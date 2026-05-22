@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 import CelebrityCard from '../components/CelebrityCard'
 
 export default function Home() {
@@ -59,8 +58,6 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      <Navbar />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 20px' }}>
         {/* Hero */}

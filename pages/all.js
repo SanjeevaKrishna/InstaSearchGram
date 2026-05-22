@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 import Link from 'next/link'
 
 export default function AllCelebrities() {
@@ -31,10 +30,8 @@ export default function AllCelebrities() {
   return (
     <>
       <Head>
-        <title>All Celebrities — InstaSearch</title>
+        <title>All Profiles — InstaSearch</title>
       </Head>
-
-      <Navbar />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 20px' }}>
         <h1 style={{

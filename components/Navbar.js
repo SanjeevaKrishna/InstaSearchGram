@@ -52,6 +52,15 @@ export default function Navbar() {
           <Link href="/">
             <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Home</button>
           </Link>
+          <Link href="/all">
+            <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>All Profiles</button>
+          </Link>
+          <Link href="/live">
+            <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Live</button>
+          </Link>
+          <Link href="/instanews">
+            <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>InstaNews</button>
+          </Link>
           <Link href="/about">
             <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>About</button>
           </Link>

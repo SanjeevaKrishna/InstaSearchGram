@@ -6,8 +6,9 @@ export default function BottomNav() {
 
   const navItems = [
     { name: 'Home', path: '/', icon: '🏠' },
-    { name: 'All Celebrities', path: '/all', icon: '👥' },
-    { name: 'Saved & Profile', path: '/saved', icon: '🔖' },
+    { name: 'All Profiles', path: '/all', icon: '👥' },
+    { name: 'Live', path: '/live', icon: '⚡' },
+    { name: 'InstaNews', path: '/instanews', icon: '📰' },
   ]
 
   return (

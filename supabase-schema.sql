@@ -58,3 +58,69 @@ create policy "Public read posts"
 -- ============================================================
 -- DONE! Your database is ready.
 -- ============================================================
+
+-- 5. NEWS TABLE (Run this to add the InstaNews feature)
+create table if not exists news (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  slug text not null unique,
+  image_url text,
+  content text,
+  views integer default 0,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_news_slug on news(slug);
+create index if not exists idx_news_created on news(created_at desc);
+
+alter table news enable row level security;
+create policy "Public read news"
+  on news for select
+  using (true);
+
+-- ============================================================
+-- 6. MOST FOLLOWED TABLE (Live Tab)
+-- ============================================================
+create table if not exists most_followed (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  photo_url text,
+  followers_count bigint not null default 0,
+  followers_text text,
+  order_index integer default 0,
+  created_at timestamptz default now()
+);
+
+alter table most_followed enable row level security;
+create policy "Public read most_followed" on most_followed for select using (true);
+
+-- ============================================================
+-- 7. VIRAL REELS TABLE (Live Tab)
+-- ============================================================
+create table if not exists viral_reels (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  photo_url text,
+  instagram_link text not null,
+  order_index integer default 0,
+  created_at timestamptz default now()
+);
+
+alter table viral_reels enable row level security;
+create policy "Public read viral_reels" on viral_reels for select using (true);
+
+-- ============================================================
+-- 8. LIVE SETTINGS TABLE (Live Tab)
+-- ============================================================
+create table if not exists live_settings (
+  id integer primary key default 1,
+  live_date text not null default '',
+  updated_at timestamptz default now()
+);
+
+alter table live_settings enable row level security;
+create policy "Public read live_settings" on live_settings for select using (true);
+
+-- Insert default row
+insert into live_settings (id, live_date) values (1, '') on conflict (id) do nothing;
+
