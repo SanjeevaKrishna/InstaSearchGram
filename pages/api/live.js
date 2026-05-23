@@ -28,9 +28,17 @@ export default async function handler(req, res) {
     const { data: reelsData, error: reelsError } = await supabase
       .from('viral_reels')
       .select('*')
-      .order('created_at', { ascending: false })
 
     if (reelsError) throw reelsError
+
+    const sortedReels = (reelsData || []).sort((a, b) => {
+      const rankA = a.order_index || 999999
+      const rankB = b.order_index || 999999
+      if (rankA !== rankB) {
+        return rankA - rankB
+      }
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
 
     const currentDate = new Date().toLocaleDateString('en-US', {
       weekday: 'long',
@@ -41,7 +49,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       live_date: settingsData?.live_date || currentDate,
       most_followed: profilesData || [],
-      viral_reels: reelsData || []
+      viral_reels: sortedReels
     })
   } catch (err) {
     console.error('Public API Live Error:', err)

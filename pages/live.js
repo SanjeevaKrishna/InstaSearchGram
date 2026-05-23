@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
+import Navbar from '../components/Navbar'
+
+const getOrdinal = (n) => {
+  if (!n) return ''
+  const s = ["th", "st", "nd", "rd"]
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
 
 export default function LivePage() {
   const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'viral_reels'
@@ -7,6 +15,7 @@ export default function LivePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('All')
 
   useEffect(() => {
     fetch('/api/live')
@@ -36,6 +45,8 @@ export default function LivePage() {
         <meta name="description" content="Check out the live leaderboards of most followed accounts and trending viral reels today, updated regularly." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
+
+      <Navbar />
 
       <main style={{ maxWidth: 850, margin: '0 auto', padding: '40px 20px 80px' }}>
         {/* Header section with live pulse indicator and manual date */}
@@ -75,7 +86,7 @@ export default function LivePage() {
                 <span className="live-pulse" style={{
                   fontSize: 13,
                   display: 'inline-block',
-                }}>⚡</span>
+                }}>📈</span>
                 <span style={{
                   fontSize: 11,
                   fontWeight: 800,
@@ -119,6 +130,8 @@ export default function LivePage() {
           marginBottom: 32,
           gap: 4,
           border: '1px solid var(--border)',
+          maxWidth: 420,
+          margin: '0 auto 32px'
         }}>
           <button
             onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); }}
@@ -127,11 +140,10 @@ export default function LivePage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
-              padding: '12px 16px',
+              padding: '10px 14px',
               borderRadius: '10px',
               border: 'none',
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 700,
               background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
               color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
@@ -139,7 +151,13 @@ export default function LivePage() {
               transition: 'all 0.2s ease',
             }}
           >
-            <span>📊</span> Most Followed
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
+              <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
+              <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
+              <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
+              <line x1="2" y1="21" x2="22" y2="21" stroke="#e0e0e0" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Most Followed
           </button>
           <button
             onClick={() => { setActiveTab('viral_reels'); setSearchQuery(''); }}
@@ -148,11 +166,10 @@ export default function LivePage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
-              padding: '12px 16px',
+              padding: '10px 14px',
               borderRadius: '10px',
               border: 'none',
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 700,
               background: activeTab === 'viral_reels' ? 'var(--surface)' : 'transparent',
               color: activeTab === 'viral_reels' ? 'var(--text)' : 'var(--text-muted)',
@@ -160,7 +177,11 @@ export default function LivePage() {
               transition: 'all 0.2s ease',
             }}
           >
-            <span>🔥</span> Viral Reels Today
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
+              <path d="M12 2C8 6.5 8 11.5 10 13c.5-.5 1-1.5 1-2.5 1.5 1.5 2 3.5 1.5 5.5-.5 2 1.5 3.5 3.5 3 2.5-.5 4.5-3 3-6.5-1.5-3.5-5-4.5-5-7.5-.5 1.5-1 2.5-2 3.5C11.5 6 12 3.5 12 2z" fill="#ff9800" />
+              <path d="M12 14c-1 1-1.5 2-1.5 3s.5 2.5 1.5 2.5 2.5-1.5 2-3.5c-.2-.5-1-1.5-2-2z" fill="#f44336" />
+            </svg>
+            Viral Reels Today
           </button>
         </div>
 
@@ -240,6 +261,57 @@ export default function LivePage() {
               </div>
             )}
 
+            {/* Category Filter */}
+            {liveData.most_followed.length > 0 && (() => {
+              const categories = ['All', 'Actor', 'Influencers', 'Creator', 'Singer', 'Sports', 'Politicians', 'Meme Pages']
+              // Add any other custom categories from the database dynamically
+              liveData.most_followed.forEach(p => {
+                if (p.category) {
+                  const cleaned = p.category.trim()
+                  if (cleaned && !categories.some(c => c.toLowerCase() === cleaned.toLowerCase())) {
+                    categories.push(cleaned)
+                  }
+                }
+              })
+
+              return (
+                <div className="no-scrollbar" style={{
+                  display: 'flex',
+                  gap: 8,
+                  overflowX: 'auto',
+                  paddingBottom: 8,
+                  marginBottom: 12,
+                  WebkitOverflowScrolling: 'touch',
+                }}>
+                  {categories.map((cat) => {
+                    const isActive = selectedCategory.toLowerCase() === cat.toLowerCase()
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '100px',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          border: '1px solid',
+                          borderColor: isActive ? 'var(--accent)' : 'var(--border)',
+                          background: isActive ? 'var(--gradient-subtle)' : 'var(--surface)',
+                          color: isActive ? 'var(--accent)' : 'var(--text-dim)',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isActive ? '0 2px 6px rgba(225, 48, 108, 0.1)' : 'none'
+                        }}
+                      >
+                        {cat}
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+
             {liveData.most_followed.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '80px 0', background: 'var(--surface2)', borderRadius: 20, border: '1px dashed var(--border)' }}>
                 <div style={{ fontSize: 36, marginBottom: 16 }}>📊</div>
@@ -247,101 +319,159 @@ export default function LivePage() {
                 <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Check back later for update ranks.</p>
               </div>
             ) : (() => {
-              const filtered = liveData.most_followed.filter(p =>
-                p.name?.toLowerCase().includes(searchQuery.toLowerCase())
-              )
+              const filtered = liveData.most_followed.filter(p => {
+                const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+                const matchesCategory = selectedCategory.toLowerCase() === 'all' || 
+                  p.category?.toLowerCase() === selectedCategory.toLowerCase()
+                return matchesSearch && matchesCategory
+              })
+
               if (filtered.length === 0) {
                 return (
                   <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-                    No profiles match "{searchQuery}"
+                    No profiles match the filter criteria
                   </div>
                 )
               }
-              return filtered.map((profile) => {
-                const rank = liveData.most_followed.findIndex(p => p.id === profile.id) + 1
-                return (
-                  <div key={profile.id} className="card" style={{
+              return (
+                <div style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
+                  background: 'var(--surface)',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
+                }}>
+                  {/* Table Header */}
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 16,
-                    padding: '16px 24px',
-                    position: 'relative',
-                    overflow: 'hidden'
+                    padding: '14px 20px',
+                    background: 'var(--surface2)',
+                    borderBottom: '1px solid var(--border)',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'var(--text-dim)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
                   }}>
-                    {/* Rank Position */}
-                    <div style={{
-                      fontSize: 18,
-                      fontWeight: 800,
-                      color: rank <= 3 ? 'var(--accent)' : 'var(--text-muted)',
-                      fontFamily: 'var(--font-display)',
-                      width: 32,
-                      textAlign: 'center',
-                      flexShrink: 0
-                    }}>
-                      #{rank}
-                    </div>
+                    <div style={{ width: 60, textAlign: 'center' }}>Rank</div>
+                    <div style={{ flex: 1, paddingLeft: 12 }}>Account</div>
+                    <div style={{ width: 140, textAlign: 'right' }}>Followers</div>
+                  </div>
 
-                    {/* Avatar */}
-                    <div style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: '50%',
-                      background: 'var(--gradient)',
-                      padding: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <div style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '50%',
-                        background: 'var(--surface)',
+                  {/* Table Body */}
+                  {filtered.map((profile) => {
+                    const rank = liveData.most_followed.findIndex(p => p.id === profile.id) + 1
+                    return (
+                      <div key={profile.id} className="table-row-hover" style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        fontSize: 20,
-                        overflow: 'hidden'
+                        padding: '12px 20px',
+                        borderBottom: '1px solid var(--border)',
+                        transition: 'background-color 0.2s ease',
                       }}>
-                        {profile.photo_url ? (
-                          <img src={profile.photo_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          profile.name?.charAt(0)
-                        )}
+                        {/* Rank Position */}
+                        <div style={{
+                          fontSize: 15,
+                          fontWeight: 700,
+                          color: rank <= 3 ? 'var(--accent)' : 'var(--text-muted)',
+                          fontFamily: 'var(--font-display)',
+                          width: 60,
+                          textAlign: 'center',
+                          flexShrink: 0
+                        }}>
+                          #{rank}
+                        </div>
+
+                        {/* Profile Info (Avatar + Name) */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          flex: 1,
+                          minWidth: 0,
+                          paddingLeft: 12
+                        }}>
+                          {/* Avatar */}
+                          <div style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: 'var(--gradient)',
+                            padding: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: '50%',
+                              background: 'var(--surface)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 800,
+                              fontSize: 13,
+                              overflow: 'hidden'
+                            }}>
+                              {profile.photo_url ? (
+                                <img src={profile.photo_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                profile.name?.charAt(0)
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Name & Category tag */}
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <span style={{
+                              fontWeight: 600,
+                              fontSize: 14,
+                              color: 'var(--text)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}>
+                              {profile.name}
+                            </span>
+                            {profile.category && (
+                              <span style={{
+                                alignSelf: 'flex-start',
+                                fontSize: 9,
+                                fontWeight: 700,
+                                color: 'var(--text-muted)',
+                                background: 'var(--surface2)',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                marginTop: 2,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                              }}>
+                                {profile.category}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Followers Count */}
+                        <div style={{
+                          width: 140,
+                          textAlign: 'right',
+                          fontWeight: 600,
+                          fontSize: 14,
+                          color: 'var(--text)',
+                          fontFamily: 'var(--font-body)',
+                          flexShrink: 0
+                        }}>
+                          {profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Name details */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{
-                        fontFamily: 'var(--font-display)',
-                        fontWeight: 800,
-                        fontSize: 16,
-                        color: 'var(--text)',
-                        marginBottom: 0
-                      }}>{profile.name}</h3>
-                    </div>
-
-                    {/* Followers Count Badge */}
-                    <div style={{
-                      padding: '8px 16px',
-                      borderRadius: '30px',
-                      background: 'var(--gradient-subtle)',
-                      border: '1px solid rgba(225, 48, 108, 0.15)',
-                      color: 'var(--accent)',
-                      fontWeight: 800,
-                      fontSize: 14,
-                      fontFamily: 'var(--font-display)',
-                      letterSpacing: '0.02em',
-                      boxShadow: '0 2px 8px rgba(225, 48, 108, 0.05)'
-                    }}>
-                      {profile.followers_text || `${(profile.followers_count / 1000000).toFixed(1)}M`}
-                    </div>
-                  </div>
-                )
-              })
+                    )
+                  })}
+                </div>
+              )
             })()}
           </div>
         ) : (
@@ -354,99 +484,154 @@ export default function LivePage() {
                 <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Trending video links will update here.</p>
               </div>
             ) : (
-              liveData.viral_reels.map((reel, idx) => {
-                const rank = idx + 1
-                return (
-                  <a
-                    key={reel.id}
-                    href={reel.instagram_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="card"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 18,
-                      padding: 16,
-                      textDecoration: 'none',
-                      transition: 'all 0.2s var(--spring)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {/* Rank Number */}
-                    <div style={{
-                      fontSize: 20,
-                      fontWeight: 800,
-                      color: rank <= 3 ? 'var(--accent)' : 'var(--text-muted)',
-                      fontFamily: 'var(--font-display)',
-                      width: 32,
-                      textAlign: 'center'
-                    }}>
-                      #{rank}
-                    </div>
+              <div style={{
+                border: '1px solid var(--border)',
+                borderRadius: 16,
+                background: 'var(--surface)',
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
+              }}>
+                {/* Table Header */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '14px 20px',
+                  background: 'var(--surface2)',
+                  borderBottom: '1px solid var(--border)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: 'var(--text-dim)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <div style={{ width: 60, textAlign: 'center' }}>Rank</div>
+                  <div style={{ flex: 1, paddingLeft: 12 }}>Reel / Video</div>
+                  <div style={{ width: 100, textAlign: 'right' }}>Link</div>
+                </div>
 
-                    {/* Reel Cover / Thumbnail with overlay play icon */}
-                    <div style={{
-                      position: 'relative',
-                      width: 68,
-                      height: 68,
-                      borderRadius: 12,
-                      overflow: 'hidden',
-                      background: 'var(--surface2)',
-                      border: '1px solid var(--border)',
-                      flexShrink: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      {reel.photo_url ? (
-                        <>
-                          <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <div style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: 'rgba(0,0,0,0.25)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}>
-                            <span style={{ fontSize: 18, color: '#ffffff' }}>▶</span>
-                          </div>
-                        </>
-                      ) : (
-                        <span style={{ fontSize: 24 }}>🎬</span>
-                      )}
-                    </div>
-
-                    {/* Reel Details */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{
-                        fontWeight: 700,
-                        fontSize: 15,
-                        color: 'var(--text)',
-                        lineHeight: 1.4,
-                        marginBottom: 4,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}>
-                        {reel.title}
-                      </h3>
-                      <div style={{
-                        display: 'inline-flex',
+                {/* Table Body */}
+                {liveData.viral_reels.map((reel, idx) => {
+                  const rank = idx + 1
+                  return (
+                    <a
+                      key={reel.id}
+                      href={reel.instagram_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="table-row-hover"
+                      style={{
+                        display: 'flex',
                         alignItems: 'center',
-                        gap: 4,
-                        fontSize: 12,
-                        color: 'var(--text-muted)',
+                        padding: '12px 20px',
+                        borderBottom: '1px solid var(--border)',
+                        transition: 'background-color 0.2s ease',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      {/* Rank Position */}
+                      <div style={{
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: rank <= 3 ? 'var(--accent)' : 'var(--text-muted)',
+                        fontFamily: 'var(--font-display)',
+                        width: 60,
+                        textAlign: 'center',
+                        flexShrink: 0
                       }}>
-                        <span>Watch on Instagram</span>
-                        <span>↗</span>
+                        #{rank}
                       </div>
-                    </div>
-                  </a>
-                )
-              })
+
+                      {/* Reel Info (Thumbnail + Title/Creator) */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        flex: 1,
+                        minWidth: 0,
+                        paddingLeft: 12
+                      }}>
+                        {/* Thumbnail */}
+                        <div style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          background: 'var(--surface2)',
+                          border: '1px solid var(--border)',
+                          flexShrink: 0,
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          {reel.photo_url ? (
+                            <>
+                              <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                background: 'rgba(0,0,0,0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}>
+                                <span style={{ fontSize: 10, color: '#ffffff' }}>▶</span>
+                              </div>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: 16 }}>🎬</span>
+                          )}
+                        </div>
+
+                        {/* Title & Creator Name */}
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                          <span style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                            color: 'var(--text)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {reel.title}
+                          </span>
+                          {reel.creator_name && (
+                            <span style={{
+                              alignSelf: 'flex-start',
+                              fontSize: 10,
+                              fontWeight: 500,
+                              color: 'var(--text-dim)',
+                              marginTop: 2
+                            }}>
+                              {reel.creator_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Link */}
+                      <div style={{
+                        width: 100,
+                        textAlign: 'right',
+                        fontWeight: 600,
+                        fontSize: 12,
+                        color: 'var(--accent)',
+                        fontFamily: 'var(--font-body)',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        gap: 4
+                      }}>
+                        <span>Watch</span>
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                      </div>
+                    </a>
+                  )
+                })}
+              </div>
             )}
           </div>
         )}
@@ -455,6 +640,14 @@ export default function LivePage() {
       <style jsx global>{`
         .live-pulse {
           animation: pulse-scale 1.8s infinite;
+        }
+
+        .table-row-hover:hover {
+          background-color: var(--surface2) !important;
+        }
+
+        .table-row-hover:last-child {
+          border-bottom: none !important;
         }
 
         @keyframes pulse-scale {

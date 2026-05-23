@@ -5,10 +5,71 @@ export default function BottomNav() {
   const router = useRouter()
 
   const navItems = [
-    { name: 'Home', path: '/', icon: '🏠' },
-    { name: 'All Profiles', path: '/all', icon: '👥' },
-    { name: 'Live', path: '/live', icon: '⚡' },
-    { name: 'InstaNews', path: '/instanews', icon: '📰' },
+    { 
+      name: 'Home', 
+      path: '/', 
+      iconOutline: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      ),
+      iconFilled: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M20 20H14V12H10V20H4V10L12 3L20 10V20Z"/>
+        </svg>
+      )
+    },
+    { 
+      name: 'All Profiles', 
+      path: '/all', 
+      iconOutline: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      ),
+      iconFilled: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+        </svg>
+      )
+    },
+    { 
+      name: 'Live', 
+      path: '/live', 
+      iconOutline: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+          <polyline points="17 6 23 6 23 12"/>
+        </svg>
+      ),
+      iconFilled: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M16 6l2.29 2.29-4.88 4.88-3-3L2 18.59 3.41 20l7-7 3 3 6.29-6.29L22 12V6h-6z"/>
+        </svg>
+      )
+    },
+    { 
+      name: 'InstaNews', 
+      path: '/instanews', 
+      iconOutline: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      ),
+      iconFilled: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 6H7v2h5V9zm5 0h-4v2h4V9zm0 4H7v2h10v-2zm0 4H7v2h10v-2z"/>
+        </svg>
+      )
+    }
   ]
 
   return (
@@ -21,7 +82,9 @@ export default function BottomNav() {
             return (
               <Link key={item.path} href={item.path}>
                 <div className={`bottom-nav-item ${isActive ? 'active' : ''}`}>
-                  <span className="icon">{item.icon}</span>
+                  <span className="icon" style={{ display: 'flex', alignItems: 'center' }}>
+                    {isActive ? item.iconFilled : item.iconOutline}
+                  </span>
                   <span className="label">{item.name}</span>
                 </div>
               </Link>

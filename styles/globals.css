@@ -278,4 +278,33 @@ input, textarea, select {
   .card {
     padding: 16px;
   }
+  .nav-links {
+    display: none !important;
+  }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.dropdown-item:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.mobile-only-menu {
+  display: flex !important;
+}
+@media (min-width: 769px) {
+  .mobile-only-menu {
+    display: none !important;
+  }
 }

@@ -21,6 +21,82 @@ function adminFetch(url, options = {}) {
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
+function AdminModal({ isOpen, onClose, title, children }) {
+  if (!isOpen) return null
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0, 0, 0, 0.45)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999,
+      padding: 16,
+    }}>
+      <div style={{
+        background: 'var(--surface)',
+        borderRadius: 16,
+        border: '1px solid var(--border)',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+        width: '100%',
+        maxWidth: 550,
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Modal Header */}
+        <div style={{
+          padding: '16px 24px',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'var(--surface2)'
+        }}>
+          <h3 style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 18,
+            color: 'var(--text)',
+            margin: 0
+          }}>{title}</h3>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: 20,
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 4
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div style={{
+          padding: '24px',
+          overflowY: 'auto',
+          flex: 1
+        }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function LoginScreen({ onLogin }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
@@ -138,86 +214,81 @@ function CelebrityForm({ initial, onSave, onCancel }) {
   }
 
   return (
-    <div className="card" style={{ marginBottom: 20 }}>
-      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
-        {initial ? '✏️ Edit Celebrity' : '➕ Add New Celebrity'}
-      </h3>
-      <div style={{ display: 'grid', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div>
+        <label style={labelStyle}>Full Name *</label>
+        <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Virat Kohli" />
+      </div>
+      <div>
+        <label style={labelStyle}>Instagram Handle (without @)</label>
+        <input className="input-field" value={form.instagram_handle} onChange={e => set('instagram_handle', e.target.value)} placeholder="e.g. virat.kohli" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Full Name *</label>
-          <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Virat Kohli" />
+          <label style={labelStyle}>Followers Count (number)</label>
+          <input className="input-field" type="number" value={form.followers_count} onChange={e => set('followers_count', e.target.value)} placeholder="e.g. 17000000" />
         </div>
         <div>
-          <label style={labelStyle}>Instagram Handle (without @)</label>
-          <input className="input-field" value={form.instagram_handle} onChange={e => set('instagram_handle', e.target.value)} placeholder="e.g. virat.kohli" />
+          <label style={labelStyle}>Total Posts on Instagram</label>
+          <input className="input-field" type="number" value={form.posts_count} onChange={e => set('posts_count', e.target.value)} placeholder="e.g. 140" />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Followers Count (number)</label>
-            <input className="input-field" type="number" value={form.followers_count} onChange={e => set('followers_count', e.target.value)} placeholder="e.g. 17000000" />
+      </div>
+      <div>
+        <label style={labelStyle}>Profile Photo</label>
+        {form.photo_url ? (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <img src={form.photo_url} alt="Profile" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
+            <button className="btn btn-ghost" onClick={() => set('photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
           </div>
+        ) : (
           <div>
-            <label style={labelStyle}>Total Posts on Instagram</label>
-            <input className="input-field" type="number" value={form.posts_count} onChange={e => set('posts_count', e.target.value)} placeholder="e.g. 140" />
-          </div>
-        </div>
-        <div>
-          <label style={labelStyle}>Profile Photo</label>
-          {form.photo_url ? (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <img src={form.photo_url} alt="Profile" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
-              <button className="btn btn-ghost" onClick={() => set('photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
-            </div>
-          ) : (
-            <div>
-              <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
-                const file = e.target.files[0]
-                if (!file) return
-                
-                // Show a temporary loading state by setting saving
-                setSaving(true)
-                setError('')
-                const reader = new FileReader()
-                reader.readAsDataURL(file)
-                reader.onload = async () => {
+            <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
+              const file = e.target.files[0]
+              if (!file) return
+              
+              // Show a temporary loading state by setting saving
+              setSaving(true)
+              setError('')
+              const reader = new FileReader()
+              reader.readAsDataURL(file)
+              reader.onload = async () => {
+                try {
+                  const res = await adminFetch('/api/admin/upload', {
+                    method: 'POST',
+                    body: { image: reader.result }
+                  })
+                  const text = await res.text()
+                  let data
                   try {
-                    const res = await adminFetch('/api/admin/upload', {
-                      method: 'POST',
-                      body: { image: reader.result }
-                    })
-                    const text = await res.text()
-                    let data
-                    try {
-                      data = JSON.parse(text)
-                    } catch(e) {
-                      throw new Error(`Server Error: ${res.status} - ${text.substring(0, 40)}`)
-                    }
-                    if (data.url) set('photo_url', data.url)
-                    else throw new Error(data.error || 'Upload failed')
-                  } catch(err) {
-                    setError(err.message || 'Failed to upload image')
-                  } finally {
-                    setSaving(false)
+                    data = JSON.parse(text)
+                  } catch(e) {
+                    throw new Error(`Server Error: ${res.status} - ${text.substring(0, 40)}`)
                   }
+                  if (data.url) set('photo_url', data.url)
+                  else throw new Error(data.error || 'Upload failed')
+                } catch(err) {
+                  setError(err.message || 'Failed to upload image')
+                } finally {
+                  setSaving(false)
                 }
-              }} />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select an image to upload securely to Cloudinary</div>
-            </div>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="checkbox" id="featured" checked={form.is_featured} onChange={e => set('is_featured', e.target.checked)} style={{ width: 16, height: 16 }} />
-          <label htmlFor="featured" style={{ fontSize: 14, color: 'var(--text-dim)', cursor: 'pointer' }}>
-            Show on Homepage (Featured)
-          </label>
-        </div>
-        {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : initial ? 'Update Celebrity' : 'Add Celebrity'}
-          </button>
-        </div>
+              }
+            }} />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select an image to upload securely to Cloudinary</div>
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <input type="checkbox" id="featured" checked={form.is_featured} onChange={e => set('is_featured', e.target.checked)} style={{ width: 16, height: 16 }} />
+        <label htmlFor="featured" style={{ fontSize: 14, color: 'var(--text-dim)', cursor: 'pointer' }}>
+          Show on Homepage (Featured)
+        </label>
+      </div>
+      {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+        <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : initial ? 'Update Celebrity' : 'Add Celebrity'}
+        </button>
       </div>
     </div>
   )
@@ -257,136 +328,131 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
   }
 
   return (
-    <div className="card" style={{ marginBottom: 20 }}>
-      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
-        {initial ? '✏️ Edit Post' : '➕ Add New Post / Reel'}
-      </h3>
-      <div style={{ display: 'grid', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div>
+        <label style={labelStyle}>Celebrity *</label>
+        <select
+          className="input-field"
+          value={form.celebrity_id}
+          onChange={e => set('celebrity_id', e.target.value)}
+        >
+          <option value="">— Select Celebrity —</option>
+          {celebrities.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label style={labelStyle}>Instagram Post / Reel URL *</label>
+        <input className="input-field" value={form.post_url} onChange={e => set('post_url', e.target.value)} placeholder="https://www.instagram.com/reel/..." />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Celebrity *</label>
-          <select
-            className="input-field"
-            value={form.celebrity_id}
-            onChange={e => set('celebrity_id', e.target.value)}
-          >
-            <option value="">— Select Celebrity —</option>
-            {celebrities.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
+          <label style={labelStyle}>Type</label>
+          <select className="input-field" value={form.post_type} onChange={e => set('post_type', e.target.value)}>
+            <option value="reel">Reel</option>
+            <option value="post">Post (Photo)</option>
+            <option value="video">Video</option>
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Instagram Post / Reel URL *</label>
-          <input className="input-field" value={form.post_url} onChange={e => set('post_url', e.target.value)} placeholder="https://www.instagram.com/reel/..." />
+          <label style={labelStyle}>Post Date</label>
+          <input className="input-field" type="date" value={form.post_date} onChange={e => set('post_date', e.target.value)} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Type</label>
-            <select className="input-field" value={form.post_type} onChange={e => set('post_type', e.target.value)}>
-              <option value="reel">Reel</option>
-              <option value="post">Post (Photo)</option>
-              <option value="video">Video</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Post Date</label>
-            <input className="input-field" type="date" value={form.post_date} onChange={e => set('post_date', e.target.value)} />
-          </div>
-        </div>
+      </div>
+      <div>
+        <label style={labelStyle}>Caption (optional)</label>
+        <textarea
+          className="input-field"
+          value={form.caption}
+          onChange={e => set('caption', e.target.value)}
+          placeholder="Paste the caption or describe the post..."
+          rows={3}
+          style={{ resize: 'vertical' }}
+        />
+      </div>
+      <div>
+        <label style={labelStyle}>Playlist Name (optional)</label>
+        <input className="input-field" value={form.playlist_name || ''} onChange={e => set('playlist_name', e.target.value)} placeholder="e.g. World Cup 2023" />
+      </div>
+      {form.playlist_name && (
         <div>
-          <label style={labelStyle}>Caption (optional)</label>
-          <textarea
-            className="input-field"
-            value={form.caption}
-            onChange={e => set('caption', e.target.value)}
-            placeholder="Paste the caption or describe the post..."
-            rows={3}
-            style={{ resize: 'vertical' }}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>Playlist Name (optional)</label>
-          <input className="input-field" value={form.playlist_name || ''} onChange={e => set('playlist_name', e.target.value)} placeholder="e.g. World Cup 2023" />
-        </div>
-        {form.playlist_name && (
-          <div>
-            <label style={labelStyle}>Playlist Cover Image</label>
-            {form.playlist_cover_url ? (
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <img src={form.playlist_cover_url} alt="Cover" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
-                <button className="btn btn-ghost" onClick={() => set('playlist_cover_url', '')} style={{ color: '#ff5252' }}>Remove</button>
-              </div>
-            ) : (
-              <div>
-                <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
-                  const file = e.target.files[0]
-                  if (!file) return
-                  setSaving(true)
-                  setError('')
-                  const reader = new FileReader()
-                  reader.readAsDataURL(file)
-                  reader.onload = async () => {
-                    try {
-                      const res = await adminFetch('/api/admin/upload', {
-                        method: 'POST',
-                        body: { image: reader.result }
-                      })
-                      const text = await res.text()
-                      let data
-                      try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error: ${res.status}`) }
-                      if (data.url) set('playlist_cover_url', data.url)
-                      else throw new Error(data.error || 'Upload failed')
-                    } catch(err) {
-                      setError(err.message || 'Failed to upload image')
-                    } finally {
-                      setSaving(false)
-                    }
-                  }
-                }} />
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Upload an image for the playlist thumbnail</div>
-              </div>
-            )}
-          </div>
-        )}
-        <div>
-          <label style={labelStyle}>Tags (comma separated)</label>
-          <input
-            className="input-field"
-            value={form.tags}
-            onChange={e => set('tags', e.target.value)}
-            placeholder="e.g. cricket, ipl, celebration, boundary"
-          />
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-            These are searchable keywords users can filter by
-          </div>
-        </div>
-        {/* Checkboxes */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {[
-            { key: 'is_most_liked', label: '❤️ Most Liked Post' },
-            { key: 'is_most_commented', label: '💬 Most Commented' },
-            { key: 'is_most_viewed', label: '👁 Most Viewed' },
-            { key: 'is_first_post', label: '⭐ First Post Ever' },
-          ].map(({ key, label }) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="checkbox"
-                id={key}
-                checked={form[key]}
-                onChange={e => set(key, e.target.checked)}
-                style={{ width: 16, height: 16 }}
-              />
-              <label htmlFor={key} style={{ fontSize: 13, color: 'var(--text-dim)', cursor: 'pointer' }}>{label}</label>
+          <label style={labelStyle}>Playlist Cover Image</label>
+          {form.playlist_cover_url ? (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <img src={form.playlist_cover_url} alt="Cover" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
+              <button className="btn btn-ghost" onClick={() => set('playlist_cover_url', '')} style={{ color: '#ff5252' }}>Remove</button>
             </div>
-          ))}
+          ) : (
+            <div>
+              <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
+                const file = e.target.files[0]
+                if (!file) return
+                setSaving(true)
+                setError('')
+                const reader = new FileReader()
+                reader.readAsDataURL(file)
+                reader.onload = async () => {
+                  try {
+                    const res = await adminFetch('/api/admin/upload', {
+                      method: 'POST',
+                      body: { image: reader.result }
+                    })
+                    const text = await res.text()
+                    let data
+                    try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error: ${res.status}`) }
+                    if (data.url) set('playlist_cover_url', data.url)
+                    else throw new Error(data.error || 'Upload failed')
+                  } catch(err) {
+                    setError(err.message || 'Failed to upload image')
+                  } finally {
+                    setSaving(false)
+                  }
+                }
+              }} />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Upload an image for the playlist thumbnail</div>
+            </div>
+          )}
         </div>
-        {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : initial ? 'Update Post' : 'Add Post'}
-          </button>
+      )}
+      <div>
+        <label style={labelStyle}>Tags (comma separated)</label>
+        <input
+          className="input-field"
+          value={form.tags}
+          onChange={e => set('tags', e.target.value)}
+          placeholder="e.g. cricket, ipl, celebration, boundary"
+        />
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+          These are searchable keywords users can filter by
         </div>
+      </div>
+      {/* Checkboxes */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {[
+          { key: 'is_most_liked', label: '❤️ Most Liked Post' },
+          { key: 'is_most_commented', label: '💬 Most Commented' },
+          { key: 'is_most_viewed', label: '👁 Most Viewed' },
+          { key: 'is_first_post', label: '⭐ First Post Ever' },
+        ].map(({ key, label }) => (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              id={key}
+              checked={form[key]}
+              onChange={e => set(key, e.target.checked)}
+              style={{ width: 16, height: 16 }}
+            />
+            <label htmlFor={key} style={{ fontSize: 13, color: 'var(--text-dim)', cursor: 'pointer' }}>{label}</label>
+          </div>
+        ))}
+      </div>
+      {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+        <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : initial ? 'Update Post' : 'Add Post'}
+        </button>
       </div>
     </div>
   )
@@ -429,97 +495,140 @@ function NewsForm({ initial, onSave, onCancel }) {
   }
 
   return (
-    <div className="card" style={{ marginBottom: 20 }}>
-      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
-        {initial ? '✏️ Edit News' : '➕ Add InstaNews'}
-      </h3>
-      <div style={{ display: 'grid', gap: 12 }}>
-        <div>
-          <label style={labelStyle}>Title *</label>
-          <input className="input-field" value={form.title} onChange={e => set('title', e.target.value)} placeholder="News Headline..." />
-        </div>
-        <div>
-          <label style={labelStyle}>Image Cover</label>
-          {form.image_url ? (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <img src={form.image_url} alt="Cover" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
-              <button className="btn btn-ghost" onClick={() => set('image_url', '')} style={{ color: '#ff5252' }}>Remove</button>
-            </div>
-          ) : (
-            <div>
-              <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
-                const file = e.target.files[0]
-                if (!file) return
-                setSaving(true)
-                setError('')
-                const reader = new FileReader()
-                reader.readAsDataURL(file)
-                reader.onload = async () => {
-                  try {
-                    const res = await adminFetch('/api/admin/upload', {
-                      method: 'POST',
-                      body: { image: reader.result }
-                    })
-                    const text = await res.text()
-                    let data
-                    try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error: ${res.status}`) }
-                    if (data.url) set('image_url', data.url)
-                    else throw new Error(data.error || 'Upload failed')
-                  } catch(err) {
-                    setError(err.message || 'Failed to upload image')
-                  } finally {
-                    setSaving(false)
-                  }
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div>
+        <label style={labelStyle}>Title *</label>
+        <input className="input-field" value={form.title} onChange={e => set('title', e.target.value)} placeholder="News Headline..." />
+      </div>
+      <div>
+        <label style={labelStyle}>Image Cover</label>
+        {form.image_url ? (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <img src={form.image_url} alt="Cover" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
+            <button className="btn btn-ghost" onClick={() => set('image_url', '')} style={{ color: '#ff5252' }}>Remove</button>
+          </div>
+        ) : (
+          <div>
+            <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
+              const file = e.target.files[0]
+              if (!file) return
+              setSaving(true)
+              setError('')
+              const reader = new FileReader()
+              reader.readAsDataURL(file)
+              reader.onload = async () => {
+                try {
+                  const res = await adminFetch('/api/admin/upload', {
+                    method: 'POST',
+                    body: { image: reader.result }
+                  })
+                  const text = await res.text()
+                  let data
+                  try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error: ${res.status}`) }
+                  if (data.url) set('image_url', data.url)
+                  else throw new Error(data.error || 'Upload failed')
+                } catch(err) {
+                  setError(err.message || 'Failed to upload image')
+                } finally {
+                  setSaving(false)
                 }
-              }} />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Upload an image for the news thumbnail</div>
-            </div>
-          )}
-        </div>
-        <div>
-          <label style={labelStyle}>Matter (Content)</label>
-          <textarea
-            className="input-field"
-            value={form.content || ''}
-            onChange={e => set('content', e.target.value)}
-            placeholder="Write the full news story here..."
-            rows={6}
-            style={{ resize: 'vertical' }}
-          />
-        </div>
-        {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : initial ? 'Update News' : 'Publish News'}
-          </button>
-        </div>
+              }
+            }} />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Upload an image for the news thumbnail</div>
+          </div>
+        )}
+      </div>
+      <div>
+        <label style={labelStyle}>Matter (Content)</label>
+        <textarea
+          className="input-field"
+          value={form.content || ''}
+          onChange={e => set('content', e.target.value)}
+          placeholder="Write the full news story here..."
+          rows={6}
+          style={{ resize: 'vertical' }}
+        />
+      </div>
+      {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+        <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : initial ? 'Update News' : 'Publish News'}
+        </button>
       </div>
     </div>
   )
 }
 
-function MostFollowedForm({ initial, onSave, onCancel }) {
+function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
+  const predefinedCategories = ['Actor', 'Influencers', 'Creator', 'Singer', 'Sports', 'Politicians', 'Meme Pages']
+  const initialCategoryIsCustom = initial?.category && !predefinedCategories.some(c => c.toLowerCase() === initial.category.toLowerCase())
+
   const [form, setForm] = useState(initial || {
     name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0'
   })
+  const [selectedDropdown, setSelectedDropdown] = useState(
+    initialCategoryIsCustom ? 'Other' : (initial?.category || 'Actor')
+  )
+  const [customCategoryText, setCustomCategoryText] = useState(
+    initialCategoryIsCustom ? initial.category : ''
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  const handleNameChange = (nameVal) => {
+    setForm(f => {
+      const updated = { ...f, name: nameVal }
+      if (!initial) {
+        const trimmed = nameVal.trim().toLowerCase()
+        const match = profiles.find(p => p.name.trim().toLowerCase() === trimmed)
+        if (match) {
+          setNotice(`✨ Existing profile found! Loaded details for "${match.name}" to update.`)
+          updated.id = match.id
+          updated.photo_url = match.photo_url || ''
+          updated.followers_count = match.followers_count?.toString() || ''
+          updated.followers_text = match.followers_text || ''
+          updated.order_index = match.order_index?.toString() || '0'
+          
+          const matchCategoryIsCustom = match.category && !predefinedCategories.some(c => c.toLowerCase() === match.category.toLowerCase())
+          setSelectedDropdown(matchCategoryIsCustom ? 'Other' : (match.category || 'Actor'))
+          setCustomCategoryText(matchCategoryIsCustom ? match.category : '')
+        } else {
+          if (updated.id) {
+            delete updated.id
+            updated.photo_url = ''
+            updated.followers_count = ''
+            updated.followers_text = ''
+            updated.order_index = '0'
+            setNotice('')
+          }
+        }
+      }
+      return updated
+    })
+  }
+
   const handleSave = async () => {
     if (!form.name.trim()) return setError('Name is required')
+    const finalCategory = selectedDropdown === 'Other' ? customCategoryText.trim() : selectedDropdown
+    if (selectedDropdown === 'Other' && !finalCategory) {
+      return setError('Please type a custom category name')
+    }
+
     setSaving(true)
     setError('')
     try {
       const res = await adminFetch('/api/admin/most_followed', {
-        method: initial ? 'PUT' : 'POST',
+        method: (initial || form.id) ? 'PUT' : 'POST',
         body: {
           ...form,
-          id: initial?.id,
+          id: initial?.id || form.id,
           followers_count: form.followers_count ? Number(form.followers_count) : 0,
           order_index: form.order_index ? Number(form.order_index) : 0,
+          category: finalCategory
         },
       })
       const data = await res.json()
@@ -533,70 +642,105 @@ function MostFollowedForm({ initial, onSave, onCancel }) {
   }
 
   return (
-    <div className="card" style={{ marginBottom: 20 }}>
-      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
-        {initial ? '✏️ Edit Profile' : '➕ Add Most Followed Profile'}
-      </h3>
-      <div style={{ display: 'grid', gap: 12 }}>
-        <div>
-          <label style={labelStyle}>Full Name *</label>
-          <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Virat Kohli" />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Followers Count (Number for sorting)</label>
-            <input className="input-field" type="number" value={form.followers_count} onChange={e => set('followers_count', e.target.value)} placeholder="e.g. 270000000" />
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div>
+        <label style={labelStyle}>Full Name *</label>
+        <input 
+          className="input-field" 
+          value={form.name} 
+          onChange={e => handleNameChange(e.target.value)} 
+          placeholder="e.g. Virat Kohli" 
+          list="admin-profiles-list"
+        />
+        <datalist id="admin-profiles-list">
+          {profiles.map(p => (
+            <option key={p.id} value={p.name} />
+          ))}
+        </datalist>
+        {notice && (
+          <div style={{ color: '#00c853', fontSize: 13, marginTop: 6, fontWeight: 500 }}>
+            {notice}
           </div>
-          <div>
-            <label style={labelStyle}>Followers Text (Custom display)</label>
-            <input className="input-field" value={form.followers_text} onChange={e => set('followers_text', e.target.value)} placeholder="e.g. 270M or 27 Cr" />
-          </div>
+        )}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Followers Count (Number for sorting)</label>
+          <input className="input-field" type="number" value={form.followers_count} onChange={e => set('followers_count', e.target.value)} placeholder="e.g. 270000000" />
         </div>
         <div>
-          <label style={labelStyle}>Profile Photo</label>
-          {form.photo_url ? (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <img src={form.photo_url} alt="Profile" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
-              <button className="btn btn-ghost" onClick={() => set('photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
-            </div>
-          ) : (
-            <div>
-              <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
-                const file = e.target.files[0]
-                if (!file) return
-                setSaving(true)
-                setError('')
-                const reader = new FileReader()
-                reader.readAsDataURL(file)
-                reader.onload = async () => {
-                  try {
-                    const res = await adminFetch('/api/admin/upload', {
-                      method: 'POST',
-                      body: { image: reader.result }
-                    })
-                    const text = await res.text()
-                    let data
-                    try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error`) }
-                    if (data.url) set('photo_url', data.url)
-                    else throw new Error(data.error || 'Upload failed')
-                  } catch(err) {
-                    setError(err.message || 'Failed to upload image')
-                  } finally {
-                    setSaving(false)
-                  }
+          <label style={labelStyle}>Followers Text (Custom display)</label>
+          <input className="input-field" value={form.followers_text} onChange={e => set('followers_text', e.target.value)} placeholder="e.g. 270M or 27 Cr" />
+        </div>
+      </div>
+
+      <div>
+        <label style={labelStyle}>Category</label>
+        <select
+          className="input-field"
+          value={selectedDropdown}
+          onChange={e => setSelectedDropdown(e.target.value)}
+          style={{ marginBottom: selectedDropdown === 'Other' ? 12 : 0 }}
+        >
+          {predefinedCategories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+          <option value="Other">Other (Manual Entry)</option>
+        </select>
+        {selectedDropdown === 'Other' && (
+          <input
+            className="input-field"
+            value={customCategoryText}
+            onChange={e => setCustomCategoryText(e.target.value)}
+            placeholder="Type custom category name..."
+          />
+        )}
+      </div>
+
+      <div>
+        <label style={labelStyle}>Profile Photo</label>
+        {form.photo_url ? (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <img src={form.photo_url} alt="Profile" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
+            <button className="btn btn-ghost" onClick={() => set('photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
+          </div>
+        ) : (
+          <div>
+            <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
+              const file = e.target.files[0]
+              if (!file) return
+              setSaving(true)
+              setError('')
+              const reader = new FileReader()
+              reader.readAsDataURL(file)
+              reader.onload = async () => {
+                try {
+                  const res = await adminFetch('/api/admin/upload', {
+                    method: 'POST',
+                    body: { image: reader.result }
+                  })
+                  const text = await res.text()
+                  let data
+                  try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error`) }
+                  if (data.url) set('photo_url', data.url)
+                  else throw new Error(data.error || 'Upload failed')
+                } catch(err) {
+                  setError(err.message || 'Failed to upload image')
+                } finally {
+                  setSaving(false)
                 }
-              }} />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select an image to upload securely</div>
-            </div>
-          )}
-        </div>
-        {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : initial ? 'Update Profile' : 'Add Profile'}
-          </button>
-        </div>
+              }
+            }} />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select an image to upload securely</div>
+          </div>
+        )}
+      </div>
+      {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+        <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : (initial || form.id) ? 'Update Profile' : 'Add Profile'}
+        </button>
       </div>
     </div>
   )
@@ -604,7 +748,7 @@ function MostFollowedForm({ initial, onSave, onCancel }) {
 
 function ViralReelsForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial || {
-    title: '', photo_url: '', instagram_link: '', order_index: '0'
+    title: '', photo_url: '', instagram_link: '', order_index: '0', creator_name: ''
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -623,6 +767,7 @@ function ViralReelsForm({ initial, onSave, onCancel }) {
           ...form,
           id: initial?.id,
           order_index: form.order_index ? Number(form.order_index) : 0,
+          creator_name: form.creator_name || '',
         },
       })
       const data = await res.json()
@@ -636,64 +781,71 @@ function ViralReelsForm({ initial, onSave, onCancel }) {
   }
 
   return (
-    <div className="card" style={{ marginBottom: 20 }}>
-      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
-        {initial ? '✏️ Edit Viral Reel' : '➕ Add New Viral Reel'}
-      </h3>
-      <div style={{ display: 'grid', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div>
+        <label style={labelStyle}>Reel Title / Caption *</label>
+        <input className="input-field" value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Virat Kohli historic knock..." />
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Reel Title / Caption *</label>
-          <input className="input-field" value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Virat Kohli historic knock..." />
+          <label style={labelStyle}>Creator Name</label>
+          <input className="input-field" value={form.creator_name || ''} onChange={e => set('creator_name', e.target.value)} placeholder="e.g. Virat Kohli" />
         </div>
         <div>
-          <label style={labelStyle}>Instagram URL *</label>
-          <input className="input-field" value={form.instagram_link} onChange={e => set('instagram_link', e.target.value)} placeholder="e.g. https://instagram.com/reel/..." />
+          <label style={labelStyle}>Rank (e.g. 1 for 1st, 2 for 2nd)</label>
+          <input className="input-field" type="number" value={form.order_index || ''} onChange={e => set('order_index', e.target.value)} placeholder="e.g. 1 or 2" />
         </div>
-        <div>
-          <label style={labelStyle}>Reel Thumbnail Photo</label>
-          {form.photo_url ? (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <img src={form.photo_url} alt="Thumbnail" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
-              <button className="btn btn-ghost" onClick={() => set('photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
-            </div>
-          ) : (
-            <div>
-              <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
-                const file = e.target.files[0]
-                if (!file) return
-                setSaving(true)
-                setError('')
-                const reader = new FileReader()
-                reader.readAsDataURL(file)
-                reader.onload = async () => {
-                  try {
-                    const res = await adminFetch('/api/admin/upload', {
-                      method: 'POST',
-                      body: { image: reader.result }
-                    })
-                    const text = await res.text()
-                    let data
-                    try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error`) }
-                    if (data.url) set('photo_url', data.url)
-                    else throw new Error(data.error || 'Upload failed')
-                  } catch(err) {
-                    setError(err.message || 'Failed to upload image')
-                  } finally {
-                    setSaving(false)
-                  }
+      </div>
+
+      <div>
+        <label style={labelStyle}>Instagram URL *</label>
+        <input className="input-field" value={form.instagram_link} onChange={e => set('instagram_link', e.target.value)} placeholder="e.g. https://instagram.com/reel/..." />
+      </div>
+      <div>
+        <label style={labelStyle}>Reel Thumbnail Photo</label>
+        {form.photo_url ? (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <img src={form.photo_url} alt="Thumbnail" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
+            <button className="btn btn-ghost" onClick={() => set('photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
+          </div>
+        ) : (
+          <div>
+            <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
+              const file = e.target.files[0]
+              if (!file) return
+              setSaving(true)
+              setError('')
+              const reader = new FileReader()
+              reader.readAsDataURL(file)
+              reader.onload = async () => {
+                try {
+                  const res = await adminFetch('/api/admin/upload', {
+                    method: 'POST',
+                    body: { image: reader.result }
+                  })
+                  const text = await res.text()
+                  let data
+                  try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error`) }
+                  if (data.url) set('photo_url', data.url)
+                  else throw new Error(data.error || 'Upload failed')
+                } catch(err) {
+                  setError(err.message || 'Failed to upload image')
+                } finally {
+                  setSaving(false)
                 }
-              }} />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select a thumbnail image to upload securely</div>
-            </div>
-          )}
-        </div>
-        {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : initial ? 'Update Reel' : 'Add Reel'}
-          </button>
-        </div>
+              }
+            }} />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select a thumbnail image to upload securely</div>
+          </div>
+        )}
+      </div>
+      {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+        <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : initial ? 'Update Reel' : 'Add Reel'}
+        </button>
       </div>
     </div>
   )
@@ -727,6 +879,12 @@ export default function AdminPanel() {
   const [editingNews, setEditingNews] = useState(null)
   const [filterCelId, setFilterCelId] = useState('')
   const [toast, setToast] = useState('')
+
+  const [searchCel, setSearchCel] = useState('')
+  const [searchPost, setSearchPost] = useState('')
+  const [searchNews, setSearchNews] = useState('')
+  const [searchMostFollowed, setSearchMostFollowed] = useState('')
+  const [searchViralReels, setSearchViralReels] = useState('')
 
   const showToast = (msg) => {
     setToast(msg)
@@ -857,6 +1015,13 @@ export default function AdminPanel() {
     if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
     if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
     return n.toString()
+  }
+
+  const getOrdinal = (n) => {
+    if (!n) return ''
+    const s = ["th", "st", "nd", "rd"]
+    const v = n % 100
+    return n + (s[(v - 20) % 10] || s[v] || s[0])
   }
 
   if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />
@@ -991,68 +1156,91 @@ export default function AdminPanel() {
             </div>
 
             {(showCelForm || editingCel) && (
-              <CelebrityForm
-                initial={editingCel}
-                onSave={(cel) => {
-                  if (editingCel) {
-                    setCelebrities(c => c.map(x => x.id === cel.id ? cel : x))
-                  } else {
-                    setCelebrities(c => [...c, cel])
-                  }
-                  setShowCelForm(false)
-                  setEditingCel(null)
-                  showToast('✅ Celebrity saved!')
-                }}
-                onCancel={() => { setShowCelForm(false); setEditingCel(null) }}
-              />
+              <AdminModal
+                isOpen={showCelForm || !!editingCel}
+                onClose={() => { setShowCelForm(false); setEditingCel(null); }}
+                title={editingCel ? '✏️ Edit Celebrity' : '➕ Add New Celebrity'}
+              >
+                <CelebrityForm
+                  initial={editingCel}
+                  onSave={(cel) => {
+                    if (editingCel) {
+                      setCelebrities(c => c.map(x => x.id === cel.id ? cel : x))
+                    } else {
+                      setCelebrities(c => [...c, cel])
+                    }
+                    setShowCelForm(false)
+                    setEditingCel(null)
+                    showToast('✅ Celebrity saved!')
+                  }}
+                  onCancel={() => { setShowCelForm(false); setEditingCel(null) }}
+                />
+              </AdminModal>
             )}
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="input-field"
+                value={searchCel}
+                onChange={e => setSearchCel(e.target.value)}
+                placeholder="🔍 Search celebrities by name or handle..."
+              />
+            </div>
 
             {loadingData ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {celebrities.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-                    No celebrities yet. Add your first one! 👆
-                  </div>
-                )}
-                {celebrities.map(cel => (
-                  <div key={cel.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{
-                      width: 48, height: 48, borderRadius: '50%',
-                      background: 'var(--gradient)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 800, fontSize: 18, flexShrink: 0,
-                    }}>
-                      {cel.name?.charAt(0)}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{cel.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        @{cel.instagram_handle || '—'} &nbsp;·&nbsp; {formatCount(cel.followers_count)} followers
-                        {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
+                {(() => {
+                  const filtered = celebrities.filter(c => 
+                    c.name?.toLowerCase().includes(searchCel.toLowerCase()) ||
+                    c.instagram_handle?.toLowerCase().includes(searchCel.toLowerCase())
+                  )
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        {celebrities.length === 0 ? "No celebrities yet. Add your first one! 👆" : "No matching celebrities found."}
+                      </div>
+                    )
+                  }
+                  return filtered.map(cel => (
+                    <div key={cel.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{
+                        width: 48, height: 48, borderRadius: '50%',
+                        background: 'var(--gradient)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 800, fontSize: 18, flexShrink: 0,
+                      }}>
+                        {cel.name?.charAt(0)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{cel.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          @{cel.instagram_handle || '—'} &nbsp;·&nbsp; {formatCount(cel.followers_count)} followers
+                          {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        <a href={`/celebrity/${cel.slug}`} target="_blank">
+                          <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
+                        </a>
+                        <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
+                          onClick={() => { setEditingCel({ ...cel, followers_count: cel.followers_count?.toString(), posts_count: cel.posts_count?.toString(), tags: '' }); setShowCelForm(false) }}>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteCelebrity(cel.id)}
+                          style={{
+                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                            color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
+                          }}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                      <a href={`/celebrity/${cel.slug}`} target="_blank">
-                        <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
-                      </a>
-                      <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
-                        onClick={() => { setEditingCel({ ...cel, followers_count: cel.followers_count?.toString(), posts_count: cel.posts_count?.toString(), tags: '' }); setShowCelForm(false) }}>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteCelebrity(cel.id)}
-                        style={{
-                          background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                          color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                })()}
               </div>
             )}
           </div>
@@ -1084,94 +1272,123 @@ export default function AdminPanel() {
             </div>
 
             {(showPostForm || editingPost) && (
-              <PostForm
-                celebrities={celebrities}
-                initial={editingPost ? {
-                  ...editingPost,
-                  tags: (editingPost.tags || []).join(', ')
-                } : null}
-                onSave={(post) => {
-                  if (editingPost) {
-                    setPosts(p => p.map(x => x.id === post.id ? post : x))
-                  } else {
-                    setPosts(p => [post, ...p])
-                  }
-                  setShowPostForm(false)
-                  setEditingPost(null)
-                  showToast('✅ Post saved!')
-                }}
-                onCancel={() => { setShowPostForm(false); setEditingPost(null) }}
-              />
+              <AdminModal
+                isOpen={showPostForm || !!editingPost}
+                onClose={() => { setShowPostForm(false); setEditingPost(null); }}
+                title={editingPost ? '✏️ Edit Post' : '➕ Add New Post'}
+              >
+                <PostForm
+                  celebrities={celebrities}
+                  initial={editingPost ? {
+                    ...editingPost,
+                    tags: (editingPost.tags || []).join(', ')
+                  } : null}
+                  onSave={(post) => {
+                    if (editingPost) {
+                      setPosts(p => p.map(x => x.id === post.id ? post : x))
+                    } else {
+                      setPosts(p => [post, ...p])
+                    }
+                    setShowPostForm(false)
+                    setEditingPost(null)
+                    showToast('✅ Post saved!')
+                  }}
+                  onCancel={() => { setShowPostForm(false); setEditingPost(null) }}
+                />
+              </AdminModal>
             )}
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="input-field"
+                value={searchPost}
+                onChange={e => setSearchPost(e.target.value)}
+                placeholder="🔍 Search posts by celebrity, caption, playlist, or tags..."
+              />
+            </div>
 
             {loadingData ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {posts.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-                    No posts yet. Add your first one! 👆
-                  </div>
-                )}
-                {posts.map(post => {
-                  const cel = celebrities.find(c => c.id === post.celebrity_id)
-                  return (
-                    <div key={post.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                          <span style={{
-                            fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-                            padding: '2px 7px', borderRadius: 4,
-                            background: post.post_type === 'reel' ? 'rgba(224,64,251,0.2)' : 'rgba(0,229,255,0.2)',
-                            color: post.post_type === 'reel' ? '#e040fb' : '#00e5ff',
-                          }}>
-                            {post.post_type}
-                          </span>
-                          {cel && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{cel.name}</span>}
-                          {post.post_date && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {post.post_date}</span>}
-                          {post.playlist_name && <span style={{ fontSize: 11, padding: '2px 6px', background: 'var(--surface2)', borderRadius: 4, color: 'var(--text)' }}>📺 {post.playlist_name}</span>}
-                          {post.is_most_liked && <span style={{ fontSize: 11, color: '#ff6b35' }}>❤️</span>}
-                          {post.is_most_commented && <span style={{ fontSize: 11, color: '#00e5ff' }}>💬</span>}
-                          {post.is_most_viewed && <span style={{ fontSize: 11, color: '#e040fb' }}>👁</span>}
-                          {post.is_first_post && <span style={{ fontSize: 11, color: '#ffeb3b' }}>⭐</span>}
-                        </div>
-                        <a href={post.post_url} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 13, color: 'var(--accent)', wordBreak: 'break-all' }}>
-                          {post.post_url}
-                        </a>
-                        {post.caption && (
-                          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {post.caption}
-                          </p>
-                        )}
-                        {post.tags?.length > 0 && (
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
-                            {post.tags.map(t => (
-                              <span key={t} style={{ fontSize: 11, padding: '2px 6px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text-dim)' }}>
-                                #{t}
-                              </span>
-                            ))}
+                {(() => {
+                  const filtered = posts.filter(post => {
+                    const cel = celebrities.find(c => c.id === post.celebrity_id)
+                    const celName = cel ? cel.name : ''
+                    return (
+                      post.caption?.toLowerCase().includes(searchPost.toLowerCase()) ||
+                      post.tags?.some(t => t.toLowerCase().includes(searchPost.toLowerCase())) ||
+                      post.playlist_name?.toLowerCase().includes(searchPost.toLowerCase()) ||
+                      celName.toLowerCase().includes(searchPost.toLowerCase())
+                    )
+                  })
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        {posts.length === 0 ? "No posts yet. Add your first one! 👆" : "No matching posts found."}
+                      </div>
+                    )
+                  }
+                  return filtered.map(post => {
+                    const cel = celebrities.find(c => c.id === post.celebrity_id)
+                    return (
+                      <div key={post.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                              padding: '2px 7px', borderRadius: 4,
+                              background: post.post_type === 'reel' ? 'rgba(224,64,251,0.2)' : 'rgba(0,229,255,0.2)',
+                              color: post.post_type === 'reel' ? '#e040fb' : '#00e5ff',
+                            }}>
+                              {post.post_type}
+                            </span>
+                            {cel && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{cel.name}</span>}
+                            {post.post_date && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {post.post_date}</span>}
+                            {post.playlist_name && <span style={{ fontSize: 11, padding: '2px 6px', background: 'var(--surface2)', borderRadius: 4, color: 'var(--text)' }}>📺 {post.playlist_name}</span>}
+                            {post.is_most_liked && <span style={{ fontSize: 11, color: '#ff6b35' }}>❤️</span>}
+                            {post.is_most_commented && <span style={{ fontSize: 11, color: '#00e5ff' }}>💬</span>}
+                            {post.is_most_viewed && <span style={{ fontSize: 11, color: '#e040fb' }}>👁</span>}
+                            {post.is_first_post && <span style={{ fontSize: 11, color: '#ffeb3b' }}>⭐</span>}
                           </div>
-                        )}
+                          <a href={post.post_url} target="_blank" rel="noopener noreferrer"
+                            style={{ fontSize: 13, color: 'var(--accent)', wordBreak: 'break-all' }}>
+                            {post.post_url}
+                          </a>
+                          {post.caption && (
+                            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {post.caption}
+                            </p>
+                          )}
+                          {post.tags?.length > 0 && (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                              {post.tags.map(t => (
+                                <span key={t} style={{ fontSize: 11, padding: '2px 6px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text-dim)' }}>
+                                  #{t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                            onClick={() => { setEditingPost(post); setShowPostForm(false) }}>
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deletePost(post.id)}
+                            style={{
+                              background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                              color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                          onClick={() => { setEditingPost(post); setShowPostForm(false) }}>
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deletePost(post.id)}
-                          style={{
-                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                            color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                })()}
               </div>
             )}
           </div>
@@ -1192,64 +1409,87 @@ export default function AdminPanel() {
             </div>
 
             {(showNewsForm || editingNews) && (
-              <NewsForm
-                initial={editingNews}
-                onSave={(item) => {
-                  if (editingNews) {
-                    setNews(n => n.map(x => x.id === item.id ? item : x))
-                  } else {
-                    setNews(n => [item, ...n])
-                  }
-                  setShowNewsForm(false)
-                  setEditingNews(null)
-                  showToast('✅ News saved!')
-                }}
-                onCancel={() => { setShowNewsForm(false); setEditingNews(null) }}
-              />
+              <AdminModal
+                isOpen={showNewsForm || !!editingNews}
+                onClose={() => { setShowNewsForm(false); setEditingNews(null); }}
+                title={editingNews ? '✏️ Edit News' : '➕ Add InstaNews'}
+              >
+                <NewsForm
+                  initial={editingNews}
+                  onSave={(item) => {
+                    if (editingNews) {
+                      setNews(n => n.map(x => x.id === item.id ? item : x))
+                    } else {
+                      setNews(n => [item, ...n])
+                    }
+                    setShowNewsForm(false)
+                    setEditingNews(null)
+                    showToast('✅ News saved!')
+                  }}
+                  onCancel={() => { setShowNewsForm(false); setEditingNews(null) }}
+                />
+              </AdminModal>
             )}
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="input-field"
+                value={searchNews}
+                onChange={e => setSearchNews(e.target.value)}
+                placeholder="🔍 Search news by title or content..."
+              />
+            </div>
 
             {loadingData ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {news.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-                    No news yet. Add your first one! 👆
-                  </div>
-                )}
-                {news.map(item => (
-                  <div key={item.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                    {item.image_url ? (
-                      <img src={item.image_url} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
-                    ) : (
-                      <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>📰</div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.title}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        <span style={{ color: '#00e5ff', fontWeight: 600 }}>👁 {item.views || 0} views</span> &nbsp;·&nbsp; {new Date(item.created_at).toLocaleDateString()}
+                {(() => {
+                  const filtered = news.filter(item => 
+                    item.title?.toLowerCase().includes(searchNews.toLowerCase()) ||
+                    item.content?.toLowerCase().includes(searchNews.toLowerCase())
+                  )
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        {news.length === 0 ? "No news yet. Add your first one! 👆" : "No matching news found."}
+                      </div>
+                    )
+                  }
+                  return filtered.map(item => (
+                    <div key={item.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                      {item.image_url ? (
+                        <img src={item.image_url} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
+                      ) : (
+                        <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>📰</div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.title}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          <span style={{ color: '#00e5ff', fontWeight: 600 }}>👁 {item.views || 0} views</span> &nbsp;·&nbsp; {new Date(item.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <a href={`/instanews/${item.slug}`} target="_blank">
+                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View</button>
+                        </a>
+                        <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                          onClick={() => { setEditingNews(item); setShowNewsForm(false) }}>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteNews(item.id)}
+                          style={{
+                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                            color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                          }}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <a href={`/instanews/${item.slug}`} target="_blank">
-                        <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View</button>
-                      </a>
-                      <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                        onClick={() => { setEditingNews(item); setShowNewsForm(false) }}>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteNews(item.id)}
-                        style={{
-                          background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                          color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                })()}
               </div>
             )}
           </div>
@@ -1296,72 +1536,96 @@ export default function AdminPanel() {
             </div>
 
             {(showMostFollowedForm || editingMostFollowed) && (
-              <MostFollowedForm
-                initial={editingMostFollowed}
-                onSave={(profile) => {
-                  if (editingMostFollowed) {
-                    setMostFollowed(p => p.map(x => x.id === profile.id ? profile : x))
-                  } else {
-                    setMostFollowed(p => [...p, profile])
-                  }
-                  setShowMostFollowedForm(false)
-                  setEditingMostFollowed(null)
-                  showToast('✅ Profile saved!')
-                }}
-                onCancel={() => { setShowMostFollowedForm(false); setEditingMostFollowed(null) }}
-              />
+              <AdminModal
+                isOpen={showMostFollowedForm || !!editingMostFollowed}
+                onClose={() => { setShowMostFollowedForm(false); setEditingMostFollowed(null); }}
+                title={editingMostFollowed ? '✏️ Edit Profile' : '➕ Add Most Followed Profile'}
+              >
+                <MostFollowedForm
+                  profiles={mostFollowed}
+                  initial={editingMostFollowed}
+                  onSave={(profile) => {
+                    if (editingMostFollowed) {
+                      setMostFollowed(p => p.map(x => x.id === profile.id ? profile : x))
+                    } else {
+                      setMostFollowed(p => [...p, profile])
+                    }
+                    setShowMostFollowedForm(false)
+                    setEditingMostFollowed(null)
+                    showToast('✅ Profile saved!')
+                  }}
+                  onCancel={() => { setShowMostFollowedForm(false); setEditingMostFollowed(null) }}
+                />
+              </AdminModal>
             )}
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="input-field"
+                value={searchMostFollowed}
+                onChange={e => setSearchMostFollowed(e.target.value)}
+                placeholder="🔍 Search profiles by name or category..."
+              />
+            </div>
 
             {loadingData ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {mostFollowed.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-                    No profiles added yet. Click "+ Add Profile" to begin!
-                  </div>
-                )}
-                {mostFollowed.map((profile, index) => (
-                  <div key={profile.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-muted)', width: 24 }}>
-                      #{index + 1}
-                    </div>
-                    <div style={{
-                      width: 48, height: 48, borderRadius: '50%',
-                      background: 'var(--gradient)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 800, fontSize: 18, flexShrink: 0,
-                      overflow: 'hidden'
-                    }}>
-                      {profile.photo_url ? (
-                        <img src={profile.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        profile.name?.charAt(0)
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{profile.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        Followers Text: <strong style={{ color: 'var(--text)' }}>{profile.followers_text || '—'}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
+                {(() => {
+                  const filtered = mostFollowed.filter(profile => 
+                    profile.name?.toLowerCase().includes(searchMostFollowed.toLowerCase()) ||
+                    profile.category?.toLowerCase().includes(searchMostFollowed.toLowerCase())
+                  )
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        {mostFollowed.length === 0 ? "No profiles added yet. Click \"+ Add Profile\" to begin!" : "No matching profiles found."}
+                      </div>
+                    )
+                  }
+                  return filtered.map((profile, index) => (
+                    <div key={profile.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-muted)', width: 24 }}>
+                        #{index + 1}
+                      </div>
+                      <div style={{
+                        width: 48, height: 48, borderRadius: '50%',
+                        background: 'var(--gradient)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 800, fontSize: 18, flexShrink: 0,
+                        overflow: 'hidden'
+                      }}>
+                        {profile.photo_url ? (
+                          <img src={profile.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          profile.name?.charAt(0)
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{profile.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          Category: <strong style={{ color: 'var(--text)' }}>{profile.category || 'None'}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                          onClick={() => { setEditingMostFollowed({ ...profile, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString(), category: profile.category || '' }); setShowMostFollowedForm(false) }}>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteMostFollowed(profile.id)}
+                          style={{
+                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                            color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                          }}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                        onClick={() => { setEditingMostFollowed({ ...profile, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString() }); setShowMostFollowedForm(false) }}>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteMostFollowed(profile.id)}
-                        style={{
-                          background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                          color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                })()}
               </div>
             )}
           </div>
@@ -1382,64 +1646,92 @@ export default function AdminPanel() {
             </div>
 
             {(showViralReelsForm || editingViralReels) && (
-              <ViralReelsForm
-                initial={editingViralReels}
-                onSave={(reel) => {
-                  if (editingViralReels) {
-                    setViralReels(r => r.map(x => x.id === reel.id ? reel : x))
-                  } else {
-                    setViralReels(r => [reel, ...r])
-                  }
-                  setShowViralReelsForm(false)
-                  setEditingViralReels(null)
-                  showToast('✅ Viral reel saved!')
-                }}
-                onCancel={() => { setShowViralReelsForm(false); setEditingViralReels(null) }}
-              />
+              <AdminModal
+                isOpen={showViralReelsForm || !!editingViralReels}
+                onClose={() => { setShowViralReelsForm(false); setEditingViralReels(null); }}
+                title={editingViralReels ? '✏️ Edit Viral Reel' : '➕ Add New Viral Reel'}
+              >
+                <ViralReelsForm
+                  initial={editingViralReels}
+                  onSave={(reel) => {
+                    if (editingViralReels) {
+                      setViralReels(r => r.map(x => x.id === reel.id ? reel : x))
+                    } else {
+                      setViralReels(r => [reel, ...r])
+                    }
+                    setShowViralReelsForm(false)
+                    setEditingViralReels(null)
+                    showToast('✅ Viral reel saved!')
+                  }}
+                  onCancel={() => { setShowViralReelsForm(false); setEditingViralReels(null) }}
+                />
+              </AdminModal>
             )}
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="input-field"
+                value={searchViralReels}
+                onChange={e => setSearchViralReels(e.target.value)}
+                placeholder="🔍 Search reels by title or creator name..."
+              />
+            </div>
 
             {loadingData ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {viralReels.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-                    No viral reels added yet. Click "+ Add Reel" to begin!
-                  </div>
-                )}
-                {viralReels.map((reel, index) => (
-                  <div key={reel.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-muted)', width: 24 }}>
-                      #{index + 1}
+                {(() => {
+                  const filtered = viralReels.filter(reel => 
+                    reel.title?.toLowerCase().includes(searchViralReels.toLowerCase()) ||
+                    reel.creator_name?.toLowerCase().includes(searchViralReels.toLowerCase())
+                  )
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        {viralReels.length === 0 ? "No viral reels added yet. Click \"+ Add Reel\" to begin!" : "No matching viral reels found."}
+                      </div>
+                    )
+                  }
+                  return filtered.map((reel, index) => (
+                    <div key={reel.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', width: 36, textAlign: 'center' }}>
+                        {getOrdinal(index + 1)}
+                      </div>
+                      {reel.photo_url ? (
+                        <img src={reel.photo_url} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
+                      ) : (
+                        <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🎬</div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{reel.title}</div>
+                        {reel.creator_name && (
+                          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 4 }}>
+                            {reel.creator_name}
+                          </div>
+                        )}
+                        <a href={reel.instagram_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}>
+                          {reel.instagram_link}
+                        </a>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                          onClick={() => { setEditingViralReels({ ...reel, order_index: reel.order_index?.toString(), creator_name: reel.creator_name || '' }); setShowViralReelsForm(false) }}>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteViralReel(reel.id)}
+                          style={{
+                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                            color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                    {reel.photo_url ? (
-                      <img src={reel.photo_url} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
-                    ) : (
-                      <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🎬</div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{reel.title}</div>
-                      <a href={reel.instagram_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}>
-                        {reel.instagram_link}
-                      </a>
-                    </div>
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                        onClick={() => { setEditingViralReels({ ...reel, order_index: reel.order_index?.toString() }); setShowViralReelsForm(false) }}>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteViralReel(reel.id)}
-                        style={{
-                          background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                          color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                })()}
               </div>
             )}
           </div>

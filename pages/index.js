@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import CelebrityCard from '../components/CelebrityCard'
+import Navbar from '../components/Navbar'
 
 export default function Home() {
   const [query, setQuery] = useState('')
@@ -58,6 +59,8 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
+      <Navbar />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 20px' }}>
         {/* Hero */}

@@ -24,15 +24,25 @@ export default async function handler(req, res) {
       const { data, error } = await supabase
         .from('viral_reels')
         .select('*')
-        .order('created_at', { ascending: false })
 
       if (error) return res.status(500).json({ error: error.message })
-      return res.status(200).json({ reels: data || [] })
+
+      // Sort by manual rank (order_index) ascending, then created_at descending
+      const sorted = (data || []).sort((a, b) => {
+        const rankA = a.order_index || 999999
+        const rankB = b.order_index || 999999
+        if (rankA !== rankB) {
+          return rankA - rankB
+        }
+        return new Date(b.created_at) - new Date(a.created_at)
+      })
+
+      return res.status(200).json({ reels: sorted })
     }
 
     // POST - add a new viral reel
     if (req.method === 'POST') {
-      const { title, photo_url, instagram_link, order_index } = req.body
+      const { title, photo_url, instagram_link, order_index, creator_name } = req.body
       if (!title) return res.status(400).json({ error: 'Title is required' })
       if (!instagram_link) return res.status(400).json({ error: 'Instagram link is required' })
 
@@ -40,7 +50,8 @@ export default async function handler(req, res) {
         title,
         photo_url,
         instagram_link,
-        order_index: order_index ? Number(order_index) : 0
+        order_index: order_index ? Number(order_index) : 0,
+        creator_name: creator_name || ''
       }
 
       const { data, error } = await supabase
@@ -55,7 +66,7 @@ export default async function handler(req, res) {
 
     // PUT - update a viral reel
     if (req.method === 'PUT') {
-      const { id, title, photo_url, instagram_link, order_index } = req.body
+      const { id, title, photo_url, instagram_link, order_index, creator_name } = req.body
       if (!id) return res.status(400).json({ error: 'ID is required' })
       if (!title) return res.status(400).json({ error: 'Title is required' })
       if (!instagram_link) return res.status(400).json({ error: 'Instagram link is required' })
@@ -64,7 +75,8 @@ export default async function handler(req, res) {
         title,
         photo_url,
         instagram_link,
-        order_index: order_index ? Number(order_index) : 0
+        order_index: order_index ? Number(order_index) : 0,
+        creator_name: creator_name || ''
       }
 
       const { data, error } = await supabase

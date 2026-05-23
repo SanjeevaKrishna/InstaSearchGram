@@ -32,6 +32,7 @@ $$;
 create table if not exists viral_reels (
   id uuid default gen_random_uuid() primary key,
   title text not null,
+  creator_name text,
   photo_url text,
   instagram_link text not null,
   order_index integer default 0,
@@ -73,3 +74,8 @@ $$;
 
 -- Insert default row
 insert into live_settings (id, live_date) values (1, '') on conflict (id) do nothing;
+
+-- ============================================================
+-- 4. ADD CREATOR_NAME TO VIRAL REELS (MAY 2026 UPDATE)
+-- ============================================================
+alter table viral_reels add column if not exists creator_name text;

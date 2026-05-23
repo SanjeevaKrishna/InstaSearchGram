@@ -1,0 +1,7 @@
+# Robots.txt file for InstaSearch
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://instasearch.com/sitemap.xml

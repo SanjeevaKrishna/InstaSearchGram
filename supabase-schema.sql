@@ -100,6 +100,7 @@ create policy "Public read most_followed" on most_followed for select using (tru
 create table if not exists viral_reels (
   id uuid default gen_random_uuid() primary key,
   title text not null,
+  creator_name text,
   photo_url text,
   instagram_link text not null,
   order_index integer default 0,

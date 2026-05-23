@@ -20,8 +20,11 @@ export default function About() {
           <p style={{ fontSize: 16, color: 'var(--text-dim)', lineHeight: 1.8, marginBottom: 24 }}>
             Every post on InstaSearch is manually curated and tagged. Search a celebrity name, filter by Most Liked, Most Commented, or a keyword tag — and get a direct link to the exact post on Instagram.
           </p>
-          <p style={{ fontSize: 16, color: 'var(--text-dim)', lineHeight: 1.8 }}>
+          <p style={{ fontSize: 16, color: 'var(--text-dim)', lineHeight: 1.8, marginBottom: 24 }}>
             No login needed. No scrolling. Just search and find.
+          </p>
+          <p style={{ fontSize: 16, color: 'var(--text-dim)', lineHeight: 1.8 }}>
+            Have a suggestion, question, or need assistance? Reach out to us directly through our <a href="/contact" style={{ color: 'var(--accent)', fontWeight: 600 }}>Contact Us</a> page or email us at <a href="mailto:professionalusepurpose@gmail.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>professionalusepurpose@gmail.com</a>.
           </p>
         </div>
       </main>

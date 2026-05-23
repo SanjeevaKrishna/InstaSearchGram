@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import Navbar from '../../components/Navbar'
 
 export async function getServerSideProps(context) {
   const { slug } = context.params
@@ -65,6 +66,8 @@ export default function NewsDetail({ news }) {
         <meta name="twitter:description" content={news.content ? news.content.substring(0, 150) + '...' : news.title} />
         {news.image_url && <meta name="twitter:image" content={news.image_url} />}
       </Head>
+
+      <Navbar />
 
       <article style={{
         maxWidth: 600,

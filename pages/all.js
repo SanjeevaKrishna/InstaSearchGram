@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import Navbar from '../components/Navbar'
 
 export default function AllCelebrities() {
   const [celebrities, setCelebrities] = useState([])
@@ -32,6 +33,8 @@ export default function AllCelebrities() {
       <Head>
         <title>All Profiles — InstaSearch</title>
       </Head>
+
+      <Navbar />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 20px' }}>
         <h1 style={{

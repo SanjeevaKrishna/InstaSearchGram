@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
+import Navbar from '../../components/Navbar'
 
 export async function getServerSideProps() {
   const { data: news, error } = await supabase
@@ -22,6 +23,8 @@ export default function InstaNewsIndex({ news }) {
         <title>Daily Instagram News - InstaSearch</title>
         <meta name="description" content="Catch up on the latest daily news and updates about your favorite Instagram celebrities." />
       </Head>
+
+      <Navbar />
 
       <div style={{
         maxWidth: 600,
