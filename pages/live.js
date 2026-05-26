@@ -9,6 +9,76 @@ const getOrdinal = (n) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
+const parseCategoryAndTag = (rawCategory) => {
+  const raw = (rawCategory || '').trim();
+  if (raw.includes(':')) {
+    const parts = raw.split(':');
+    return {
+      tabCategory: parts[0].trim(),
+      describingTag: parts[1].trim()
+    };
+  }
+  const cat = raw.toLowerCase();
+  let tabCategory = 'Creators';
+  let describingTag = raw || 'Creator';
+
+  if (cat.includes('actor') || cat.includes('actress')) {
+    tabCategory = 'Actors';
+  } else if (cat.includes('influencer') || cat.includes('model')) {
+    tabCategory = 'Influencers';
+  } else if (cat.includes('creator') || cat.includes('singer') || cat.includes('artist')) {
+    tabCategory = 'Creators';
+  } else if (cat.includes('meme')) {
+    tabCategory = 'Meme Pages';
+  } else if (cat.includes('sport') || cat.includes('cricket')) {
+    tabCategory = 'Sports';
+  } else if (cat.includes('politician')) {
+    tabCategory = 'Politicians';
+  }
+
+  return { tabCategory, describingTag };
+};
+
+const getCategoryStyle = (tabCategory) => {
+  const cat = (tabCategory || '').toLowerCase().trim()
+  let baseColor = 'var(--text-muted)'
+  let bgColor = 'var(--surface2)'
+  let borderColor = 'var(--border)'
+
+  if (cat.includes('actor')) {
+    baseColor = '#8b5cf6' // Purple
+    bgColor = 'rgba(139, 92, 246, 0.08)'
+    borderColor = 'rgba(139, 92, 246, 0.25)'
+  } else if (cat.includes('singer') || cat.includes('creator')) {
+    baseColor = '#10b981' // Emerald
+    bgColor = 'rgba(16, 185, 129, 0.08)'
+    borderColor = 'rgba(16, 185, 129, 0.25)'
+  } else if (cat.includes('sports')) {
+    baseColor = '#3b82f6' // Blue
+    bgColor = 'rgba(59, 130, 246, 0.08)'
+    borderColor = 'rgba(59, 130, 246, 0.25)'
+  } else if (cat.includes('politician')) {
+    baseColor = '#f59e0b' // Amber
+    bgColor = 'rgba(245, 158, 11, 0.08)'
+    borderColor = 'rgba(245, 158, 11, 0.25)'
+  } else if (cat.includes('influencer')) {
+    baseColor = '#f43f5e' // Rose
+    bgColor = 'rgba(244, 63, 94, 0.08)'
+    borderColor = 'rgba(244, 63, 94, 0.25)'
+  } else if (cat.includes('meme')) {
+    baseColor = '#06b6d4' // Cyan
+    bgColor = 'rgba(6, 180, 212, 0.08)'
+    borderColor = 'rgba(6, 180, 212, 0.25)'
+  }
+
+  return {
+    color: baseColor,
+    background: bgColor,
+    borderColor: borderColor,
+    border: `1px solid ${borderColor}`,
+  }
+}
+
 export default function LivePage() {
   const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'viral_reels'
   const [liveData, setLiveData] = useState({ live_date: '', most_followed: [], viral_reels: [] })
@@ -41,9 +111,34 @@ export default function LivePage() {
   return (
     <>
       <Head>
-        <title>Social Standings — InstaSearch</title>
-        <meta name="description" content="Check out the live leaderboards of most followed accounts and trending viral reels today, updated regularly." />
+        <title>Most Followed Instagram Accounts Live Standings — InstaSearch</title>
+        <meta name="description" content="Check real-time follower counts of the most followed Instagram accounts globally. Live standings of top-ranked actors, creators, sports stars, influencers, meme pages, and politicians." />
+        <meta name="keywords" content="most followed instagram accounts, most followed actors on instagram, top creators on instagram, top instagram influencers, live instagram follower counts, sports stars instagram followers, top meme pages, most followed politicians" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        
+        {/* Open Graph / Social Sharing SEO */}
+        <meta property="og:title" content="Most Followed Instagram Accounts (Live Rankings) — InstaSearch" />
+        <meta property="og:description" content="Track real-time follower counts of the most followed Instagram accounts. View top-ranked actors, creators, influencers, athletes, and politicians in one click." />
+        <meta property="og:type" content="website" />
+        
+        {/* Schema Markup for Google Rich Snippets */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "name": "Most Followed Instagram Accounts Live Leaderboard",
+              "description": "Live rankings and follower counts of the top Instagram profiles globally.",
+              "itemListElement": (liveData?.most_followed || []).slice(0, 15).map((profile, idx) => ({
+                "@type": "ListItem",
+                "position": idx + 1,
+                "name": profile.name,
+                "description": `${profile.category?.split(':')[1] || 'Creator'} with ${profile.followers_text || 'millions of'} followers.`
+              }))
+            })
+          }}
+        />
       </Head>
 
       <Navbar />
@@ -67,12 +162,12 @@ export default function LivePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <h1 style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(28px, 5vw, 36px)',
+                fontSize: 'clamp(26px, 4.5vw, 36px)',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 lineHeight: 1.2
               }}>
-                Social <span className="gradient-text">Standings</span>
+                Most Followed <span className="gradient-text">Instagram Accounts</span>
               </h1>
               <div style={{
                 display: 'inline-flex',
@@ -116,8 +211,8 @@ export default function LivePage() {
               </div>
             )}
           </div>
-          <p style={{ fontSize: 15, color: 'var(--text-muted)' }}>
-            List of most followed Instagram accounts
+          <p style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Live real-time follower count leaderboard for top actors, creators, sports stars, influencers, meme pages, and politicians.
           </p>
         </div>
 
@@ -263,16 +358,7 @@ export default function LivePage() {
 
             {/* Category Filter */}
             {liveData.most_followed.length > 0 && (() => {
-              const categories = ['All', 'Actor', 'Influencers', 'Creator', 'Singer', 'Sports', 'Politicians', 'Meme Pages']
-              // Add any other custom categories from the database dynamically
-              liveData.most_followed.forEach(p => {
-                if (p.category) {
-                  const cleaned = p.category.trim()
-                  if (cleaned && !categories.some(c => c.toLowerCase() === cleaned.toLowerCase())) {
-                    categories.push(cleaned)
-                  }
-                }
-              })
+              const categories = ['All', 'Actors', 'Creators', 'Influencers', 'Meme Pages', 'Sports', 'Politicians']
 
               return (
                 <div className="no-scrollbar" style={{
@@ -321,8 +407,9 @@ export default function LivePage() {
             ) : (() => {
               const filtered = liveData.most_followed.filter(p => {
                 const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+                const parsed = parseCategoryAndTag(p.category)
                 const matchesCategory = selectedCategory.toLowerCase() === 'all' || 
-                  p.category?.toLowerCase() === selectedCategory.toLowerCase()
+                  parsed.tabCategory.toLowerCase() === selectedCategory.toLowerCase()
                 return matchesSearch && matchesCategory
               })
 
@@ -342,7 +429,7 @@ export default function LivePage() {
                   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
                 }}>
                   {/* Table Header */}
-                  <div style={{
+                  <div className="table-header" style={{
                     display: 'flex',
                     alignItems: 'center',
                     padding: '14px 20px',
@@ -354,16 +441,16 @@ export default function LivePage() {
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
                   }}>
-                    <div style={{ width: 60, textAlign: 'center' }}>Rank</div>
+                    <div className="col-rank">Rank</div>
                     <div style={{ flex: 1, paddingLeft: 12 }}>Account</div>
-                    <div style={{ width: 140, textAlign: 'right' }}>Followers</div>
+                    <div className="col-followers">Followers</div>
                   </div>
 
                   {/* Table Body */}
-                  {filtered.map((profile) => {
-                    const rank = liveData.most_followed.findIndex(p => p.id === profile.id) + 1
+                  {filtered.map((profile, index) => {
+                    const rank = index + 1
                     return (
-                      <div key={profile.id} className="table-row-hover" style={{
+                      <div key={profile.id} className="table-row table-row-hover" style={{
                         display: 'flex',
                         alignItems: 'center',
                         padding: '12px 20px',
@@ -371,10 +458,10 @@ export default function LivePage() {
                         transition: 'background-color 0.2s ease',
                       }}>
                         {/* Rank Position */}
-                        <div style={{
+                        <div className="col-rank" style={{
                           fontSize: 15,
                           fontWeight: 700,
-                          color: rank <= 3 ? 'var(--accent)' : 'var(--text-muted)',
+                          color: 'var(--accent)',
                           fontFamily: 'var(--font-display)',
                           width: 60,
                           textAlign: 'center',
@@ -384,7 +471,7 @@ export default function LivePage() {
                         </div>
 
                         {/* Profile Info (Avatar + Name) */}
-                        <div style={{
+                        <div className="col-account-info" style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: 12,
@@ -394,8 +481,8 @@ export default function LivePage() {
                         }}>
                           {/* Avatar */}
                           <div style={{
-                            width: 36,
-                            height: 36,
+                            width: 44,
+                            height: 44,
                             borderRadius: '50%',
                             background: 'var(--gradient)',
                             padding: 1.5,
@@ -413,7 +500,7 @@ export default function LivePage() {
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontWeight: 800,
-                              fontSize: 13,
+                              fontSize: 14,
                               overflow: 'hidden'
                             }}>
                               {profile.photo_url ? (
@@ -426,37 +513,54 @@ export default function LivePage() {
 
                           {/* Name & Category tag */}
                           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                            <span style={{
-                              fontWeight: 600,
-                              fontSize: 14,
+                            <span className="profile-name" style={{
+                              fontWeight: 700,
+                              fontSize: 16,
                               color: 'var(--text)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
+                              whiteSpace: 'normal',
+                              wordBreak: 'break-word',
+                              lineHeight: 1.25,
                             }}>
                               {profile.name}
                             </span>
-                            {profile.category && (
-                              <span style={{
-                                alignSelf: 'flex-start',
-                                fontSize: 9,
-                                fontWeight: 700,
-                                color: 'var(--text-muted)',
-                                background: 'var(--surface2)',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                marginTop: 2,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.05em'
-                              }}>
-                                {profile.category}
-                              </span>
-                            )}
+                            {profile.category && (() => {
+                              const parsed = parseCategoryAndTag(profile.category);
+                              if (!parsed.describingTag) return null;
+                              const style = getCategoryStyle(parsed.tabCategory);
+                              return (
+                                <span style={{
+                                  alignSelf: 'flex-start',
+                                  fontFamily: "'Caveat', cursive, sans-serif",
+                                  fontSize: 11.5,
+                                  fontWeight: 700,
+                                  padding: '0px 7px',
+                                  borderRadius: '100px',
+                                  marginTop: 3,
+                                  lineHeight: '1.25',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  color: style.color,
+                                  background: style.background,
+                                  border: 'none',
+                                }}>
+                                  <span style={{
+                                    width: '4px',
+                                    height: '4px',
+                                    borderRadius: '50%',
+                                    background: style.color,
+                                    display: 'inline-block',
+                                    flexShrink: 0
+                                  }} />
+                                  {parsed.describingTag}
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
 
                         {/* Followers Count */}
-                        <div style={{
+                        <div className="col-followers" style={{
                           width: 140,
                           textAlign: 'right',
                           fontWeight: 600,
@@ -648,6 +752,40 @@ export default function LivePage() {
 
         .table-row-hover:last-child {
           border-bottom: none !important;
+        }
+
+        .col-rank {
+          width: 60px;
+          text-align: center;
+          flex-shrink: 0;
+        }
+
+        .col-followers {
+          width: 140px;
+          text-align: right;
+          flex-shrink: 0;
+        }
+
+        @media (max-width: 600px) {
+          .table-header {
+            padding: 14px 10px !important;
+          }
+          .table-row {
+            padding: 12px 10px !important;
+          }
+          .col-rank {
+            width: 42px !important;
+          }
+          .col-followers {
+            width: 85px !important;
+          }
+          .col-account-info {
+            padding-left: 6px !important;
+            gap: 8px !important;
+          }
+          .profile-name {
+            font-size: 15px !important;
+          }
         }
 
         @keyframes pulse-scale {

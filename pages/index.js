@@ -10,15 +10,22 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [featured, setFeatured] = useState([])
+  const [loadingFeatured, setLoadingFeatured] = useState(true)
   const searchRef = useRef(null)
   const debounceRef = useRef(null)
 
   useEffect(() => {
     // Load featured celebrities on mount
+    setLoadingFeatured(true)
     fetch('/api/celebrities?featured=true')
       .then(r => r.json())
-      .then(d => setFeatured(d.celebrities || []))
-      .catch(() => {})
+      .then(d => {
+        setFeatured(d.celebrities || [])
+        setLoadingFeatured(false)
+      })
+      .catch(() => {
+        setLoadingFeatured(false)
+      })
   }, [])
 
   const handleSearch = async (q) => {
@@ -96,11 +103,11 @@ export default function Home() {
           <p style={{
             fontSize: 17,
             color: 'var(--text-dim)',
-            maxWidth: 500,
+            maxWidth: 520,
             margin: '0 auto 40px',
             lineHeight: 1.6,
           }}>
-            Search any celebrity or creator, find their most liked, most commented, or most viewed posts — all in one click.
+            Search for any celebrity or creator, search to find specific posts, or discover their most liked, most commented, or timeline-ordered posts.
           </p>
 
           {/* Search Bar */}
@@ -234,8 +241,23 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Loading state - loading featured */}
+        {loadingFeatured && !query && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px 20px',
+            gap: 16
+          }}>
+            <div className="spinner" />
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Please wait, data is loading...</div>
+          </div>
+        )}
+
         {/* Featured Celebrities */}
-        {!query && featured.length > 0 && (
+        {!loadingFeatured && !query && featured.length > 0 && (
           <div className="fade-in">
             <h2 style={{
               fontFamily: 'var(--font-display)',
@@ -254,7 +276,7 @@ export default function Home() {
         )}
 
         {/* Empty state - no featured */}
-        {featured.length === 0 && !query && (
+        {!loadingFeatured && featured.length === 0 && !query && (
           <div style={{
             textAlign: 'center',
             padding: '60px 20px',

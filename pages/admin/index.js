@@ -561,18 +561,46 @@ function NewsForm({ initial, onSave, onCancel }) {
 }
 
 function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
-  const predefinedCategories = ['Actor', 'Influencers', 'Creator', 'Singer', 'Sports', 'Politicians', 'Meme Pages']
-  const initialCategoryIsCustom = initial?.category && !predefinedCategories.some(c => c.toLowerCase() === initial.category.toLowerCase())
+  const predefinedTabCategories = ['Actors', 'Creators', 'Influencers', 'Meme Pages', 'Sports', 'Politicians']
+  
+  const parseCategoryAndTag = (rawCategory) => {
+    const raw = (rawCategory || '').trim();
+    if (raw.includes(':')) {
+      const parts = raw.split(':');
+      return {
+        tabCategory: parts[0].trim(),
+        describingTag: parts[1].trim()
+      };
+    }
+    const cat = raw.toLowerCase();
+    let tabCategory = 'Creators';
+    let describingTag = raw || 'Creator';
+
+    if (cat.includes('actor') || cat.includes('actress')) {
+      tabCategory = 'Actors';
+    } else if (cat.includes('influencer') || cat.includes('model')) {
+      tabCategory = 'Influencers';
+    } else if (cat.includes('creator') || cat.includes('singer') || cat.includes('artist')) {
+      tabCategory = 'Creators';
+    } else if (cat.includes('meme')) {
+      tabCategory = 'Meme Pages';
+    } else if (cat.includes('sport') || cat.includes('cricket')) {
+      tabCategory = 'Sports';
+    } else if (cat.includes('politician')) {
+      tabCategory = 'Politicians';
+    }
+
+    return { tabCategory, describingTag };
+  };
+
+  const parsed = parseCategoryAndTag(initial?.category);
 
   const [form, setForm] = useState(initial || {
     name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0'
   })
-  const [selectedDropdown, setSelectedDropdown] = useState(
-    initialCategoryIsCustom ? 'Other' : (initial?.category || 'Actor')
-  )
-  const [customCategoryText, setCustomCategoryText] = useState(
-    initialCategoryIsCustom ? initial.category : ''
-  )
+  
+  const [tabCategory, setTabCategory] = useState(parsed.tabCategory)
+  const [describingTag, setDescribingTag] = useState(parsed.describingTag)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -593,9 +621,9 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           updated.followers_text = match.followers_text || ''
           updated.order_index = match.order_index?.toString() || '0'
           
-          const matchCategoryIsCustom = match.category && !predefinedCategories.some(c => c.toLowerCase() === match.category.toLowerCase())
-          setSelectedDropdown(matchCategoryIsCustom ? 'Other' : (match.category || 'Actor'))
-          setCustomCategoryText(matchCategoryIsCustom ? match.category : '')
+          const parsedMatch = parseCategoryAndTag(match.category)
+          setTabCategory(parsedMatch.tabCategory)
+          setDescribingTag(parsedMatch.describingTag)
         } else {
           if (updated.id) {
             delete updated.id
@@ -604,6 +632,8 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
             updated.followers_text = ''
             updated.order_index = '0'
             setNotice('')
+            setTabCategory('Actors')
+            setDescribingTag('')
           }
         }
       }
@@ -613,10 +643,9 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
 
   const handleSave = async () => {
     if (!form.name.trim()) return setError('Name is required')
-    const finalCategory = selectedDropdown === 'Other' ? customCategoryText.trim() : selectedDropdown
-    if (selectedDropdown === 'Other' && !finalCategory) {
-      return setError('Please type a custom category name')
-    }
+    if (!describingTag.trim()) return setError('Description tag is required')
+
+    const combinedCategory = `${tabCategory}:${describingTag.trim()}`
 
     setSaving(true)
     setError('')
@@ -628,7 +657,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           id: initial?.id || form.id,
           followers_count: form.followers_count ? Number(form.followers_count) : 0,
           order_index: form.order_index ? Number(form.order_index) : 0,
-          category: finalCategory
+          category: combinedCategory
         },
       })
       const data = await res.json()
@@ -674,27 +703,28 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
         </div>
       </div>
 
-      <div>
-        <label style={labelStyle}>Category</label>
-        <select
-          className="input-field"
-          value={selectedDropdown}
-          onChange={e => setSelectedDropdown(e.target.value)}
-          style={{ marginBottom: selectedDropdown === 'Other' ? 12 : 0 }}
-        >
-          {predefinedCategories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-          <option value="Other">Other (Manual Entry)</option>
-        </select>
-        {selectedDropdown === 'Other' && (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Category Tab (for Filtering)</label>
+          <select
+            className="input-field"
+            value={tabCategory}
+            onChange={e => setTabCategory(e.target.value)}
+          >
+            {predefinedTabCategories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>Description Tag (for Display)</label>
           <input
             className="input-field"
-            value={customCategoryText}
-            onChange={e => setCustomCategoryText(e.target.value)}
-            placeholder="Type custom category name..."
+            value={describingTag}
+            onChange={e => setDescribingTag(e.target.value)}
+            placeholder="e.g. Actor, Singer, Cricketer, Meme Page"
           />
-        )}
+        </div>
       </div>
 
       <div>
@@ -1605,7 +1635,14 @@ export default function AdminPanel() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{profile.name}</div>
                         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          Category: <strong style={{ color: 'var(--text)' }}>{profile.category || 'None'}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
+                          Category: <strong style={{ color: 'var(--text)' }}>{(() => {
+                            if (!profile.category) return 'None';
+                            if (profile.category.includes(':')) {
+                              const parts = profile.category.split(':');
+                              return `${parts[1]} (${parts[0]})`;
+                            }
+                            return profile.category;
+                          })()}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
