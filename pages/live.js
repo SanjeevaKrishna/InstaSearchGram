@@ -26,10 +26,14 @@ const parseCategoryAndTag = (rawCategory) => {
     tabCategory = 'Actors';
   } else if (cat.includes('influencer') || cat.includes('model')) {
     tabCategory = 'Influencers';
-  } else if (cat.includes('creator') || cat.includes('singer') || cat.includes('artist')) {
+  } else if (cat.includes('singer')) {
+    tabCategory = 'Singers';
+  } else if (cat.includes('creator') || cat.includes('artist')) {
     tabCategory = 'Creators';
   } else if (cat.includes('meme')) {
     tabCategory = 'Meme Pages';
+  } else if (cat.includes('handle') || cat.includes('page')) {
+    tabCategory = 'Handles';
   } else if (cat.includes('sport') || cat.includes('cricket')) {
     tabCategory = 'Sports';
   } else if (cat.includes('politician')) {
@@ -49,7 +53,11 @@ const getCategoryStyle = (tabCategory) => {
     baseColor = '#8b5cf6' // Purple
     bgColor = 'rgba(139, 92, 246, 0.08)'
     borderColor = 'rgba(139, 92, 246, 0.25)'
-  } else if (cat.includes('singer') || cat.includes('creator')) {
+  } else if (cat.includes('singer')) {
+    baseColor = '#ec4899' // Pink/Rose
+    bgColor = 'rgba(236, 72, 153, 0.08)'
+    borderColor = 'rgba(236, 72, 153, 0.25)'
+  } else if (cat.includes('creator') || cat.includes('artist')) {
     baseColor = '#10b981' // Emerald
     bgColor = 'rgba(16, 185, 129, 0.08)'
     borderColor = 'rgba(16, 185, 129, 0.25)'
@@ -69,6 +77,10 @@ const getCategoryStyle = (tabCategory) => {
     baseColor = '#06b6d4' // Cyan
     bgColor = 'rgba(6, 180, 212, 0.08)'
     borderColor = 'rgba(6, 180, 212, 0.25)'
+  } else if (cat.includes('handle')) {
+    baseColor = '#14b8a6' // Teal
+    bgColor = 'rgba(20, 184, 166, 0.08)'
+    borderColor = 'rgba(20, 184, 166, 0.25)'
   }
 
   return {
@@ -358,7 +370,7 @@ export default function LivePage() {
 
             {/* Category Filter */}
             {liveData.most_followed.length > 0 && (() => {
-              const categories = ['All', 'Actors', 'Creators', 'Influencers', 'Meme Pages', 'Sports', 'Politicians']
+              const categories = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Sports', 'Politicians', 'Handles', 'Singers']
 
               return (
                 <div className="no-scrollbar" style={{

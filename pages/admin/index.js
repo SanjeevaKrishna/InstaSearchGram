@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
+import PostCard from '../../components/PostCard'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'is_admin_token'
@@ -182,7 +183,8 @@ function LoginScreen({ onLogin }) {
 
 function CelebrityForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial || {
-    name: '', instagram_handle: '', followers_count: '', posts_count: '', photo_url: '', is_featured: false
+    name: '', instagram_handle: '', followers_count: '', posts_count: '', photo_url: '', is_featured: false,
+    has_full_details: false
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -201,6 +203,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           id: initial?.id,
           followers_count: form.followers_count ? Number(form.followers_count) : null,
           posts_count: form.posts_count ? Number(form.posts_count) : null,
+          has_full_details: !!form.has_full_details,
         },
       })
       const data = await res.json()
@@ -277,11 +280,19 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <input type="checkbox" id="featured" checked={form.is_featured} onChange={e => set('is_featured', e.target.checked)} style={{ width: 16, height: 16 }} />
-        <label htmlFor="featured" style={{ fontSize: 14, color: 'var(--text-dim)', cursor: 'pointer' }}>
-          Show on Homepage (Featured)
-        </label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '4px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="checkbox" id="featured" checked={form.is_featured} onChange={e => set('is_featured', e.target.checked)} style={{ width: 16, height: 16 }} />
+          <label htmlFor="featured" style={{ fontSize: 14, color: 'var(--text-dim)', cursor: 'pointer' }}>
+            Show on Homepage (Featured)
+          </label>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="checkbox" id="full_details" checked={form.has_full_details || false} onChange={e => set('has_full_details', e.target.checked)} style={{ width: 16, height: 16 }} />
+          <label htmlFor="full_details" style={{ fontSize: 14, color: 'var(--text-dim)', cursor: 'pointer' }}>
+            Has Full Instagram Details (All Posts & Playlists Entered)
+          </label>
+        </div>
       </div>
       {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
@@ -301,8 +312,38 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [existingPlaylists, setExistingPlaylists] = useState([])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    if (!form.celebrity_id) {
+      setExistingPlaylists([])
+      return
+    }
+    adminFetch(`/api/admin/posts?celebrity_id=${form.celebrity_id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.posts) {
+          const uniquePlaylists = []
+          const map = new Map()
+          data.posts.forEach(p => {
+            if (p.playlist_name && p.playlist_name.trim()) {
+              const nameLower = p.playlist_name.toLowerCase().trim()
+              if (!map.has(nameLower)) {
+                map.set(nameLower, true)
+                uniquePlaylists.push({
+                  name: p.playlist_name.trim(),
+                  cover_url: p.playlist_cover_url || ''
+                })
+              }
+            }
+          })
+          setExistingPlaylists(uniquePlaylists)
+        }
+      })
+      .catch(err => console.error('Failed to load playlists:', err))
+  }, [form.celebrity_id])
 
   const handleSave = async () => {
     if (!form.celebrity_id) return setError('Please select a celebrity')
@@ -373,7 +414,26 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
       </div>
       <div>
         <label style={labelStyle}>Playlist Name (optional)</label>
-        <input className="input-field" value={form.playlist_name || ''} onChange={e => set('playlist_name', e.target.value)} placeholder="e.g. World Cup 2023" />
+        <input
+          className="input-field"
+          value={form.playlist_name || ''}
+          onChange={e => {
+            const val = e.target.value
+            set('playlist_name', val)
+            
+            const match = existingPlaylists.find(p => p.name.toLowerCase().trim() === val.toLowerCase().trim())
+            if (match && match.cover_url && !form.playlist_cover_url) {
+              set('playlist_cover_url', match.cover_url)
+            }
+          }}
+          placeholder="e.g. World Cup 2023"
+          list="celebrity-playlists"
+        />
+        <datalist id="celebrity-playlists">
+          {existingPlaylists.map((p, idx) => (
+            <option key={idx} value={p.name} />
+          ))}
+        </datalist>
       </div>
       {form.playlist_name && (
         <div>
@@ -561,7 +621,7 @@ function NewsForm({ initial, onSave, onCancel }) {
 }
 
 function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
-  const predefinedTabCategories = ['Actors', 'Creators', 'Influencers', 'Meme Pages', 'Sports', 'Politicians']
+  const predefinedTabCategories = ['Creators', 'Influencers', 'Actors', 'Meme Pages', 'Sports', 'Politicians', 'Handles', 'Singers']
   
   const parseCategoryAndTag = (rawCategory) => {
     const raw = (rawCategory || '').trim();
@@ -580,10 +640,14 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
       tabCategory = 'Actors';
     } else if (cat.includes('influencer') || cat.includes('model')) {
       tabCategory = 'Influencers';
-    } else if (cat.includes('creator') || cat.includes('singer') || cat.includes('artist')) {
+    } else if (cat.includes('singer')) {
+      tabCategory = 'Singers';
+    } else if (cat.includes('creator') || cat.includes('artist')) {
       tabCategory = 'Creators';
     } else if (cat.includes('meme')) {
       tabCategory = 'Meme Pages';
+    } else if (cat.includes('handle') || cat.includes('page')) {
+      tabCategory = 'Handles';
     } else if (cat.includes('sport') || cat.includes('cricket')) {
       tabCategory = 'Sports';
     } else if (cat.includes('politician')) {
@@ -1208,13 +1272,69 @@ export default function AdminPanel() {
               </AdminModal>
             )}
 
-            <div style={{ marginBottom: 16 }}>
+            {/* Leaderboard widget for requested profiles */}
+            {(() => {
+              const requestedCels = celebrities
+                .filter(c => !c.has_full_details && (c.request_count || 0) > 0)
+                .sort((a, b) => (b.request_count || 0) - (a.request_count || 0))
+              
+              if (requestedCels.length === 0) return null
+
+              const totalRequests = celebrities.reduce((sum, c) => sum + (c.request_count || 0), 0)
+
+              return (
+                <div className="card" style={{
+                  background: 'rgba(255, 152, 0, 0.05)',
+                  border: '1px solid rgba(255, 152, 0, 0.15)',
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 20,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 800, color: '#ff9800', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                      🔥 Most Requested Additions ({totalRequests} total requests)
+                    </h3>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {requestedCels.slice(0, 5).map(c => (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>
+                          {c.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(@{c.instagram_handle || '—'})</span>
+                        </span>
+                        <span style={{
+                          background: '#ff9800',
+                          color: '#fff',
+                          padding: '2px 8px',
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 700
+                        }}>
+                          {c.request_count} requests
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
               <input
                 className="input-field"
                 value={searchCel}
                 onChange={e => setSearchCel(e.target.value)}
                 placeholder="🔍 Search celebrities by name or handle..."
+                style={{ flex: 1 }}
               />
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  // Explicit trigger or visual indicator, search matches instantly on state update
+                }}
+                style={{ padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                Search
+              </button>
             </div>
 
             {loadingData ? (
@@ -1248,6 +1368,11 @@ export default function AdminPanel() {
                         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                           @{cel.instagram_handle || '—'} &nbsp;·&nbsp; {formatCount(cel.followers_count)} followers
                           {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
+                          {cel.has_full_details ? (
+                            <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Full Details</span>
+                          ) : (
+                            <span style={{ marginLeft: 8, color: '#ff9800', fontWeight: 600 }}>⚠️ Partial ({cel.request_count || 0} requests)</span>
+                          )}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -1362,57 +1487,29 @@ export default function AdminPanel() {
                   return filtered.map(post => {
                     const cel = celebrities.find(c => c.id === post.celebrity_id)
                     return (
-                      <div key={post.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                            <span style={{
-                              fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-                              padding: '2px 7px', borderRadius: 4,
-                              background: post.post_type === 'reel' ? 'rgba(224,64,251,0.2)' : 'rgba(0,229,255,0.2)',
-                              color: post.post_type === 'reel' ? '#e040fb' : '#00e5ff',
-                            }}>
-                              {post.post_type}
-                            </span>
-                            {cel && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{cel.name}</span>}
-                            {post.post_date && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {post.post_date}</span>}
-                            {post.playlist_name && <span style={{ fontSize: 11, padding: '2px 6px', background: 'var(--surface2)', borderRadius: 4, color: 'var(--text)' }}>📺 {post.playlist_name}</span>}
-                            {post.is_most_liked && <span style={{ fontSize: 11, color: '#ff6b35' }}>❤️</span>}
-                            {post.is_most_commented && <span style={{ fontSize: 11, color: '#00e5ff' }}>💬</span>}
-                            {post.is_most_viewed && <span style={{ fontSize: 11, color: '#e040fb' }}>👁</span>}
-                            {post.is_first_post && <span style={{ fontSize: 11, color: '#ffeb3b' }}>⭐</span>}
+                      <div key={post.id} style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', padding: 16 }}>
+                        {cel && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Celebrity:</span>
+                            <strong style={{ fontSize: 13, color: 'var(--text)' }}>{cel.name}</strong>
                           </div>
-                          <a href={post.post_url} target="_blank" rel="noopener noreferrer"
-                            style={{ fontSize: 13, color: 'var(--accent)', wordBreak: 'break-all' }}>
-                            {post.post_url}
-                          </a>
-                          {post.caption && (
-                            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                              {post.caption}
-                            </p>
-                          )}
-                          {post.tags?.length > 0 && (
-                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
-                              {post.tags.map(t => (
-                                <span key={t} style={{ fontSize: 11, padding: '2px 6px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text-dim)' }}>
-                                  #{t}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                        )}
+                        
+                        <PostCard post={post} />
+
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                          <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
                             onClick={() => { setEditingPost(post); setShowPostForm(false) }}>
-                            Edit
+                            ✏️ Edit Post
                           </button>
                           <button
                             onClick={() => deletePost(post.id)}
                             style={{
                               background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                              color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                              color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
                             }}
                           >
-                            ×
+                            🗑 Delete Post
                           </button>
                         </div>
                       </div>

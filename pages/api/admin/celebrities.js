@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
     // POST - add new celebrity
     if (req.method === 'POST') {
-      const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured } = req.body
+      const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details } = req.body
       if (!name) return res.status(400).json({ error: 'Name is required' })
 
       // Auto generate slug from name
@@ -39,7 +39,13 @@ export default async function handler(req, res) {
 
       const { data, error } = await supabase
         .from('celebrities')
-        .insert([{ name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured: is_featured || false }])
+        .insert([{
+          name, slug, instagram_handle, photo_url,
+          followers_count, posts_count,
+          is_featured: is_featured || false,
+          has_full_details: has_full_details || false,
+          request_count: 0
+        }])
         .select()
         .single()
 
@@ -49,12 +55,18 @@ export default async function handler(req, res) {
 
     // PUT - update celebrity
     if (req.method === 'PUT') {
-      const { id, name, instagram_handle, followers_count, posts_count, photo_url, is_featured } = req.body
+      const { id, name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, request_count } = req.body
       if (!id) return res.status(400).json({ error: 'ID required' })
 
       const { data, error } = await supabase
         .from('celebrities')
-        .update({ name, instagram_handle, followers_count, posts_count, photo_url, is_featured })
+        .update({
+          name, instagram_handle, photo_url,
+          followers_count, posts_count,
+          is_featured,
+          has_full_details: has_full_details || false,
+          request_count: request_count || 0
+        })
         .eq('id', id)
         .select()
         .single()

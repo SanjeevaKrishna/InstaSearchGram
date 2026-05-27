@@ -79,3 +79,9 @@ insert into live_settings (id, live_date) values (1, '') on conflict (id) do not
 -- 4. ADD CREATOR_NAME TO VIRAL REELS (MAY 2026 UPDATE)
 -- ============================================================
 alter table viral_reels add column if not exists creator_name text;
+
+-- ============================================================
+-- 5. REQUEST FEATURE & FULL DETAILS UPDATE (MAY 2026)
+-- ============================================================
+alter table celebrities add column if not exists has_full_details boolean default false;
+alter table celebrities add column if not exists request_count integer default 0;

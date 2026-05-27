@@ -79,6 +79,7 @@ export default function RequestCreator() {
                 <option value="Sports">Sports</option>
                 <option value="Politicians">Politicians</option>
                 <option value="Meme Pages">Meme Pages</option>
+                <option value="Handles">Handles</option>
                 <option value="Other">Other</option>
               </select>
             </div>

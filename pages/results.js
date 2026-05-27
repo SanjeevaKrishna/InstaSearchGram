@@ -12,6 +12,39 @@ export default function ResultsPage() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const [requesting, setRequesting] = useState(false)
+  const [requested, setRequested] = useState(false)
+
+  useEffect(() => {
+    if (celebrity?.id) {
+      const alreadyRequested = localStorage.getItem(`requested_${celebrity.id}`)
+      if (alreadyRequested === 'true') {
+        setRequested(true)
+      }
+    }
+  }, [celebrity])
+
+  const handleRequestFullDetails = async () => {
+    if (!celebrity?.id) return
+    setRequesting(true)
+    try {
+      const res = await fetch('/api/celebrities/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: celebrity.id })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRequested(true)
+        localStorage.setItem(`requested_${celebrity.id}`, 'true')
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setRequesting(false)
+    }
+  }
+
   useEffect(() => {
     if (!slug) return
     setLoading(true)
@@ -108,6 +141,63 @@ export default function ResultsPage() {
             </div>
           </div>
         </div>
+
+        {celebrity && !celebrity.has_full_details && (
+          <div style={{
+            background: 'var(--surface2)',
+            border: '1px solid var(--border-bright)',
+            borderRadius: 16,
+            padding: '20px 24px',
+            marginBottom: 32,
+            textAlign: 'center',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.02)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12
+          }}>
+            <div style={{ fontSize: 24 }}>💡</div>
+            <div>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, marginBottom: 4, color: 'var(--accent)' }}>
+                Note!
+              </h4>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, margin: 0 }}>
+                Right now, we only have the top 4 featured posts loaded for <strong>{celebrity?.name || 'this celebrity'}</strong>. Want to see their complete Instagram Posts and playlists? Tap <strong>Request</strong> below, and we will load all their posts within 2 days! 🚀
+              </p>
+            </div>
+            {requested ? (
+              <div style={{
+                color: '#00c853',
+                fontSize: 13,
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(0, 200, 83, 0.08)',
+                padding: '6px 16px',
+                borderRadius: '100px'
+              }}>
+                ✓ Requested successfully!
+              </div>
+            ) : (
+              <button
+                className="btn btn-primary"
+                onClick={handleRequestFullDetails}
+                disabled={requesting}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  marginTop: 4
+                }}
+              >
+                {requesting ? 'Requesting...' : 'Request'}
+              </button>
+            )}
+          </div>
+        )}
 
         {posts.length > 0 ? (
           <div style={{
