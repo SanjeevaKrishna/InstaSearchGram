@@ -312,34 +312,20 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [existingPlaylists, setExistingPlaylists] = useState([])
+  const [availablePlaylists, setAvailablePlaylists] = useState([])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   useEffect(() => {
     if (!form.celebrity_id) {
-      setExistingPlaylists([])
+      setAvailablePlaylists([])
       return
     }
-    adminFetch(`/api/admin/posts?celebrity_id=${form.celebrity_id}`)
+    adminFetch(`/api/admin/playlists?celebrity_id=${form.celebrity_id}`)
       .then(res => res.json())
       .then(data => {
-        if (data.posts) {
-          const uniquePlaylists = []
-          const map = new Map()
-          data.posts.forEach(p => {
-            if (p.playlist_name && p.playlist_name.trim()) {
-              const nameLower = p.playlist_name.toLowerCase().trim()
-              if (!map.has(nameLower)) {
-                map.set(nameLower, true)
-                uniquePlaylists.push({
-                  name: p.playlist_name.trim(),
-                  cover_url: p.playlist_cover_url || ''
-                })
-              }
-            }
-          })
-          setExistingPlaylists(uniquePlaylists)
+        if (data.playlists) {
+          setAvailablePlaylists(data.playlists)
         }
       })
       .catch(err => console.error('Failed to load playlists:', err))
@@ -413,27 +399,27 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
         />
       </div>
       <div>
-        <label style={labelStyle}>Playlist Name (optional)</label>
-        <input
+        <label style={labelStyle}>Playlist (optional)</label>
+        <select
           className="input-field"
           value={form.playlist_name || ''}
           onChange={e => {
             const val = e.target.value
-            set('playlist_name', val)
-            
-            const match = existingPlaylists.find(p => p.name.toLowerCase().trim() === val.toLowerCase().trim())
-            if (match && match.cover_url && !form.playlist_cover_url) {
-              set('playlist_cover_url', match.cover_url)
+            if (!val) {
+              set('playlist_name', '')
+              set('playlist_cover_url', '')
+            } else {
+              const match = availablePlaylists.find(p => p.name === val)
+              set('playlist_name', val)
+              set('playlist_cover_url', match ? match.cover_url || '' : '')
             }
           }}
-          placeholder="e.g. World Cup 2023"
-          list="celebrity-playlists"
-        />
-        <datalist id="celebrity-playlists">
-          {existingPlaylists.map((p, idx) => (
-            <option key={idx} value={p.name} />
+        >
+          <option value="">— No Playlist —</option>
+          {availablePlaylists.map(p => (
+            <option key={p.id} value={p.name}>{p.name}</option>
           ))}
-        </datalist>
+        </select>
       </div>
       {form.playlist_name && (
         <div>
@@ -441,37 +427,9 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
           {form.playlist_cover_url ? (
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <img src={form.playlist_cover_url} alt="Cover" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
-              <button className="btn btn-ghost" onClick={() => set('playlist_cover_url', '')} style={{ color: '#ff5252' }}>Remove</button>
             </div>
           ) : (
-            <div>
-              <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
-                const file = e.target.files[0]
-                if (!file) return
-                setSaving(true)
-                setError('')
-                const reader = new FileReader()
-                reader.readAsDataURL(file)
-                reader.onload = async () => {
-                  try {
-                    const res = await adminFetch('/api/admin/upload', {
-                      method: 'POST',
-                      body: { image: reader.result }
-                    })
-                    const text = await res.text()
-                    let data
-                    try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error: ${res.status}`) }
-                    if (data.url) set('playlist_cover_url', data.url)
-                    else throw new Error(data.error || 'Upload failed')
-                  } catch(err) {
-                    setError(err.message || 'Failed to upload image')
-                  } finally {
-                    setSaving(false)
-                  }
-                }
-              }} />
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Upload an image for the playlist thumbnail</div>
-            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No cover image set for this playlist</div>
           )}
         </div>
       )}
@@ -985,6 +943,105 @@ export default function AdminPanel() {
     setTimeout(() => setToast(''), 3000)
   }
 
+  const [playlists, setPlaylists] = useState([])
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false)
+  const [showPlaylistForm, setShowPlaylistForm] = useState(false)
+  const [newPlaylistName, setNewPlaylistName] = useState('')
+  const [newPlaylistCover, setNewPlaylistCover] = useState('')
+  const [savingPlaylist, setSavingPlaylist] = useState(false)
+  const [playlistError, setPlaylistError] = useState('')
+
+  const loadPlaylists = async () => {
+    if (!filterCelId) {
+      setPlaylists([])
+      return
+    }
+    setLoadingPlaylists(true)
+    try {
+      const res = await adminFetch(`/api/admin/playlists?celebrity_id=${filterCelId}`)
+      const data = await res.json()
+      setPlaylists(data.playlists || [])
+    } catch (err) {
+      console.error('Failed to load playlists', err)
+    } finally {
+      setLoadingPlaylists(false)
+    }
+  }
+
+  useEffect(() => {
+    if (tab === 'posts' && authed) {
+      loadPlaylists()
+    }
+  }, [filterCelId, tab, authed])
+
+  const handleCreatePlaylist = async () => {
+    if (!newPlaylistName.trim()) return setPlaylistError('Playlist name is required')
+    setSavingPlaylist(true)
+    setPlaylistError('')
+    try {
+      const res = await adminFetch('/api/admin/playlists', {
+        method: 'POST',
+        body: {
+          celebrity_id: filterCelId,
+          name: newPlaylistName.trim(),
+          cover_url: newPlaylistCover
+        }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      
+      setPlaylists(prev => [...prev, data.playlist])
+      setNewPlaylistName('')
+      setNewPlaylistCover('')
+      setShowPlaylistForm(false)
+      showToast('✅ Playlist created!')
+    } catch (e) {
+      setPlaylistError(e.message)
+    } finally {
+      setSavingPlaylist(false)
+    }
+  }
+
+  const handleDeletePlaylist = async (id) => {
+    if (!confirm('Are you sure you want to delete this playlist? Posts in this playlist will NOT be deleted, but they will be removed from this playlist.')) return
+    try {
+      const res = await adminFetch('/api/admin/playlists', {
+        method: 'DELETE',
+        body: { id }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      
+      setPlaylists(prev => prev.filter(p => p.id !== id))
+      loadData()
+      showToast('🗑️ Playlist deleted!')
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
+  const handleRemovePostFromPlaylist = async (post) => {
+    if (!confirm(`Remove this post from "${post.playlist_name}"?`)) return
+    try {
+      const res = await adminFetch('/api/admin/posts', {
+        method: 'PUT',
+        body: {
+          ...post,
+          tags: post.tags || [],
+          playlist_name: null,
+          playlist_cover_url: null
+        }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      
+      setPosts(prev => prev.map(p => p.id === post.id ? data.post : p))
+      showToast('✅ Removed post from playlist!')
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
   useEffect(() => {
     // Check if already logged in
     if (getToken()) setAuthed(true)
@@ -1453,6 +1510,130 @@ export default function AdminPanel() {
               </AdminModal>
             )}
 
+            {/* Playlist management section for selected celebrity */}
+            {filterCelId && (
+              <div className="card" style={{ marginBottom: 20, padding: 20, background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    📺 Playlists for {celebrities.find(c => c.id === filterCelId)?.name} ({playlists.length})
+                  </h3>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      setShowPlaylistForm(!showPlaylistForm);
+                      setNewPlaylistName('');
+                      setNewPlaylistCover('');
+                      setPlaylistError('');
+                    }}
+                    style={{ padding: '6px 14px', fontSize: 12, borderRadius: 8 }}
+                  >
+                    {showPlaylistForm ? 'Cancel' : '+ Create Playlist'}
+                  </button>
+                </div>
+
+                {playlistError && (
+                  <div style={{ color: '#ff5252', fontSize: 13, marginBottom: 10 }}>{playlistError}</div>
+                )}
+
+                {showPlaylistForm && (
+                  <div style={{ background: 'var(--surface)', padding: 16, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 16, display: 'grid', gap: 12 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>Create Playlist</div>
+                    <div>
+                      <label style={labelStyle}>Playlist Name *</label>
+                      <input 
+                        className="input-field" 
+                        value={newPlaylistName} 
+                        onChange={e => setNewPlaylistName(e.target.value)} 
+                        placeholder="e.g. Best of Reels" 
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Cover Image (optional)</label>
+                      {newPlaylistCover ? (
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <img src={newPlaylistCover} alt="Cover" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover' }} />
+                          <button className="btn btn-ghost" onClick={() => setNewPlaylistCover('')} style={{ color: '#ff5252', padding: '6px 12px', fontSize: 12 }}>Remove</button>
+                        </div>
+                      ) : (
+                        <div>
+                          <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
+                            const file = e.target.files[0]
+                            if (!file) return
+                            setSavingPlaylist(true)
+                            setPlaylistError('')
+                            const reader = new FileReader()
+                            reader.readAsDataURL(file)
+                            reader.onload = async () => {
+                              try {
+                                const res = await adminFetch('/api/admin/upload', {
+                                  method: 'POST',
+                                  body: { image: reader.result }
+                                })
+                                const data = await res.json()
+                                if (data.url) setNewPlaylistCover(data.url)
+                                else throw new Error(data.error || 'Upload failed')
+                              } catch(err) {
+                                setPlaylistError(err.message || 'Failed to upload cover image')
+                              } finally {
+                                setSavingPlaylist(false)
+                              }
+                            }
+                          }} />
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                      <button className="btn btn-ghost" onClick={() => setShowPlaylistForm(false)} style={{ padding: '6px 12px', fontSize: 12 }}>Cancel</button>
+                      <button className="btn btn-primary" onClick={handleCreatePlaylist} disabled={savingPlaylist} style={{ padding: '6px 16px', fontSize: 12 }}>
+                        {savingPlaylist ? 'Saving...' : 'Save Playlist'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {loadingPlaylists ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: 10 }}><div className="spinner" style={{ width: 18, height: 18 }} /></div>
+                ) : playlists.length === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>
+                    No playlists created for this profile yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+                    {playlists.map(pl => (
+                      <div key={pl.id} style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'var(--surface)', padding: 10, borderRadius: 10, border: '1px solid var(--border)', position: 'relative' }}>
+                        {pl.cover_url ? (
+                          <img src={pl.cover_url} alt="" style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: 44, height: 44, borderRadius: 6, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📺</div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.name}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Playlist</div>
+                        </div>
+                        <button
+                          onClick={() => handleDeletePlaylist(pl.id)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ff5252',
+                            fontSize: 14,
+                            cursor: 'pointer',
+                            padding: 4,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          title="Delete Playlist"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{ marginBottom: 16 }}>
               <input
                 className="input-field"
@@ -1496,6 +1677,32 @@ export default function AdminPanel() {
                         )}
                         
                         <PostCard post={post} />
+
+                        {post.playlist_name && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface2)', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', marginTop: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                              <span>📺 Playlist:</span>
+                              <strong>{post.playlist_name}</strong>
+                            </div>
+                            <button
+                              onClick={() => handleRemovePostFromPlaylist(post)}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#ff5252',
+                                fontSize: 16,
+                                cursor: 'pointer',
+                                padding: '2px 6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Remove from Playlist"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
 
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
                           <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
