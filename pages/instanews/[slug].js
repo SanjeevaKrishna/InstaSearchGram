@@ -127,7 +127,7 @@ export default function NewsDetail({ news }) {
             alignItems: 'center',
             gap: 8,
           }}>
-            <span>📅 {new Date(news.created_at).toLocaleDateString()}</span>
+            <span>📅 {news.published_date ? new Date(news.published_date).toLocaleDateString() : new Date(news.created_at).toLocaleDateString()}</span>
             <span>•</span>
             <span style={{ color: 'var(--accent)', fontWeight: 600 }}>InstaNews</span>
           </div>

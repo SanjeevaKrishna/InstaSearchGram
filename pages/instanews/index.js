@@ -6,7 +6,8 @@ import Navbar from '../../components/Navbar'
 export async function getServerSideProps() {
   const { data: news, error } = await supabase
     .from('news')
-    .select('id, title, slug, image_url, created_at')
+    .select('id, title, slug, image_url, created_at, published_date, order_index')
+    .order('order_index', { ascending: true })
     .order('created_at', { ascending: false })
 
   return {
@@ -106,7 +107,7 @@ export default function InstaNewsIndex({ news }) {
                       {item.title}
                     </h2>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 8 }}>
-                      {new Date(item.created_at).toLocaleDateString()}
+                      {item.published_date ? new Date(item.published_date).toLocaleDateString() : new Date(item.created_at).toLocaleDateString()}
                     </div>
                   </div>
                 </div>

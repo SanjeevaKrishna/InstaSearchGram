@@ -306,15 +306,44 @@ function CelebrityForm({ initial, onSave, onCancel }) {
 }
 
 function PostForm({ celebrities, initial, onSave, onCancel }) {
-  const [form, setForm] = useState(initial || {
-    celebrity_id: '', post_url: '', post_type: 'reel', caption: '', post_date: '',
-    tags: '', is_most_liked: false, is_most_commented: false, is_most_viewed: false, is_first_post: false, playlist_name: '', playlist_cover_url: ''
+  const [form, setForm] = useState(() => {
+    if (initial) return initial
+    const lastId = typeof window !== 'undefined' ? localStorage.getItem('last_selected_celebrity_id') : ''
+    const idExists = lastId && celebrities.some(c => c.id === lastId)
+    return {
+      celebrity_id: idExists ? lastId : '',
+      post_url: '',
+      post_type: 'reel',
+      caption: '',
+      post_date: '',
+      tags: '',
+      is_most_liked: false,
+      is_most_commented: false,
+      is_most_viewed: false,
+      is_first_post: false,
+      playlist_name: '',
+      playlist_cover_url: ''
+    }
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [availablePlaylists, setAvailablePlaylists] = useState([])
+  const [celSearch, setCelSearch] = useState('')
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleSelectCelebrity = (id) => {
+    set('celebrity_id', id)
+    if (id) {
+      localStorage.setItem('last_selected_celebrity_id', id)
+    }
+  }
+
+  const filteredCelebrities = celebrities.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(celSearch.toLowerCase())
+    const isCurrentlySelected = c.id === form.celebrity_id
+    return matchesSearch || isCurrentlySelected
+  })
 
   useEffect(() => {
     if (!form.celebrity_id) {
@@ -358,13 +387,23 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
     <div style={{ display: 'grid', gap: 12 }}>
       <div>
         <label style={labelStyle}>Celebrity *</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 6 }}>
+          <input
+            className="input-field"
+            type="text"
+            placeholder="🔍 Type to search celebrity..."
+            value={celSearch}
+            onChange={e => setCelSearch(e.target.value)}
+            style={{ fontSize: 13, height: 38, padding: '8px 12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8 }}
+          />
+        </div>
         <select
           className="input-field"
           value={form.celebrity_id}
-          onChange={e => set('celebrity_id', e.target.value)}
+          onChange={e => handleSelectCelebrity(e.target.value)}
         >
           <option value="">— Select Celebrity —</option>
-          {celebrities.map(c => (
+          {filteredCelebrities.map(c => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
@@ -487,7 +526,11 @@ const labelStyle = {
 }
 
 function NewsForm({ initial, onSave, onCancel }) {
-  const [form, setForm] = useState(initial || { title: '', image_url: '', content: '' })
+  const [form, setForm] = useState(initial ? {
+    ...initial,
+    published_date: initial.published_date || '',
+    order_index: initial.order_index?.toString() || '0'
+  } : { title: '', image_url: '', content: '', published_date: '', order_index: '0' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -556,6 +599,16 @@ function NewsForm({ initial, onSave, onCancel }) {
           </div>
         )}
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Published Date (Manual)</label>
+          <input className="input-field" type="date" value={form.published_date} onChange={e => set('published_date', e.target.value)} />
+        </div>
+        <div>
+          <label style={labelStyle}>News Rank / Order (for sorting)</label>
+          <input className="input-field" type="number" value={form.order_index} onChange={e => set('order_index', e.target.value)} placeholder="e.g. 1" />
+        </div>
+      </div>
       <div>
         <label style={labelStyle}>Matter (Content)</label>
         <textarea
@@ -579,7 +632,7 @@ function NewsForm({ initial, onSave, onCancel }) {
 }
 
 function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
-  const predefinedTabCategories = ['Creators', 'Influencers', 'Actors', 'Meme Pages', 'Sports', 'Politicians', 'Handles', 'Singers']
+  const predefinedTabCategories = ['Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers']
   
   const parseCategoryAndTag = (rawCategory) => {
     const raw = (rawCategory || '').trim();
@@ -604,6 +657,8 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
       tabCategory = 'Creators';
     } else if (cat.includes('meme')) {
       tabCategory = 'Meme Pages';
+    } else if (cat.includes('personality')) {
+      tabCategory = 'Personalities';
     } else if (cat.includes('handle') || cat.includes('page')) {
       tabCategory = 'Handles';
     } else if (cat.includes('sport') || cat.includes('cricket')) {
@@ -919,6 +974,8 @@ export default function AdminPanel() {
   const [showViralReelsForm, setShowViralReelsForm] = useState(false)
   const [editingViralReels, setEditingViralReels] = useState(null)
 
+  const [visits, setVisits] = useState([])
+
   const [liveDate, setLiveDate] = useState('')
   const [savingLiveDate, setSavingLiveDate] = useState(false)
 
@@ -1085,6 +1142,11 @@ export default function AdminPanel() {
         const res = await adminFetch('/api/admin/viral_reels')
         const data = await res.json()
         setViralReels(data.reels || [])
+      }
+      if (tab === 'visitors') {
+        const res = await adminFetch('/api/admin/visits')
+        const data = await res.json()
+        setVisits(data.visits || [])
       }
     } catch {}
     setLoadingData(false)
@@ -1260,6 +1322,7 @@ export default function AdminPanel() {
             { id: 'news', label: '📰 InstaNews' },
             { id: 'most_followed', label: '📊 Most Followed' },
             { id: 'viral_reels', label: '🔥 Viral Reels Today' },
+            { id: 'visitors', label: '👥 Visitors' },
           ].map(t => (
             <button
               key={t.id}
@@ -1783,6 +1846,14 @@ export default function AdminPanel() {
                     item.title?.toLowerCase().includes(searchNews.toLowerCase()) ||
                     item.content?.toLowerCase().includes(searchNews.toLowerCase())
                   )
+                  filtered.sort((a, b) => {
+                    const rankA = a.order_index ?? 999999
+                    const rankB = b.order_index ?? 999999
+                    if (rankA !== rankB) return rankA - rankB
+                    const dateA = new Date(a.published_date || a.created_at)
+                    const dateB = new Date(b.published_date || b.created_at)
+                    return dateB - dateA
+                  })
                   if (filtered.length === 0) {
                     return (
                       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
@@ -1800,7 +1871,7 @@ export default function AdminPanel() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.title}</div>
                         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          <span style={{ color: '#00e5ff', fontWeight: 600 }}>👁 {item.views || 0} views</span> &nbsp;·&nbsp; {new Date(item.created_at).toLocaleDateString()}
+                          <span style={{ color: '#00e5ff', fontWeight: 600 }}>👁 {item.views || 0} views</span> &nbsp;·&nbsp; {item.published_date ? `📅 ${item.published_date}` : new Date(item.created_at).toLocaleDateString()} &nbsp;·&nbsp; <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Rank: #{item.order_index || 0}</span>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -1832,23 +1903,11 @@ export default function AdminPanel() {
         {/* ── LIVE DATE CARD (Only visible in Live-related tabs) ────────── */}
         {(tab === 'most_followed' || tab === 'viral_reels') && (
           <div className="card" style={{ marginBottom: 28, padding: '20px' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 12 }}>
-              📅 Live Page Manual Date
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
+              📅 Live Page Date
             </h3>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <input
-                className="input-field"
-                value={liveDate}
-                onChange={e => setLiveDate(e.target.value)}
-                placeholder="e.g. 22 May 2026 or Friday, 22-05-2026"
-                style={{ maxWidth: 350 }}
-              />
-              <button className="btn btn-primary" onClick={saveLiveDate} disabled={savingLiveDate}>
-                {savingLiveDate ? 'Saving...' : 'Save Date'}
-              </button>
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-              This date will display on the top-right corner of the /live page.
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+              The date on the top-right corner of the <span style={{ color: 'var(--accent)', fontWeight: 700 }}>/live</span> page is now <strong>fully automated</strong> by calendar time. It dynamically displays the current local date to visitors.
             </div>
           </div>
         )}
@@ -2073,6 +2132,48 @@ export default function AdminPanel() {
                     </div>
                   ))
                 })()}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── VISITORS TAB ──────────────────────────────────────────────── */}
+        {tab === 'visitors' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
+                Daily Unique Visitors
+              </h2>
+            </div>
+
+            {loadingData ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {visits.length === 0 ? (
+                  <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    No visitor statistics tracked yet. Visits will automatically start logging when users visit the public pages.
+                  </div>
+                ) : (
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', padding: '14px 20px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <div style={{ flex: 1 }}>Date</div>
+                      <div style={{ width: 180, textAlign: 'right' }}>Unique Visitors Count</div>
+                    </div>
+                    {/* Rows */}
+                    {visits.map(v => (
+                      <div key={v.visit_date} style={{ display: 'flex', padding: '14px 20px', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
+                        <div style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>
+                          📅 {new Date(v.visit_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                        <div style={{ width: 180, textAlign: 'right', fontWeight: 700, fontSize: 16, color: 'var(--accent)' }}>
+                          {v.unique_visitors.toLocaleString()} visitor{v.unique_visitors !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

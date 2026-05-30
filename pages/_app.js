@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import '../styles/globals.css'
 import Head from 'next/head'
 import Script from 'next/script'
@@ -7,6 +8,13 @@ import BottomNav from '../components/BottomNav'
 export default function App({ Component, pageProps }) {
   const router = useRouter()
   const isAdmin = router.pathname.startsWith('/admin')
+
+  useEffect(() => {
+    // Record page visit on load/path change, excluding admin and API paths
+    if (!router.pathname.startsWith('/admin') && !router.pathname.startsWith('/api')) {
+      fetch('/api/visit', { method: 'POST' }).catch(() => {})
+    }
+  }, [router.pathname])
 
   return (
     <>

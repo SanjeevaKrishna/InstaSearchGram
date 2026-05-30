@@ -23,6 +23,7 @@ export default async function handler(req, res) {
       const { data: news, error } = await supabase
         .from('news')
         .select('*')
+        .order('order_index', { ascending: true })
         .order('created_at', { ascending: false })
       
       if (error) return res.status(500).json({ error: error.message })
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { id, title, image_url, content } = req.body
+      const { id, title, image_url, content, published_date, order_index } = req.body
       
       // Generate a simple slug from the title
       let slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
@@ -41,6 +42,8 @@ export default async function handler(req, res) {
         title,
         image_url,
         content,
+        published_date: published_date || null,
+        order_index: order_index ? Number(order_index) : 0,
       }
       if (!id) payload.slug = slug
 

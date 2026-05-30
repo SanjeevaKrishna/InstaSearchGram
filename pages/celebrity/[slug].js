@@ -204,19 +204,7 @@ export default function CelebrityPage() {
               </button>
             </div>
 
-            {/* Verification / Entered posts list */}
-            {posts && posts.length > 0 && (
-              <div style={{ marginTop: 40 }}>
-                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, fontFamily: 'var(--font-display)', color: 'var(--text)' }}>
-                  Loaded Posts ({posts.length})
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {posts.map(p => (
-                    <PostCard key={p.id} post={p} />
-                  ))}
-                </div>
-              </div>
-            )}
+
           </div>
         )}
 

@@ -32,6 +32,8 @@ const parseCategoryAndTag = (rawCategory) => {
     tabCategory = 'Creators';
   } else if (cat.includes('meme')) {
     tabCategory = 'Meme Pages';
+  } else if (cat.includes('personality')) {
+    tabCategory = 'Personalities';
   } else if (cat.includes('handle') || cat.includes('page')) {
     tabCategory = 'Handles';
   } else if (cat.includes('sport') || cat.includes('cricket')) {
@@ -77,6 +79,10 @@ const getCategoryStyle = (tabCategory) => {
     baseColor = '#06b6d4' // Cyan
     bgColor = 'rgba(6, 180, 212, 0.08)'
     borderColor = 'rgba(6, 180, 212, 0.25)'
+  } else if (cat.includes('personality')) {
+    baseColor = '#6366f1' // Indigo
+    bgColor = 'rgba(99, 102, 241, 0.08)'
+    borderColor = 'rgba(99, 102, 241, 0.25)'
   } else if (cat.includes('handle')) {
     baseColor = '#14b8a6' // Teal
     bgColor = 'rgba(20, 184, 166, 0.08)'
@@ -94,10 +100,15 @@ const getCategoryStyle = (tabCategory) => {
 export default function LivePage() {
   const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'viral_reels'
   const [liveData, setLiveData] = useState({ live_date: '', most_followed: [], viral_reels: [] })
+  const [currentDate, setCurrentDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
+  }, [])
 
   useEffect(() => {
     fetch('/api/live')
@@ -205,7 +216,7 @@ export default function LivePage() {
             </div>
 
             {/* Date Badge */}
-            {liveData.live_date && (
+            {currentDate && (
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -219,7 +230,7 @@ export default function LivePage() {
                 color: 'var(--text-dim)',
               }}>
                 <span>📅</span>
-                <span>{liveData.live_date}</span>
+                <span>{currentDate}</span>
               </div>
             )}
           </div>
@@ -370,7 +381,7 @@ export default function LivePage() {
 
             {/* Category Filter */}
             {liveData.most_followed.length > 0 && (() => {
-              const categories = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Sports', 'Politicians', 'Handles', 'Singers']
+              const categories = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers']
 
               return (
                 <div className="no-scrollbar" style={{

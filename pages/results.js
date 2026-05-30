@@ -142,7 +142,7 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {celebrity && !celebrity.has_full_details && (
+        {celebrity && !celebrity.has_full_details && search && (
           <div style={{
             background: 'var(--surface2)',
             border: '1px solid var(--border-bright)',
