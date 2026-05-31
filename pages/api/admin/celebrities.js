@@ -24,6 +24,7 @@ export default async function handler(req, res) {
       const { data, error } = await supabase
         .from('celebrities')
         .select('*')
+        .order('order_index', { ascending: true })
         .order('name')
       if (error) return res.status(500).json({ error: error.message })
       return res.status(200).json({ celebrities: data })
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
 
     // POST - add new celebrity
     if (req.method === 'POST') {
-      const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details } = req.body
+      const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, order_index } = req.body
       if (!name) return res.status(400).json({ error: 'Name is required' })
 
       // Auto generate slug from name
@@ -44,7 +45,8 @@ export default async function handler(req, res) {
           followers_count, posts_count,
           is_featured: is_featured || false,
           has_full_details: has_full_details || false,
-          request_count: 0
+          request_count: 0,
+          order_index: order_index ? Number(order_index) : 0
         }])
         .select()
         .single()
@@ -55,7 +57,7 @@ export default async function handler(req, res) {
 
     // PUT - update celebrity
     if (req.method === 'PUT') {
-      const { id, name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, request_count } = req.body
+      const { id, name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, request_count, order_index } = req.body
       if (!id) return res.status(400).json({ error: 'ID required' })
 
       const { data, error } = await supabase
@@ -65,7 +67,8 @@ export default async function handler(req, res) {
           followers_count, posts_count,
           is_featured,
           has_full_details: has_full_details || false,
-          request_count: request_count || 0
+          request_count: request_count || 0,
+          order_index: order_index ? Number(order_index) : 0
         })
         .eq('id', id)
         .select()

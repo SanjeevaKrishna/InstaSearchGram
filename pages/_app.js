@@ -35,14 +35,14 @@ export default function App({ Component, pageProps }) {
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://instasearch.com/" />
-        <meta property="og:site_name" content="InstaSearch" />
-        <meta property="og:image" content="https://instasearch.com/og-image.jpg" />
+        <meta property="og:url" content="https://spialr.com/" />
+        <meta property="og:site_name" content="Spialr" />
+        <meta property="og:image" content="https://spialr.com/og-image.jpg" />
         
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://instasearch.com/" />
-        <meta property="twitter:image" content="https://instasearch.com/og-image.jpg" />
+        <meta property="twitter:url" content="https://spialr.com/" />
+        <meta property="twitter:image" content="https://spialr.com/og-image.jpg" />
 
         {/* Google Search Console Verification */}
         {/* Replace content value with your actual verification code */}
@@ -55,11 +55,11 @@ export default function App({ Component, pageProps }) {
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebSite",
-              "name": "InstaSearch",
-              "url": "https://instasearch.com/",
+              "name": "Spialr",
+              "url": "https://spialr.com/",
               "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://instasearch.com/results?q={search_term_string}",
+                "target": "https://spialr.com/results?q={search_term_string}",
                 "query-input": "required name=search_term_string"
               }
             })

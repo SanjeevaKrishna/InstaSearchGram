@@ -77,7 +77,7 @@ export default function CelebrityPage() {
   return (
     <>
       <Head>
-        <title>{celebrity.name} — InstaSearch</title>
+        <title>{celebrity.name} — Spialr</title>
       </Head>
 
       <Navbar />

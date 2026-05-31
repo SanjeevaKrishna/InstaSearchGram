@@ -182,9 +182,17 @@ function LoginScreen({ onLogin }) {
 }
 
 function CelebrityForm({ initial, onSave, onCancel }) {
-  const [form, setForm] = useState(initial || {
-    name: '', instagram_handle: '', followers_count: '', posts_count: '', photo_url: '', is_featured: false,
-    has_full_details: false
+  const [form, setForm] = useState(() => {
+    if (initial) {
+      return {
+        ...initial,
+        order_index: initial.order_index !== undefined && initial.order_index !== null ? initial.order_index.toString() : '0'
+      }
+    }
+    return {
+      name: '', instagram_handle: '', followers_count: '', posts_count: '', photo_url: '', is_featured: false,
+      has_full_details: false, order_index: '0'
+    }
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -204,6 +212,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           followers_count: form.followers_count ? Number(form.followers_count) : null,
           posts_count: form.posts_count ? Number(form.posts_count) : null,
           has_full_details: !!form.has_full_details,
+          order_index: form.order_index ? Number(form.order_index) : 0,
         },
       })
       const data = await res.json()
@@ -279,6 +288,11 @@ function CelebrityForm({ initial, onSave, onCancel }) {
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select an image to upload securely to Cloudinary</div>
           </div>
         )}
+      </div>
+      <div>
+        <label style={labelStyle}>Homepage Display Order (Popular Section Order Index)</label>
+        <input className="input-field" type="number" value={form.order_index} onChange={e => set('order_index', e.target.value)} placeholder="e.g. 1 for first, 2 for second (0 = default alphabetical)" />
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Lower numbers are displayed first. 0 is the default. If same, sorted alphabetically.</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '4px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1242,7 +1256,7 @@ export default function AdminPanel() {
   return (
     <>
       <Head>
-        <title>Admin — InstaSearch</title>
+        <title>Admin — Spialr</title>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
 
@@ -1500,7 +1514,7 @@ export default function AdminPanel() {
                           <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
                         </a>
                         <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
-                          onClick={() => { setEditingCel({ ...cel, followers_count: cel.followers_count?.toString(), posts_count: cel.posts_count?.toString(), tags: '' }); setShowCelForm(false) }}>
+                          onClick={() => { setEditingCel({ ...cel, followers_count: cel.followers_count?.toString(), posts_count: cel.posts_count?.toString(), order_index: cel.order_index?.toString() || '0', tags: '' }); setShowCelForm(false) }}>
                           Edit
                         </button>
                         <button

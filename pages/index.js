@@ -61,8 +61,9 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>InstaSearch — Find Instagram Posts & Reels Instantly</title>
-        <meta name="description" content="Search Instagram posts, reels and content from your favourite celebrities and creators — without endless scrolling." />
+        <title>Spialr — Find Instagram Posts & Reels Instantly</title>
+        <meta name="description" content="Discover 1000s of top Instagram accounts ordered by followers count. Search and find Instagram posts, reels, and trending profiles in India and globally — without endless scrolling." />
+        <meta name="keywords" content="top 100 instagram accounts in india, most followed instagram accounts, top instagram creators, spialr, instagram follower rankings, famous instagram profiles, search instagram reels, list of top instagram accounts" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>

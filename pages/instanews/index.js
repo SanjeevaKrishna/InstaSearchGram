@@ -21,7 +21,7 @@ export default function InstaNewsIndex({ news }) {
   return (
     <>
       <Head>
-        <title>Daily Instagram News - InstaSearch</title>
+        <title>Daily Instagram News - Spialr</title>
         <meta name="description" content="Catch up on the latest daily news and updates about your favorite Instagram celebrities." />
       </Head>
 

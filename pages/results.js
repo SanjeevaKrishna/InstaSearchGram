@@ -114,7 +114,7 @@ export default function ResultsPage() {
   return (
     <>
       <Head>
-        <title>Results — InstaSearch</title>
+        <title>Results — Spialr</title>
       </Head>
 
       <Navbar />

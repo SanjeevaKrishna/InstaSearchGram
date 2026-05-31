@@ -8,7 +8,8 @@ export default async function handler(req, res) {
   try {
     let query = supabase
       .from('celebrities')
-      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured')
+      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
+      .order('order_index', { ascending: true })
       .order('name')
 
     if (q && q.trim()) {

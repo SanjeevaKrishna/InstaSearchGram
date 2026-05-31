@@ -24,7 +24,7 @@ export default function RequestCreator() {
   return (
     <>
       <Head>
-        <title>Request Creator / Suggest Profile — InstaSearch</title>
+        <title>Request Creator / Suggest Profile — Spialr</title>
       </Head>
       <Navbar />
       <main style={{ maxWidth: 600, margin: '0 auto', padding: '60px 20px' }}>

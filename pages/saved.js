@@ -24,7 +24,7 @@ export default function SavedLinks() {
   return (
     <>
       <Head>
-        <title>Saved Links — InstaSearch</title>
+        <title>Saved Links — Spialr</title>
       </Head>
 
       <Navbar />

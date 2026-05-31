@@ -54,14 +54,24 @@ export default function Navbar() {
                 justifyContent: 'center',
                 fontSize: 16,
               }}>🔍</div>
-              <span style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: 20,
-                letterSpacing: '-0.03em',
-              }}>
-                Insta<span className="gradient-text">Search</span>
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+                <span style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: 19,
+                  letterSpacing: '-0.03em',
+                }}>
+                  Spi<span className="gradient-text">alr</span>
+                </span>
+                <span className="gradient-text" style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  letterSpacing: '-0.01em',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  search posts & analyze ranks
+                </span>
+              </div>
             </div>
           </Link>
 

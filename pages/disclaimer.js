@@ -5,7 +5,7 @@ export default function Disclaimer() {
   return (
     <>
       <Head>
-        <title>Disclaimer — InstaSearch</title>
+        <title>Disclaimer — Spialr</title>
       </Head>
       <Navbar />
       <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
@@ -16,13 +16,13 @@ export default function Disclaimer() {
           <p style={{ marginBottom: 20 }}>Last updated: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>1. External Links Disclaimer</h2>
-          <p style={{ marginBottom: 16 }}>InstaSearch may contain links to external websites that are not provided or maintained by or in any way affiliated with us. Please note that we do not guarantee the accuracy, relevance, timeliness, or completeness of any information on these external websites.</p>
+          <p style={{ marginBottom: 16 }}>Spialr may contain links to external websites that are not provided or maintained by or in any way affiliated with us. Please note that we do not guarantee the accuracy, relevance, timeliness, or completeness of any information on these external websites.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>2. No Affiliation with Instagram</h2>
-          <p style={{ marginBottom: 16 }}>InstaSearch is an independent search tool and directory. We are not sponsored, endorsed, administered by, or associated with Instagram, Meta Platforms, Inc., or any of the celebrities, creators, or profiles listed on this website.</p>
+          <p style={{ marginBottom: 16 }}>Spialr is an independent search tool and directory. We are not sponsored, endorsed, administered by, or associated with Instagram, Meta Platforms, Inc., or any of the celebrities, creators, or profiles listed on this website.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>3. Information Accuracy</h2>
-          <p style={{ marginBottom: 16 }}>The information on InstaSearch is compiled from public sources. While we strive to keep information updated (such as follower counts and trends), we make no representations or warranties of any kind about the accuracy or completeness of the data.</p>
+          <p style={{ marginBottom: 16 }}>The information on Spialr is compiled from public sources. While we strive to keep information updated (such as follower counts and trends), we make no representations or warranties of any kind about the accuracy or completeness of the data.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>4. Professional Disclaimer</h2>
           <p style={{ marginBottom: 16 }}>The site cannot and does not contain professional, financial, or legal advice. The information is provided for general informational and educational purposes only and is not a substitute for professional advice.</p>

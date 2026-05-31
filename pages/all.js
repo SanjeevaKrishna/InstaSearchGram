@@ -31,7 +31,7 @@ export default function AllCelebrities() {
   return (
     <>
       <Head>
-        <title>All Profiles — InstaSearch</title>
+        <title>All Profiles — Spialr</title>
       </Head>
 
       <Navbar />

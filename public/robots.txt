@@ -1,7 +1,7 @@
-# Robots.txt file for InstaSearch
+# Robots.txt file for Spialr
 User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://instasearch.com/sitemap.xml
+Sitemap: https://spialr.com/sitemap.xml

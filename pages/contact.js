@@ -22,7 +22,7 @@ export default function Contact() {
   return (
     <>
       <Head>
-        <title>Contact Us — InstaSearch</title>
+        <title>Contact Us — Spialr</title>
       </Head>
       <Navbar />
       <main style={{ maxWidth: 600, margin: '0 auto', padding: '60px 20px' }}>
