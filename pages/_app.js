@@ -18,10 +18,8 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
-      <Script 
-        async 
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0000000000000000" 
-        crossOrigin="anonymous"
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3089879645930958"
+     crossorigin="anonymous"
         strategy="afterInteractive"
       />
       <Head>
