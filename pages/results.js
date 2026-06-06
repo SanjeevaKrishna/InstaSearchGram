@@ -162,7 +162,7 @@ export default function ResultsPage() {
                 Note!
               </h4>
               <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, margin: 0 }}>
-                Right now, we only have the top 4 featured posts loaded for <strong>{celebrity?.name || 'this celebrity'}</strong>. Want to see their complete Instagram Posts and playlists? Tap <strong>Request</strong> below, and we will load all their posts within 2 days! 🚀
+                Right now, we only have the top 4 featured posts loaded for <strong>{celebrity?.name || 'this celebrity'}</strong>. Want to see their complete Instagram Posts and playlists? Tap <strong>Request</strong> below, and we will load all their posts within 2 days! 🚀 Until then check <a href="/live" style={{ color: 'var(--accent)', fontWeight: 600 }}>live Creator Rankings</a> and <a href="/live" style={{ color: 'var(--accent)', fontWeight: 600 }}>Most Viral Reels Today</a>.
               </p>
             </div>
             {requested ? (

@@ -32,7 +32,7 @@ const parseCategoryAndTag = (rawCategory) => {
     tabCategory = 'Creators';
   } else if (cat.includes('meme')) {
     tabCategory = 'Meme Pages';
-  } else if (cat.includes('personality')) {
+  } else if (cat.includes('personalit')) {
     tabCategory = 'Personalities';
   } else if (cat.includes('handle') || cat.includes('page')) {
     tabCategory = 'Handles';
@@ -79,10 +79,10 @@ const getCategoryStyle = (tabCategory) => {
     baseColor = '#06b6d4' // Cyan
     bgColor = 'rgba(6, 180, 212, 0.08)'
     borderColor = 'rgba(6, 180, 212, 0.25)'
-  } else if (cat.includes('personality')) {
-    baseColor = '#6366f1' // Indigo
-    bgColor = 'rgba(99, 102, 241, 0.08)'
-    borderColor = 'rgba(99, 102, 241, 0.25)'
+  } else if (cat.includes('personalit')) {
+    baseColor = '#dc2626' // Premium Red
+    bgColor = 'rgba(220, 38, 38, 0.08)'
+    borderColor = 'rgba(220, 38, 38, 0.25)'
   } else if (cat.includes('handle')) {
     baseColor = '#14b8a6' // Teal
     bgColor = 'rgba(20, 184, 166, 0.08)'
@@ -105,6 +105,7 @@ export default function LivePage() {
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [hoveredTab, setHoveredTab] = useState(null)
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
@@ -190,7 +191,11 @@ export default function LivePage() {
                 letterSpacing: '-0.02em',
                 lineHeight: 1.2
               }}>
-                Most Followed <span className="gradient-text">Instagram Accounts</span>
+                {activeTab === 'most_followed' ? (
+                  <>Most Followed <span className="gradient-text">Instagram Accounts</span></>
+                ) : (
+                  <>Most Viral <span className="gradient-text">Instagram Reels</span></>
+                )}
               </h1>
               <div style={{
                 display: 'inline-flex',
@@ -204,14 +209,14 @@ export default function LivePage() {
                 <span className="live-pulse" style={{
                   fontSize: 13,
                   display: 'inline-block',
-                }}>📈</span>
+                }}>{activeTab === 'most_followed' ? '📈' : '🔥'}</span>
                 <span style={{
                   fontSize: 11,
                   fontWeight: 800,
                   color: 'var(--accent)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em'
-                }}>Live</span>
+                }}>{activeTab === 'most_followed' ? 'Live' : 'Trending'}</span>
               </div>
             </div>
 
@@ -235,7 +240,9 @@ export default function LivePage() {
             )}
           </div>
           <p style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            Live real-time follower count leaderboard for top actors, creators, sports stars, influencers, meme pages, and politicians.
+            {activeTab === 'most_followed'
+              ? 'Live real-time follower count leaderboard for top actors, creators, sports stars, influencers, meme pages, and politicians.'
+              : 'Handpicked daily list of the most trending and viral Instagram reels from popular creators globally.'}
           </p>
         </div>
 
@@ -243,33 +250,36 @@ export default function LivePage() {
         <div className="fade-in" style={{
           display: 'flex',
           background: 'var(--surface2)',
-          borderRadius: '14px',
-          padding: 4,
+          borderRadius: '100px',
+          padding: 3,
           marginBottom: 32,
           gap: 4,
           border: '1px solid var(--border)',
-          maxWidth: 420,
+          maxWidth: 350,
           margin: '0 auto 32px'
         }}>
           <button
             onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); }}
+            onMouseEnter={() => setHoveredTab('most_followed')}
+            onMouseLeave={() => setHoveredTab(null)}
             style={{
               flex: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '10px 14px',
-              borderRadius: '10px',
+              padding: '8px 12px',
+              borderRadius: '100px',
               border: 'none',
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 700,
               background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
               color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
               boxShadow: activeTab === 'most_followed' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+              transform: hoveredTab === 'most_followed' && activeTab !== 'most_followed' ? 'scale(1.02)' : 'scale(1)',
               transition: 'all 0.2s ease',
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
               <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
               <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
               <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
@@ -279,23 +289,26 @@ export default function LivePage() {
           </button>
           <button
             onClick={() => { setActiveTab('viral_reels'); setSearchQuery(''); }}
+            onMouseEnter={() => setHoveredTab('viral_reels')}
+            onMouseLeave={() => setHoveredTab(null)}
             style={{
               flex: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '10px 14px',
-              borderRadius: '10px',
+              padding: '8px 12px',
+              borderRadius: '100px',
               border: 'none',
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 700,
               background: activeTab === 'viral_reels' ? 'var(--surface)' : 'transparent',
               color: activeTab === 'viral_reels' ? 'var(--text)' : 'var(--text-muted)',
               boxShadow: activeTab === 'viral_reels' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+              transform: hoveredTab === 'viral_reels' && activeTab !== 'viral_reels' ? 'scale(1.02)' : 'scale(1)',
               transition: 'all 0.2s ease',
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
               <path d="M12 2C8 6.5 8 11.5 10 13c.5-.5 1-1.5 1-2.5 1.5 1.5 2 3.5 1.5 5.5-.5 2 1.5 3.5 3.5 3 2.5-.5 4.5-3 3-6.5-1.5-3.5-5-4.5-5-7.5-.5 1.5-1 2.5-2 3.5C11.5 6 12 3.5 12 2z" fill="#ff9800" />
               <path d="M12 14c-1 1-1.5 2-1.5 3s.5 2.5 1.5 2.5 2.5-1.5 2-3.5c-.2-.5-1-1.5-2-2z" fill="#f44336" />
             </svg>

@@ -143,16 +143,48 @@ export default function CelebrityPage() {
           <div className="fade-in">
             {/* Search within posts */}
             <div style={{ marginBottom: 24 }}>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   className="input-field"
                   value={tagSearch}
                   onChange={e => setTagSearch(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && tagSearch.trim() && goResults({ search: tagSearch.trim() })}
-                  placeholder="Search any key word for Post and press Enter"
-                  style={{ fontSize: 16, padding: '16px 48px 16px 20px', borderRadius: 16, background: 'var(--surface)' }}
+                  placeholder="Search any key word for Post..."
+                  style={{ fontSize: 16, padding: '16px 110px 16px 20px', borderRadius: 16, background: 'var(--surface)', width: '100%' }}
                 />
-                <span style={{ position: 'absolute', right: 20, top: 16, fontSize: 18, color: 'var(--text-muted)' }}>🔍</span>
+                <button
+                  onClick={() => tagSearch.trim() && goResults({ search: tagSearch.trim() })}
+                  style={{
+                    position: 'absolute',
+                    right: 8,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'var(--accent)',
+                    border: 'none',
+                    borderRadius: 12,
+                    color: 'white',
+                    padding: '10px 18px',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 4px 12px rgba(225, 48, 108, 0.2)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.filter = 'brightness(1.1)'
+                    e.currentTarget.style.transform = 'translateY(-50%) scale(1.03)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.filter = 'brightness(1)'
+                    e.currentTarget.style.transform = 'translateY(-50%) scale(1)'
+                  }}
+                >
+                  <span>Search</span>
+                  <span>🔍</span>
+                </button>
               </div>
             </div>
 
