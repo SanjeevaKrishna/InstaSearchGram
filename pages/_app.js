@@ -18,8 +18,8 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
-      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3089879645930958"
-     crossorigin="anonymous"
+      <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3089879645930958"
+        crossOrigin="anonymous"
         strategy="afterInteractive"
       />
       <Head>
@@ -33,14 +33,14 @@ export default function App({ Component, pageProps }) {
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://spialr.com/" />
+        <meta property="og:url" content="https://www.spialr.com/" />
         <meta property="og:site_name" content="Spialr" />
-        <meta property="og:image" content="https://spialr.com/og-image.jpg" />
+        <meta property="og:image" content="https://www.spialr.com/og-image.jpg" />
         
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://spialr.com/" />
-        <meta property="twitter:image" content="https://spialr.com/og-image.jpg" />
+        <meta property="twitter:url" content="https://www.spialr.com/" />
+        <meta property="twitter:image" content="https://www.spialr.com/og-image.jpg" />
 
         {/* Google Search Console Verification */}
         {/* Replace content value with your actual verification code */}
@@ -54,10 +54,10 @@ export default function App({ Component, pageProps }) {
               "@context": "https://schema.org",
               "@type": "WebSite",
               "name": "Spialr",
-              "url": "https://spialr.com/",
+              "url": "https://www.spialr.com/",
               "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://spialr.com/results?q={search_term_string}",
+                "target": "https://www.spialr.com/results?q={search_term_string}",
                 "query-input": "required name=search_term_string"
               }
             })
