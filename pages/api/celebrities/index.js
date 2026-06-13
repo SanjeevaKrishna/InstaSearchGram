@@ -6,25 +6,60 @@ export default async function handler(req, res) {
   const { q, featured } = req.query
 
   try {
-    let query = supabase
-      .from('celebrities')
-      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
-      .order('order_index', { ascending: true })
-      .order('name')
-
-    if (q && q.trim()) {
-      query = query.ilike('name', `%${q.trim()}%`)
-    }
+    let data = []
+    let error = null
 
     if (featured === 'true') {
-      query = query.eq('is_featured', true).limit(10)
+      let query = supabase
+        .from('celebrities')
+        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
+        .order('order_index', { ascending: true })
+        .order('name')
+        .eq('is_featured', true)
+        .limit(10)
+      if (q && q.trim()) {
+        query = query.ilike('name', `%${q.trim()}%`)
+      }
+      const res = await query
+      data = res.data
+      error = res.error
     } else if (req.query.limit === 'all') {
-      // no limit
+      let from = 0
+      let to = 999
+      while (true) {
+        let query = supabase
+          .from('celebrities')
+          .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
+          .order('order_index', { ascending: true })
+          .order('name')
+          .range(from, to)
+        if (q && q.trim()) {
+          query = query.ilike('name', `%${q.trim()}%`)
+        }
+        const { data: pageData, error: pageError } = await query
+        if (pageError) {
+          error = pageError
+          break
+        }
+        data = data.concat(pageData || [])
+        if (!pageData || pageData.length < 1000) break
+        from += 1000
+        to += 1000
+      }
     } else {
-      query = query.limit(20)
+      let query = supabase
+        .from('celebrities')
+        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
+        .order('order_index', { ascending: true })
+        .order('name')
+        .limit(20)
+      if (q && q.trim()) {
+        query = query.ilike('name', `%${q.trim()}%`)
+      }
+      const res = await query
+      data = res.data
+      error = res.error
     }
-
-    const { data, error } = await query
 
     if (error) throw error
 

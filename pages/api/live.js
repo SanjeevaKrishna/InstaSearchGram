@@ -16,13 +16,24 @@ export default async function handler(req, res) {
 
     if (settingsError) throw settingsError
 
-    // 2. Fetch most followed profiles
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('most_followed')
-      .select('*')
-      .order('followers_count', { ascending: false })
+    // 2. Fetch most followed profiles (paginated to load all, bypassing the 1000-row default limit)
+    let profilesData = []
+    let from = 0
+    let to = 999
+    while (true) {
+      const { data, error: profilesError } = await supabase
+        .from('most_followed')
+        .select('*')
+        .order('followers_count', { ascending: false })
+        .range(from, to)
 
-    if (profilesError) throw profilesError
+      if (profilesError) throw profilesError
+      
+      profilesData = profilesData.concat(data || [])
+      if (!data || data.length < 1000) break
+      from += 1000
+      to += 1000
+    }
 
     // 3. Fetch viral reels today
     const { data: reelsData, error: reelsError } = await supabase

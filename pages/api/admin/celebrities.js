@@ -19,15 +19,26 @@ export default async function handler(req, res) {
 
     const supabase = getAdminClient()
 
-    // GET - list all celebrities
+    // GET - list all celebrities (paginated to fetch all, bypassing 1000-row limit)
     if (req.method === 'GET') {
-      const { data, error } = await supabase
-        .from('celebrities')
-        .select('*')
-        .order('order_index', { ascending: true })
-        .order('name')
-      if (error) return res.status(500).json({ error: error.message })
-      return res.status(200).json({ celebrities: data })
+      let celebritiesData = []
+      let from = 0
+      let to = 999
+      while (true) {
+        const { data, error } = await supabase
+          .from('celebrities')
+          .select('*')
+          .order('order_index', { ascending: true })
+          .order('name')
+          .range(from, to)
+
+        if (error) return res.status(500).json({ error: error.message })
+        celebritiesData = celebritiesData.concat(data || [])
+        if (!data || data.length < 1000) break
+        from += 1000
+        to += 1000
+      }
+      return res.status(200).json({ celebrities: celebritiesData })
     }
 
     // POST - add new celebrity

@@ -19,15 +19,25 @@ export default async function handler(req, res) {
 
     const supabase = getAdminClient()
 
-    // GET - list all most followed accounts
+    // GET - list all most followed accounts (paginated to fetch all, bypassing 1000-row limit)
     if (req.method === 'GET') {
-      const { data, error } = await supabase
-        .from('most_followed')
-        .select('*')
-        .order('followers_count', { ascending: false })
+      let profilesData = []
+      let from = 0
+      let to = 999
+      while (true) {
+        const { data, error } = await supabase
+          .from('most_followed')
+          .select('*')
+          .order('followers_count', { ascending: false })
+          .range(from, to)
 
-      if (error) return res.status(500).json({ error: error.message })
-      return res.status(200).json({ profiles: data || [] })
+        if (error) return res.status(500).json({ error: error.message })
+        profilesData = profilesData.concat(data || [])
+        if (!data || data.length < 1000) break
+        from += 1000
+        to += 1000
+      }
+      return res.status(200).json({ profiles: profilesData })
     }
 
     // POST - add a new profile
@@ -60,12 +70,22 @@ export default async function handler(req, res) {
 
       // Sub-action: Reorder profiles by followers count descending
       if (action === 'reorder') {
-        // 1. Fetch all records
-        const { data: allProfiles, error: fetchErr } = await supabase
-          .from('most_followed')
-          .select('*')
+        // 1. Fetch all records (paginated to load all)
+        let allProfiles = []
+        let from = 0
+        let to = 999
+        while (true) {
+          const { data, error: fetchErr } = await supabase
+            .from('most_followed')
+            .select('*')
+            .range(from, to)
 
-        if (fetchErr) return res.status(500).json({ error: fetchErr.message })
+          if (fetchErr) return res.status(500).json({ error: fetchErr.message })
+          allProfiles = allProfiles.concat(data || [])
+          if (!data || data.length < 1000) break
+          from += 1000
+          to += 1000
+        }
 
         // 2. Sort by followers_count desc
         const sorted = [...allProfiles].sort((a, b) => {
@@ -85,13 +105,23 @@ export default async function handler(req, res) {
           if (updateErr) return res.status(500).json({ error: updateErr.message })
         }
 
-        // 4. Return the refreshed ordered list
-        const { data: updatedProfiles, error: finalErr } = await supabase
-          .from('most_followed')
-          .select('*')
-          .order('followers_count', { ascending: false })
+        // 4. Return the refreshed ordered list (paginated to fetch all)
+        let updatedProfiles = []
+        let finalFrom = 0
+        let finalTo = 999
+        while (true) {
+          const { data: pageData, error: finalErr } = await supabase
+            .from('most_followed')
+            .select('*')
+            .order('followers_count', { ascending: false })
+            .range(finalFrom, finalTo)
 
-        if (finalErr) return res.status(500).json({ error: finalErr.message })
+          if (finalErr) return res.status(500).json({ error: finalErr.message })
+          updatedProfiles = updatedProfiles.concat(pageData || [])
+          if (!pageData || pageData.length < 1000) break
+          finalFrom += 1000
+          finalTo += 1000
+        }
         return res.status(200).json({ profiles: updatedProfiles, success: true })
       }
 
