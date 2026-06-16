@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Calendar, Heart, MessageSquare, Eye, Star, ExternalLink, Bookmark } from 'lucide-react'
 
 export default function PostCard({ post }) {
   const [isSaved, setIsSaved] = useState(false)
@@ -69,8 +70,8 @@ export default function PostCard({ post }) {
 
       {/* Date */}
       {post.post_date && (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-          📅 {new Date(post.post_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, display: 'inline-flex', alignItems: 'center' }}>
+          <Calendar size={13} style={{ marginRight: 6 }} /> {new Date(post.post_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
         </div>
       )}
 
@@ -93,16 +94,24 @@ export default function PostCard({ post }) {
       {/* Stats row */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
         {post.is_most_liked && (
-          <span style={{ fontSize: 12, color: '#ff6b35', fontWeight: 600 }}>❤️ Most Liked</span>
+          <span style={{ fontSize: 12, color: '#ff6b35', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+            <Heart size={13} style={{ marginRight: 4, fill: 'currentColor' }} /> Most Liked
+          </span>
         )}
         {post.is_most_commented && (
-          <span style={{ fontSize: 12, color: '#00e5ff', fontWeight: 600 }}>💬 Most Commented</span>
+          <span style={{ fontSize: 12, color: '#00e5ff', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+            <MessageSquare size={13} style={{ marginRight: 4, fill: 'currentColor' }} /> Most Commented
+          </span>
         )}
         {post.is_most_viewed && (
-          <span style={{ fontSize: 12, color: '#e040fb', fontWeight: 600 }}>👁 Most Viewed</span>
+          <span style={{ fontSize: 12, color: '#e040fb', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+            <Eye size={13} style={{ marginRight: 4 }} /> Most Viewed
+          </span>
         )}
         {post.is_first_post && (
-          <span style={{ fontSize: 12, color: '#ffeb3b', fontWeight: 600 }}>⭐ First Post</span>
+          <span style={{ fontSize: 12, color: '#ffeb3b', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+            <Star size={13} style={{ marginRight: 4, fill: 'currentColor' }} /> First Post
+          </span>
         )}
       </div>
 
@@ -124,7 +133,7 @@ export default function PostCard({ post }) {
           fontWeight: 600,
         }}>
           <span>Open on Instagram</span>
-          <span style={{ fontSize: 16 }}>↗</span>
+          <ExternalLink size={13} />
         </div>
         
         <button 
@@ -132,7 +141,9 @@ export default function PostCard({ post }) {
           style={{
             background: 'transparent',
             border: 'none',
-            fontSize: 22,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             color: isSaved ? 'var(--accent)' : 'var(--text-muted)',
             cursor: 'pointer',
             padding: '4px',
@@ -140,7 +151,7 @@ export default function PostCard({ post }) {
           }}
           title={isSaved ? "Remove from Saved" : "Save Post"}
         >
-          {isSaved ? '🔖' : '🤍'}
+          {isSaved ? <Bookmark size={20} style={{ fill: 'currentColor' }} /> : <Heart size={20} />}
         </button>
       </div>
     </div>

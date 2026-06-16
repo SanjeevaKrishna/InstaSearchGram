@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../components/Navbar'
 import PostCard from '../components/PostCard'
+import { Lightbulb, Search } from 'lucide-react'
 
 export default function ResultsPage() {
   const router = useRouter()
@@ -156,7 +157,7 @@ export default function ResultsPage() {
             alignItems: 'center',
             gap: 12
           }}>
-            <div style={{ fontSize: 24 }}>💡</div>
+            <Lightbulb size={24} style={{ color: 'var(--accent)' }} />
             <div>
               <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, marginBottom: 4, color: 'var(--accent)' }}>
                 Note!
@@ -210,10 +211,18 @@ export default function ResultsPage() {
             ))}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-            <p>No posts match your filters.</p>
-            <button className="btn btn-ghost" style={{ marginTop: 16 }} onClick={() => router.back()}>
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: 'var(--text-muted)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Search size={48} strokeWidth={1.5} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
+            <p style={{ margin: 0, marginBottom: 16 }}>No posts match your filters.</p>
+            <button className="btn btn-ghost" onClick={() => router.back()}>
               Try another search
             </button>
           </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Head from 'next/head'
 import Navbar from '../components/Navbar'
+import { Sparkles } from 'lucide-react'
 
 export default function RequestCreator() {
   const [creatorName, setCreatorName] = useState('')
@@ -36,8 +37,8 @@ export default function RequestCreator() {
         </p>
 
         {submitted ? (
-          <div className="card" style={{ textAlign: 'center', padding: '40px 20px', border: '1px solid #00c853', background: 'rgba(0,200,83,0.05)' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🎉</div>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 20px', border: '1px solid #00c853', background: 'rgba(0,200,83,0.05)' }}>
+            <Sparkles size={40} strokeWidth={1.5} style={{ color: '#00c853', marginBottom: 16 }} />
             <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#00c853', marginBottom: 8 }}>Suggestion Received!</h2>
             <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>Thank you! We will review the profile and add them to our database if they qualify.</p>
           </div>

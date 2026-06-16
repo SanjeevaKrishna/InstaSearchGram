@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import CelebrityCard from '../components/CelebrityCard'
 import Navbar from '../components/Navbar'
+import { Sparkles, Search, Flame, Inbox } from 'lucide-react'
 
 export default function Home() {
   const [query, setQuery] = useState('')
@@ -86,7 +87,7 @@ export default function Home() {
             marginBottom: 24,
             fontWeight: 500,
           }}>
-            ✨ Find any creator's best posts instantly
+            <Sparkles size={14} /> Find any creator's best posts instantly
           </div>
 
           <h1 style={{
@@ -125,7 +126,7 @@ export default function Home() {
             }}
             onFocus={() => {}} 
             >
-              <span style={{ fontSize: 18, flexShrink: 0 }}>🔍</span>
+              <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               <input
                 ref={searchRef}
                 className="input-field"
@@ -267,8 +268,11 @@ export default function Home() {
               marginBottom: 16,
               color: 'var(--text-dim)',
               letterSpacing: '-0.01em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
             }}>
-              Popular 🔥
+              Popular <Flame size={18} style={{ color: '#ff6b35' }} />
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {featured.map(c => <CelebrityCard key={c.id} celebrity={c} />)}
@@ -282,9 +286,13 @@ export default function Home() {
             textAlign: 'center',
             padding: '60px 20px',
             color: 'var(--text-muted)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-            <p style={{ fontSize: 15 }}>No celebrities added yet.<br />Add some from the admin panel!</p>
+            <Inbox size={48} strokeWidth={1.5} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
+            <p style={{ fontSize: 15, margin: 0 }}>No celebrities added yet.<br />Add some from the admin panel!</p>
           </div>
         )}
       </main>

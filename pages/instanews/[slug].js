@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
+import { Newspaper, Calendar } from 'lucide-react'
 
 export async function getServerSideProps(context) {
   const { slug } = context.params
@@ -101,9 +102,8 @@ export default function NewsDetail({ news }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 48,
           }}>
-            📰
+            <Newspaper size={48} style={{ color: 'white' }} />
           </div>
         )}
 
@@ -127,7 +127,9 @@ export default function NewsDetail({ news }) {
             alignItems: 'center',
             gap: 8,
           }}>
-            <span>📅 {news.published_date ? new Date(news.published_date).toLocaleDateString() : new Date(news.created_at).toLocaleDateString()}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Calendar size={14} /> {news.published_date ? new Date(news.published_date).toLocaleDateString() : new Date(news.created_at).toLocaleDateString()}
+            </span>
             <span>•</span>
             <span style={{ color: 'var(--accent)', fontWeight: 600 }}>InstaNews</span>
           </div>

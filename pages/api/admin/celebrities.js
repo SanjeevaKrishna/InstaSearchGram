@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
     // POST - add new celebrity
     if (req.method === 'POST') {
-      const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, order_index } = req.body
+      const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, order_index, total_reel_views, total_reel_likes, total_post_likes, hide_search } = req.body
       if (!name) return res.status(400).json({ error: 'Name is required' })
 
       // Auto generate slug from name
@@ -57,7 +57,11 @@ export default async function handler(req, res) {
           is_featured: is_featured || false,
           has_full_details: has_full_details || false,
           request_count: 0,
-          order_index: order_index ? Number(order_index) : 0
+          order_index: order_index ? Number(order_index) : 0,
+          total_reel_views: total_reel_views ? Number(total_reel_views) : 0,
+          total_reel_likes: total_reel_likes ? Number(total_reel_likes) : 0,
+          total_post_likes: total_post_likes ? Number(total_post_likes) : 0,
+          hide_search: hide_search || false
         }])
         .select()
         .single()
@@ -68,7 +72,7 @@ export default async function handler(req, res) {
 
     // PUT - update celebrity
     if (req.method === 'PUT') {
-      const { id, name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, request_count, order_index } = req.body
+      const { id, name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, request_count, order_index, total_reel_views, total_reel_likes, total_post_likes, hide_search } = req.body
       if (!id) return res.status(400).json({ error: 'ID required' })
 
       const { data, error } = await supabase
@@ -79,11 +83,16 @@ export default async function handler(req, res) {
           is_featured,
           has_full_details: has_full_details || false,
           request_count: request_count || 0,
-          order_index: order_index ? Number(order_index) : 0
+          order_index: order_index ? Number(order_index) : 0,
+          total_reel_views: total_reel_views ? Number(total_reel_views) : 0,
+          total_reel_likes: total_reel_likes ? Number(total_reel_likes) : 0,
+          total_post_likes: total_post_likes ? Number(total_post_likes) : 0,
+          hide_search: hide_search || false
         })
         .eq('id', id)
         .select()
         .single()
+
 
       if (error) return res.status(500).json({ error: error.message })
       return res.status(200).json({ celebrity: data })

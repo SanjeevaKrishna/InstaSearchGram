@@ -186,12 +186,17 @@ function CelebrityForm({ initial, onSave, onCancel }) {
     if (initial) {
       return {
         ...initial,
-        order_index: initial.order_index !== undefined && initial.order_index !== null ? initial.order_index.toString() : '0'
+        order_index: initial.order_index !== undefined && initial.order_index !== null ? initial.order_index.toString() : '0',
+        total_reel_views: initial.total_reel_views !== undefined && initial.total_reel_views !== null ? initial.total_reel_views.toString() : '',
+        total_reel_likes: initial.total_reel_likes !== undefined && initial.total_reel_likes !== null ? initial.total_reel_likes.toString() : '',
+        total_post_likes: initial.total_post_likes !== undefined && initial.total_post_likes !== null ? initial.total_post_likes.toString() : '',
+        hide_search: !!initial.hide_search
       }
     }
     return {
       name: '', instagram_handle: '', followers_count: '', posts_count: '', photo_url: '', is_featured: false,
-      has_full_details: false, order_index: '0'
+      has_full_details: false, order_index: '0',
+      total_reel_views: '', total_reel_likes: '', total_post_likes: '', hide_search: false
     }
   })
   const [saving, setSaving] = useState(false)
@@ -213,8 +218,13 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           posts_count: form.posts_count ? Number(form.posts_count) : null,
           has_full_details: !!form.has_full_details,
           order_index: form.order_index ? Number(form.order_index) : 0,
+          total_reel_views: form.total_reel_views ? Number(form.total_reel_views) : 0,
+          total_reel_likes: form.total_reel_likes ? Number(form.total_reel_likes) : 0,
+          total_post_likes: form.total_post_likes ? Number(form.total_post_likes) : 0,
+          hide_search: !!form.hide_search
         },
       })
+
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       onSave(data.celebrity)
@@ -289,6 +299,20 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           </div>
         )}
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Total Reel Views</label>
+          <input className="input-field" type="number" value={form.total_reel_views} onChange={e => set('total_reel_views', e.target.value)} placeholder="e.g. 5200000" />
+        </div>
+        <div>
+          <label style={labelStyle}>Total Reel Likes</label>
+          <input className="input-field" type="number" value={form.total_reel_likes} onChange={e => set('total_reel_likes', e.target.value)} placeholder="e.g. 150000" />
+        </div>
+        <div>
+          <label style={labelStyle}>Total Post Likes</label>
+          <input className="input-field" type="number" value={form.total_post_likes} onChange={e => set('total_post_likes', e.target.value)} placeholder="e.g. 80000" />
+        </div>
+      </div>
       <div>
         <label style={labelStyle}>Homepage Display Order (Popular Section Order Index)</label>
         <input className="input-field" type="number" value={form.order_index} onChange={e => set('order_index', e.target.value)} placeholder="e.g. 1 for first, 2 for second (0 = default alphabetical)" />
@@ -307,7 +331,14 @@ function CelebrityForm({ initial, onSave, onCancel }) {
             Has Full Instagram Details (All Posts & Playlists Entered)
           </label>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="checkbox" id="hide_search" checked={form.hide_search || false} onChange={e => set('hide_search', e.target.checked)} style={{ width: 16, height: 16 }} />
+          <label htmlFor="hide_search" style={{ fontSize: 14, color: '#f44336', fontWeight: 600, cursor: 'pointer' }}>
+            🔴 Remove Search Bar & Timelines (Hide Search)
+          </label>
+        </div>
       </div>
+
       {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
         <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
@@ -1223,6 +1254,32 @@ export default function AdminPanel() {
     showToast('✅ Celebrity deleted')
   }
 
+  const toggleHideSearch = async (cel) => {
+    const newHideSearch = !cel.hide_search
+    try {
+      const res = await adminFetch('/api/admin/celebrities', {
+        method: 'PUT',
+        body: {
+          ...cel,
+          hide_search: newHideSearch,
+          followers_count: cel.followers_count ? Number(cel.followers_count) : null,
+          posts_count: cel.posts_count ? Number(cel.posts_count) : null,
+          order_index: cel.order_index ? Number(cel.order_index) : 0,
+          total_reel_views: cel.total_reel_views ? Number(cel.total_reel_views) : 0,
+          total_reel_likes: cel.total_reel_likes ? Number(cel.total_reel_likes) : 0,
+          total_post_likes: cel.total_post_likes ? Number(cel.total_post_likes) : 0,
+        }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setCelebrities(list => list.map(c => c.id === cel.id ? data.celebrity : c))
+      showToast(newHideSearch ? '✅ Search disabled for ' + cel.name : '✅ Search enabled for ' + cel.name)
+    } catch(e) {
+      alert('Error updating: ' + e.message)
+    }
+  }
+
+
   const deletePost = async (id) => {
     if (!confirm('Delete this post?')) return
     await adminFetch('/api/admin/posts', { method: 'DELETE', body: { id } })
@@ -1514,8 +1571,36 @@ export default function AdminPanel() {
                           <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
                         </a>
                         <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
-                          onClick={() => { setEditingCel({ ...cel, followers_count: cel.followers_count?.toString(), posts_count: cel.posts_count?.toString(), order_index: cel.order_index?.toString() || '0', tags: '' }); setShowCelForm(false) }}>
+                          onClick={() => {
+                            setEditingCel({
+                              ...cel,
+                              followers_count: cel.followers_count?.toString() || '',
+                              posts_count: cel.posts_count?.toString() || '',
+                              order_index: cel.order_index?.toString() || '0',
+                              total_reel_views: cel.total_reel_views?.toString() || '',
+                              total_reel_likes: cel.total_reel_likes?.toString() || '',
+                              total_post_likes: cel.total_post_likes?.toString() || '',
+                              hide_search: !!cel.hide_search,
+                              tags: ''
+                            });
+                            setShowCelForm(false);
+                          }}>
                           Edit
+                        </button>
+                        <button
+                          onClick={() => toggleHideSearch(cel)}
+                          style={{
+                            background: cel.hide_search ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
+                            border: cel.hide_search ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(244,67,54,0.3)',
+                            color: cel.hide_search ? '#4caf50' : '#f44336',
+                            borderRadius: 8,
+                            padding: '6px 12px',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          {cel.hide_search ? '🟢 Add Search' : '🔴 Remove Search'}
                         </button>
                         <button
                           onClick={() => deleteCelebrity(cel.id)}
@@ -1526,6 +1611,7 @@ export default function AdminPanel() {
                         >
                           Delete
                         </button>
+
                       </div>
                     </div>
                   ))

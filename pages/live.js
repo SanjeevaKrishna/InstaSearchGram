@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Navbar from '../components/Navbar'
+import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play } from 'lucide-react'
 
 const getOrdinal = (n) => {
   if (!n) return ''
@@ -207,9 +208,9 @@ export default function LivePage() {
                 border: '1px solid rgba(225, 48, 108, 0.2)'
               }}>
                 <span className="live-pulse" style={{
-                  fontSize: 13,
-                  display: 'inline-block',
-                }}>{activeTab === 'most_followed' ? '📈' : '🔥'}</span>
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}>{activeTab === 'most_followed' ? <TrendingUp size={13} style={{ color: 'var(--accent)' }} /> : <Flame size={13} style={{ color: '#ff6b35' }} />}</span>
                 <span style={{
                   fontSize: 11,
                   fontWeight: 800,
@@ -234,7 +235,7 @@ export default function LivePage() {
                 fontWeight: 600,
                 color: 'var(--text-dim)',
               }}>
-                <span>📅</span>
+                <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
                 <span>{currentDate}</span>
               </div>
             )}
@@ -331,7 +332,9 @@ export default function LivePage() {
             textAlign: 'center',
             color: '#d32f2f',
           }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              <AlertTriangle size={32} style={{ color: '#ffa751' }} />
+            </div>
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Unable to Load Live Data</h3>
             <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>{error}</p>
           </div>
@@ -344,15 +347,14 @@ export default function LivePage() {
                 position: 'relative',
                 marginBottom: 4,
               }}>
-                <span style={{
+                <Search size={16} style={{
                   position: 'absolute',
                   left: 16,
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  fontSize: 16,
                   color: 'var(--text-muted)',
                   pointerEvents: 'none'
-                }}>🔍</span>
+                }} />
                 <input
                   type="text"
                   placeholder="Search profiles by name..."
@@ -435,8 +437,8 @@ export default function LivePage() {
             })()}
 
             {liveData.most_followed.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '80px 0', background: 'var(--surface2)', borderRadius: 20, border: '1px dashed var(--border)' }}>
-                <div style={{ fontSize: 36, marginBottom: 16 }}>📊</div>
+              <div style={{ textAlign: 'center', padding: '80px 0', background: 'var(--surface2)', borderRadius: 20, border: '1px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <BarChart3 size={36} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
                 <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, marginBottom: 6 }}>No profiles yet</h3>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Check back later for update ranks.</p>
               </div>
@@ -618,8 +620,8 @@ export default function LivePage() {
           /* VIRAL REELS TAB */
           <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
             {liveData.viral_reels.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '80px 0', background: 'var(--surface2)', borderRadius: 20, border: '1px dashed var(--border)' }}>
-                <div style={{ fontSize: 36, marginBottom: 16 }}>🔥</div>
+              <div style={{ textAlign: 'center', padding: '80px 0', background: 'var(--surface2)', borderRadius: 20, border: '1px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Flame size={36} style={{ color: '#ff6b35', marginBottom: 16 }} />
                 <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, marginBottom: 6 }}>No viral reels today</h3>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Trending video links will update here.</p>
               </div>
@@ -715,11 +717,11 @@ export default function LivePage() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                               }}>
-                                <span style={{ fontSize: 10, color: '#ffffff' }}>▶</span>
+                                <Play size={10} style={{ fill: '#ffffff', color: '#ffffff' }} />
                               </div>
                             </>
                           ) : (
-                            <span style={{ fontSize: 16 }}>🎬</span>
+                            <Film size={16} style={{ color: 'var(--text-muted)' }} />
                           )}
                         </div>
 

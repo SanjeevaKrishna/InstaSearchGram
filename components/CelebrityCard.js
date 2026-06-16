@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Users, Image } from 'lucide-react'
 
 export default function CelebrityCard({ celebrity }) {
   const formatCount = (n) => {
@@ -92,13 +93,13 @@ export default function CelebrityCard({ celebrity }) {
           )}
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {celebrity.followers_count && (
-              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                👥 {formatCount(celebrity.followers_count)} followers
+              <span style={{ fontSize: 13.5, color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center' }}>
+                <Users size={15} style={{ marginRight: 4 }} /> {formatCount(celebrity.followers_count)} followers
               </span>
             )}
             {celebrity.posts_count && (
-              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                🖼 {celebrity.posts_count} posts
+              <span style={{ fontSize: 13.5, color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center' }}>
+                <Image size={15} style={{ marginRight: 4 }} /> {celebrity.posts_count} posts
               </span>
             )}
           </div>

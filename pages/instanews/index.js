@@ -2,6 +2,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
+import { Newspaper } from 'lucide-react'
 
 export async function getServerSideProps() {
   const { data: news, error } = await supabase
@@ -87,10 +88,9 @@ export default function InstaNewsIndex({ news }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 32,
                       flexShrink: 0,
                     }}>
-                      📰
+                      <Newspaper size={32} style={{ color: 'white' }} />
                     </div>
                   )}
                   <div style={{ flex: 1 }}>

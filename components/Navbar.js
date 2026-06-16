@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
+import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, Search } from 'lucide-react'
 
 export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -53,7 +54,9 @@ export default function Navbar() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 16,
-              }}>🔍</div>
+              }}>
+                <Search size={16} style={{ color: '#fff' }} />
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
                 <span style={{
                   fontFamily: 'var(--font-display)',
@@ -139,34 +142,34 @@ export default function Navbar() {
                   </div>
 
                   <Link href="/" className="dropdown-item" onClick={closeDropdown}>
-                    🏠 Home
+                    <Home size={14} style={{ marginRight: 8 }} /> Home
                   </Link>
                   <Link href="/about" className="dropdown-item" onClick={closeDropdown}>
-                    ℹ️ About Us
+                    <Info size={14} style={{ marginRight: 8 }} /> About Us
                   </Link>
                   <Link href="/contact" className="dropdown-item" onClick={closeDropdown}>
-                    ✉️ Contact Us
+                    <Mail size={14} style={{ marginRight: 8 }} /> Contact Us
                   </Link>
                   <Link href="/privacy" className="dropdown-item" onClick={closeDropdown}>
-                    🛡️ Privacy Policy
+                    <ShieldCheck size={14} style={{ marginRight: 8 }} /> Privacy Policy
                   </Link>
                   <Link href="/terms" className="dropdown-item" onClick={closeDropdown}>
-                    📜 Terms & Conditions
+                    <FileText size={14} style={{ marginRight: 8 }} /> Terms & Conditions
                   </Link>
                   <Link href="/disclaimer" className="dropdown-item" onClick={closeDropdown}>
-                    ⚠️ Disclaimer
+                    <AlertTriangle size={14} style={{ marginRight: 8 }} /> Disclaimer
                   </Link>
                   <Link href="/dmca" className="dropdown-item" onClick={closeDropdown}>
-                    ⚖️ DMCA (optional but good)
+                    <Scale size={14} style={{ marginRight: 8 }} /> DMCA (optional but good)
                   </Link>
                   <Link href="/request" className="dropdown-item" onClick={closeDropdown}>
-                    ➕ Request Creator / Suggest Profile
+                    <PlusCircle size={14} style={{ marginRight: 8 }} /> Request Creator / Suggest Profile
                   </Link>
                   <Link href="/instanews" className="dropdown-item" onClick={closeDropdown}>
-                    📰 InstaNews
+                    <Newspaper size={14} style={{ marginRight: 8 }} /> InstaNews
                   </Link>
                   <Link href="/live" className="dropdown-item" onClick={closeDropdown}>
-                    📈 Trending / Live
+                    <TrendingUp size={14} style={{ marginRight: 8 }} /> Trending / Live
                   </Link>
 
                   <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
