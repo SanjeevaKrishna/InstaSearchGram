@@ -23,9 +23,9 @@ export default function App({ Component, pageProps }) {
         strategy="afterInteractive"
       />
       <Head>
-        <link rel="icon" href="/favicon.jpg" />
-        <link rel="shortcut icon" href="/favicon.jpg" />
-        <link rel="apple-touch-icon" href="/favicon.jpg" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         
         {/* Primary Meta Tags */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />

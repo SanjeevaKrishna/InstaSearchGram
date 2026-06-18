@@ -190,13 +190,15 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         total_reel_views: initial.total_reel_views !== undefined && initial.total_reel_views !== null ? initial.total_reel_views.toString() : '',
         total_reel_likes: initial.total_reel_likes !== undefined && initial.total_reel_likes !== null ? initial.total_reel_likes.toString() : '',
         total_post_likes: initial.total_post_likes !== undefined && initial.total_post_likes !== null ? initial.total_post_likes.toString() : '',
-        hide_search: !!initial.hide_search
+        hide_search: !!initial.hide_search,
+        description: initial.description || ''
       }
     }
     return {
       name: '', instagram_handle: '', followers_count: '', posts_count: '', photo_url: '', is_featured: false,
       has_full_details: false, order_index: '0',
-      total_reel_views: '', total_reel_likes: '', total_post_likes: '', hide_search: false
+      total_reel_views: '', total_reel_likes: '', total_post_likes: '', hide_search: false,
+      description: ''
     }
   })
   const [saving, setSaving] = useState(false)
@@ -221,7 +223,8 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           total_reel_views: form.total_reel_views ? Number(form.total_reel_views) : 0,
           total_reel_likes: form.total_reel_likes ? Number(form.total_reel_likes) : 0,
           total_post_likes: form.total_post_likes ? Number(form.total_post_likes) : 0,
-          hide_search: !!form.hide_search
+          hide_search: !!form.hide_search,
+          description: form.description || ''
         },
       })
 
@@ -298,6 +301,16 @@ function CelebrityForm({ initial, onSave, onCancel }) {
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select an image to upload securely to Cloudinary</div>
           </div>
         )}
+      </div>
+      <div>
+        <label style={labelStyle}>Profile Description / Bio</label>
+        <textarea 
+          className="input-field" 
+          value={form.description || ''} 
+          onChange={e => set('description', e.target.value)} 
+          placeholder="Enter description or bio about the celebrity..." 
+          style={{ width: '100%', height: 80, padding: 12, borderRadius: 12, resize: 'vertical' }}
+        />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
@@ -718,7 +731,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
   const parsed = parseCategoryAndTag(initial?.category);
 
   const [form, setForm] = useState(initial || {
-    name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0'
+    name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0', language: ''
   })
   
   const [tabCategory, setTabCategory] = useState(parsed.tabCategory)
@@ -742,6 +755,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           updated.followers_count = match.followers_count?.toString() || ''
           updated.followers_text = match.followers_text || ''
           updated.order_index = match.order_index?.toString() || '0'
+          updated.language = match.language || ''
           
           const parsedMatch = parseCategoryAndTag(match.category)
           setTabCategory(parsedMatch.tabCategory)
@@ -753,6 +767,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
             updated.followers_count = ''
             updated.followers_text = ''
             updated.order_index = '0'
+            updated.language = ''
             setNotice('')
             setTabCategory('Actors')
             setDescribingTag('')
@@ -794,6 +809,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
+      {error && <div style={{ color: '#ff5252', fontSize: 13, fontWeight: 600 }}>{error}</div>}
       <div>
         <label style={labelStyle}>Full Name *</label>
         <input 
@@ -847,6 +863,22 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
             placeholder="e.g. Actor, Singer, Cricketer, Meme Page"
           />
         </div>
+      </div>
+
+      <div>
+        <label style={labelStyle}>Language</label>
+        <select
+          className="input-field"
+          value={form.language || ''}
+          onChange={e => set('language', e.target.value)}
+        >
+          <option value="">None (English/Global)</option>
+          <option value="Hindi">Hindi</option>
+          <option value="Telugu">Telugu</option>
+          <option value="Tamil">Tamil</option>
+          <option value="Kannada">Kannada</option>
+          <option value="Malayalam">Malayalam</option>
+        </select>
       </div>
 
       <div>
@@ -2105,12 +2137,12 @@ export default function AdminPanel() {
                               return `${parts[1]} (${parts[0]})`;
                             }
                             return profile.category;
-                          })()}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
+                          })()}</strong> &nbsp;·&nbsp; Language: <strong style={{ color: 'var(--text)' }}>{profile.language || 'None'}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                         <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                          onClick={() => { setEditingMostFollowed({ ...profile, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString(), category: profile.category || '' }); setShowMostFollowedForm(false) }}>
+                          onClick={() => { setEditingMostFollowed({ ...profile, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString(), category: profile.category || '', language: profile.language || '' }); setShowMostFollowedForm(false) }}>
                           Edit
                         </button>
                         <button

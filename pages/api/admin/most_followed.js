@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
     // POST - add a new profile
     if (req.method === 'POST') {
-      const { name, photo_url, followers_count, followers_text, order_index, category } = req.body
+      const { name, photo_url, followers_count, followers_text, order_index, category, language } = req.body
       if (!name) return res.status(400).json({ error: 'Name is required' })
 
       const payload = {
@@ -51,7 +51,8 @@ export default async function handler(req, res) {
         followers_count: followers_count ? Number(followers_count) : 0,
         followers_text: followers_text || '',
         order_index: order_index ? Number(order_index) : 0,
-        category: category || ''
+        category: category || '',
+        language: language || null
       }
 
       const { data, error } = await supabase
@@ -66,7 +67,7 @@ export default async function handler(req, res) {
 
     // PUT - update a profile or trigger auto-reordering
     if (req.method === 'PUT') {
-      const { id, name, photo_url, followers_count, followers_text, order_index, category, action } = req.body
+      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, action } = req.body
 
       // Sub-action: Reorder profiles by followers count descending
       if (action === 'reorder') {
@@ -134,7 +135,8 @@ export default async function handler(req, res) {
         followers_count: followers_count ? Number(followers_count) : 0,
         followers_text: followers_text || '',
         order_index: order_index ? Number(order_index) : 0,
-        category: category || ''
+        category: category || '',
+        language: language || null
       }
 
       const { data, error } = await supabase

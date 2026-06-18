@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
+import Link from 'next/link'
+import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
-import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play } from 'lucide-react'
+import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronDown } from 'lucide-react'
 
 const getOrdinal = (n) => {
   if (!n) return ''
@@ -99,6 +101,7 @@ const getCategoryStyle = (tabCategory) => {
 }
 
 export default function LivePage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'viral_reels'
   const [liveData, setLiveData] = useState({ live_date: '', most_followed: [], viral_reels: [] })
   const [currentDate, setCurrentDate] = useState('')
@@ -107,9 +110,21 @@ export default function LivePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [hoveredTab, setHoveredTab] = useState(null)
+  const [selectedLanguage, setSelectedLanguage] = useState('All')
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
+    
+    // Restore last selected language filter from localStorage
+    const savedRoom = localStorage.getItem('spialr_last_language')
+    if (savedRoom) {
+      const validLangs = ['all', 'hindi', 'telugu', 'tamil', 'kannada', 'malayalam']
+      if (validLangs.includes(savedRoom.toLowerCase())) {
+        const formatted = savedRoom.charAt(0).toUpperCase() + savedRoom.slice(1)
+        setSelectedLanguage(formatted)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -260,7 +275,7 @@ export default function LivePage() {
           margin: '0 auto 32px'
         }}>
           <button
-            onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); }}
+            onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
             onMouseEnter={() => setHoveredTab('most_followed')}
             onMouseLeave={() => setHoveredTab(null)}
             style={{
@@ -289,7 +304,7 @@ export default function LivePage() {
             Most Followed
           </button>
           <button
-            onClick={() => { setActiveTab('viral_reels'); setSearchQuery(''); }}
+            onClick={() => { setActiveTab('viral_reels'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
             onMouseEnter={() => setHoveredTab('viral_reels')}
             onMouseLeave={() => setHoveredTab(null)}
             style={{
@@ -341,6 +356,98 @@ export default function LivePage() {
         ) : activeTab === 'most_followed' ? (
           /* MOST FOLLOWED TAB */
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Language Filter Dropdown */}
+            {liveData.most_followed.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                marginBottom: 4,
+                position: 'relative',
+                zIndex: 10
+              }}>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                    style={{
+                      padding: '8px 18px',
+                      borderRadius: '100px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <span>{selectedLanguage}</span>
+                    <ChevronDown size={14} style={{
+                      transform: isLangDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      color: 'var(--text-muted)'
+                    }} />
+                  </button>
+
+                  {isLangDropdownOpen && (
+                    <>
+                      {/* Click outside backdrop */}
+                      <div 
+                        onClick={() => setIsLangDropdownOpen(false)}
+                        style={{
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 99,
+                          background: 'transparent'
+                        }}
+                      />
+                      {/* Dropdown Menu */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: 6,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 12,
+                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+                        zIndex: 100,
+                        minWidth: 160,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '4px 0',
+                      }}>
+                        {['All', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam'].map((lang) => {
+                          const isSelected = selectedLanguage === lang;
+                          return (
+                            <button
+                              key={lang}
+                              onClick={() => {
+                                setSelectedLanguage(lang);
+                                setIsLangDropdownOpen(false);
+                                localStorage.setItem('spialr_last_language', lang.toLowerCase());
+                              }}
+                              className={`lang-dropdown-item ${isSelected ? 'active' : ''}`}
+                            >
+                              {lang}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Search Input */}
             {liveData.most_followed.length > 0 && (
               <div style={{
@@ -448,7 +555,9 @@ export default function LivePage() {
                 const parsed = parseCategoryAndTag(p.category)
                 const matchesCategory = selectedCategory.toLowerCase() === 'all' || 
                   parsed.tabCategory.toLowerCase() === selectedCategory.toLowerCase()
-                return matchesSearch && matchesCategory
+                const matchesLanguage = selectedLanguage === 'All' || 
+                  (p.language && p.language.toLowerCase() === selectedLanguage.toLowerCase())
+                return matchesSearch && matchesCategory && matchesLanguage
               })
 
               if (filtered.length === 0) {

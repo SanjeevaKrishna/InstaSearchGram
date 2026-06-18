@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
-import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, Search } from 'lucide-react'
+import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, MessageSquare } from 'lucide-react'
 
 export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -44,37 +44,15 @@ export default function Navbar() {
         }}>
           {/* Logo */}
           <Link href="/">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-              <div style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                background: 'var(--gradient)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 16,
-              }}>
-                <Search size={16} style={{ color: '#fff' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                <span style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                  fontSize: 19,
-                  letterSpacing: '-0.03em',
-                }}>
-                  Spi<span className="gradient-text">alr</span>
-                </span>
-                <span className="gradient-text" style={{
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  letterSpacing: '-0.01em',
-                  fontFamily: 'var(--font-body)',
-                }}>
-                  search posts & analyze ranks
-                </span>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <img 
+                src="/logo.png" 
+                alt="Spialr Logo" 
+                style={{ 
+                  height: 34, 
+                  display: 'block' 
+                }} 
+              />
             </div>
           </Link>
 
@@ -90,6 +68,9 @@ export default function Navbar() {
               </Link>
               <Link href="/live">
                 <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Live</button>
+              </Link>
+              <Link href="/chat">
+                <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Chat</button>
               </Link>
               <Link href="/instanews">
                 <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>InstaNews</button>
@@ -170,6 +151,9 @@ export default function Navbar() {
                   </Link>
                   <Link href="/live" className="dropdown-item" onClick={closeDropdown}>
                     <TrendingUp size={14} style={{ marginRight: 8 }} /> Trending / Live
+                  </Link>
+                  <Link href="/chat" className="dropdown-item" onClick={closeDropdown}>
+                    <MessageSquare size={14} style={{ marginRight: 8 }} /> Chat Room
                   </Link>
 
                   <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />

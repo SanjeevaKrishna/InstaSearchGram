@@ -102,7 +102,7 @@ export default function CelebrityPage() {
 
       <Navbar />
 
-      <main style={{ maxWidth: 600, margin: '0 auto', padding: '24px 20px 80px' }}>
+      <main style={{ maxWidth: celebrity.hide_search ? 800 : 600, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }}>
         {/* Back */}
         <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24, cursor: 'pointer', padding: 0 }}>
           ← Back to Search
@@ -339,6 +339,8 @@ export default function CelebrityPage() {
               </button>
             </div>
 
+            {/* Description removed from here, placed at the end below timeline */}
+
             {!celebrity.hide_search && (
               <>
                 <div style={{ width: '100%', height: 1, background: 'var(--border)', marginBottom: 32 }} />
@@ -381,6 +383,18 @@ export default function CelebrityPage() {
                   </button>
                 </div>
               </>
+            )}
+
+            {celebrity.description && (
+              <div style={{ marginBottom: 32, width: '100%' }}>
+                <div style={{ width: '100%', height: 1, background: 'var(--border)', margin: '32px 0 24px' }} />
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
+                  About {celebrity.name}
+                </h3>
+                <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0, wordBreak: 'break-word' }}>
+                  {celebrity.description}
+                </p>
+              </div>
             )}
           </div>
         )}
