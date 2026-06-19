@@ -487,6 +487,30 @@ input, textarea, select {
   box-shadow: 0 8px 20px rgba(255, 167, 81, 0.08);
 }
 
+.analytics-card-comments {
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(143, 0, 255, 0.03) 100%);
+}
+.analytics-card-comments:hover {
+  border-color: #8f00ff;
+  box-shadow: 0 8px 20px rgba(143, 0, 255, 0.08);
+}
+
+.analytics-card-shares {
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(46, 196, 182, 0.03) 100%);
+}
+.analytics-card-shares:hover {
+  border-color: #2ec4b6;
+  box-shadow: 0 8px 20px rgba(46, 196, 182, 0.08);
+}
+
+.analytics-card-reposts {
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(16, 185, 129, 0.03) 100%);
+}
+.analytics-card-reposts:hover {
+  border-color: #10b981;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.08);
+}
+
 .analytics-card-num-compact {
   font-family: var(--font-display);
   font-size: 24px;

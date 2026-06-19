@@ -190,6 +190,9 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         total_reel_views: initial.total_reel_views !== undefined && initial.total_reel_views !== null ? initial.total_reel_views.toString() : '',
         total_reel_likes: initial.total_reel_likes !== undefined && initial.total_reel_likes !== null ? initial.total_reel_likes.toString() : '',
         total_post_likes: initial.total_post_likes !== undefined && initial.total_post_likes !== null ? initial.total_post_likes.toString() : '',
+        total_comments: initial.total_comments !== undefined && initial.total_comments !== null ? initial.total_comments.toString() : '',
+        total_shares: initial.total_shares !== undefined && initial.total_shares !== null ? initial.total_shares.toString() : '',
+        total_reposts: initial.total_reposts !== undefined && initial.total_reposts !== null ? initial.total_reposts.toString() : '',
         hide_search: !!initial.hide_search,
         description: initial.description || ''
       }
@@ -197,7 +200,8 @@ function CelebrityForm({ initial, onSave, onCancel }) {
     return {
       name: '', instagram_handle: '', followers_count: '', posts_count: '', photo_url: '', is_featured: false,
       has_full_details: false, order_index: '0',
-      total_reel_views: '', total_reel_likes: '', total_post_likes: '', hide_search: false,
+      total_reel_views: '', total_reel_likes: '', total_post_likes: '',
+      total_comments: '', total_shares: '', total_reposts: '', hide_search: false,
       description: ''
     }
   })
@@ -223,6 +227,9 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           total_reel_views: form.total_reel_views ? Number(form.total_reel_views) : 0,
           total_reel_likes: form.total_reel_likes ? Number(form.total_reel_likes) : 0,
           total_post_likes: form.total_post_likes ? Number(form.total_post_likes) : 0,
+          total_comments: form.total_comments ? Number(form.total_comments) : 0,
+          total_shares: form.total_shares ? Number(form.total_shares) : 0,
+          total_reposts: form.total_reposts ? Number(form.total_reposts) : 0,
           hide_search: !!form.hide_search,
           description: form.description || ''
         },
@@ -324,6 +331,20 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         <div>
           <label style={labelStyle}>Total Post Likes</label>
           <input className="input-field" type="number" value={form.total_post_likes} onChange={e => set('total_post_likes', e.target.value)} placeholder="e.g. 80000" />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Total Comments</label>
+          <input className="input-field" type="number" value={form.total_comments} onChange={e => set('total_comments', e.target.value)} placeholder="e.g. 12000" />
+        </div>
+        <div>
+          <label style={labelStyle}>Total Shares</label>
+          <input className="input-field" type="number" value={form.total_shares} onChange={e => set('total_shares', e.target.value)} placeholder="e.g. 4500" />
+        </div>
+        <div>
+          <label style={labelStyle}>Total Repost</label>
+          <input className="input-field" type="number" value={form.total_reposts} onChange={e => set('total_reposts', e.target.value)} placeholder="e.g. 3500" />
         </div>
       </div>
       <div>
@@ -1349,6 +1370,9 @@ export default function AdminPanel() {
           total_reel_views: cel.total_reel_views ? Number(cel.total_reel_views) : 0,
           total_reel_likes: cel.total_reel_likes ? Number(cel.total_reel_likes) : 0,
           total_post_likes: cel.total_post_likes ? Number(cel.total_post_likes) : 0,
+          total_comments: cel.total_comments ? Number(cel.total_comments) : 0,
+          total_shares: cel.total_shares ? Number(cel.total_shares) : 0,
+          total_reposts: cel.total_reposts ? Number(cel.total_reposts) : 0,
         }
       })
       const data = await res.json()
@@ -1675,6 +1699,9 @@ export default function AdminPanel() {
                               total_reel_views: cel.total_reel_views?.toString() || '',
                               total_reel_likes: cel.total_reel_likes?.toString() || '',
                               total_post_likes: cel.total_post_likes?.toString() || '',
+                              total_comments: cel.total_comments?.toString() || '',
+                              total_shares: cel.total_shares?.toString() || '',
+                              total_reposts: cel.total_reposts?.toString() || '',
                               hide_search: !!cel.hide_search,
                               tags: ''
                             });

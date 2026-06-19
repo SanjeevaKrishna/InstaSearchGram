@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../../components/Navbar'
 import PostCard from '../../components/PostCard'
-import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles } from 'lucide-react'
+import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2 } from 'lucide-react'
 
 export default function CelebrityPage() {
   const router = useRouter()
@@ -155,7 +155,7 @@ export default function CelebrityPage() {
         </div>
 
         {/* Account Insights (Premium Analytics Cards) */}
-        {(celebrity.total_reel_views || celebrity.total_reel_likes || celebrity.total_post_likes) ? (
+        {(celebrity.total_reel_views || celebrity.total_reel_likes || celebrity.total_post_likes || celebrity.total_comments || celebrity.total_shares || celebrity.total_reposts) ? (
           <div className="analytics-section">
             <h3 className="analytics-title">
               <TrendingUp size={18} strokeWidth={2.5} /> Account Insights
@@ -192,6 +192,39 @@ export default function CelebrityPage() {
                 </div>
                 <div className="analytics-card-label-compact">
                   Post Likes
+                </div>
+              </div>
+
+              {/* Card 4: Total Comments */}
+              <div className="analytics-card-compact analytics-card-comments">
+                <MessageSquare size={20} strokeWidth={2} style={{ color: '#8f00ff', marginBottom: 8 }} />
+                <div className="analytics-card-num-compact">
+                  {formatCount(celebrity.total_comments)}
+                </div>
+                <div className="analytics-card-label-compact">
+                  Total Comments
+                </div>
+              </div>
+
+              {/* Card 5: Total Shares */}
+              <div className="analytics-card-compact analytics-card-shares">
+                <Share2 size={20} strokeWidth={2} style={{ color: '#2ec4b6', marginBottom: 8 }} />
+                <div className="analytics-card-num-compact">
+                  {formatCount(celebrity.total_shares)}
+                </div>
+                <div className="analytics-card-label-compact">
+                  Total Shares
+                </div>
+              </div>
+
+              {/* Card 6: Total Repost */}
+              <div className="analytics-card-compact analytics-card-reposts">
+                <Repeat2 size={20} strokeWidth={2} style={{ color: '#10b981', marginBottom: 8 }} />
+                <div className="analytics-card-num-compact">
+                  {formatCount(celebrity.total_reposts)}
+                </div>
+                <div className="analytics-card-label-compact">
+                  Total Repost
                 </div>
               </div>
             </div>

@@ -13,6 +13,14 @@ create table if not exists celebrities (
   posts_count integer,
   photo_url text,
   is_featured boolean default false,
+  total_reel_views bigint default 0,
+  total_reel_likes bigint default 0,
+  total_post_likes bigint default 0,
+  total_comments bigint default 0,
+  total_shares bigint default 0,
+  total_reposts bigint default 0,
+  hide_search boolean default false,
+  description text,
   created_at timestamptz default now()
 );
 
