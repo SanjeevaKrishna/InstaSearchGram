@@ -112,6 +112,12 @@ export default function LivePage() {
   const [hoveredTab, setHoveredTab] = useState(null)
   const [selectedLanguage, setSelectedLanguage] = useState('All')
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
+  const [displayLimit, setDisplayLimit] = useState(50)
+
+  // Reset display limit when filter state changes to optimize initial load & render speed
+  useEffect(() => {
+    setDisplayLimit(50)
+  }, [searchQuery, selectedCategory, selectedLanguage, activeTab])
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
@@ -594,7 +600,7 @@ export default function LivePage() {
                   </div>
 
                   {/* Table Body */}
-                  {filtered.map((profile, index) => {
+                  {filtered.slice(0, displayLimit).map((profile, index) => {
                     const rank = index + 1
                     return (
                       <div key={profile.id} className="table-row table-row-hover" style={{
@@ -721,6 +727,28 @@ export default function LivePage() {
                       </div>
                     )
                   })}
+
+                  {filtered.length > displayLimit && (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                      <button 
+                        className="btn"
+                        style={{ 
+                          background: 'var(--gradient)', 
+                          color: '#fff', 
+                          border: 'none', 
+                          padding: '10px 24px', 
+                          borderRadius: '10px', 
+                          fontWeight: 600, 
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(225, 48, 108, 0.15)',
+                          fontSize: 14,
+                        }}
+                        onClick={() => setDisplayLimit(prev => prev + 100)}
+                      >
+                        Load More Accounts ({filtered.length - displayLimit} remaining)
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })()}

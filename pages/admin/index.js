@@ -1053,6 +1053,9 @@ export default function AdminPanel() {
 
   const [visits, setVisits] = useState([])
 
+  const [chatBackgrounds, setChatBackgrounds] = useState({})
+  const [uploadingBgRoom, setUploadingBgRoom] = useState(null)
+
   const [liveDate, setLiveDate] = useState('')
   const [savingLiveDate, setSavingLiveDate] = useState(false)
 
@@ -1075,6 +1078,47 @@ export default function AdminPanel() {
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
+  }
+
+  const handleSaveChatBackground = async (room, imageUrl) => {
+    try {
+      const res = await adminFetch('/api/chat_backgrounds', {
+        method: 'POST',
+        body: { room, image_url: imageUrl }
+      })
+      if (res.ok) {
+        setChatBackgrounds(prev => ({ ...prev, [room]: imageUrl }))
+        showToast(`✅ Wallpaper for ${room} room saved!`)
+      } else {
+        const err = await res.json()
+        alert('Failed to save background: ' + (err.error || res.statusText))
+      }
+    } catch (err) {
+      alert('Error: ' + err.message)
+    }
+  }
+
+  const handleDeleteChatBackground = async (room) => {
+    if (!confirm(`Delete wallpaper for ${room}?`)) return
+    try {
+      const res = await adminFetch('/api/chat_backgrounds', {
+        method: 'DELETE',
+        body: { room }
+      })
+      if (res.ok) {
+        setChatBackgrounds(prev => {
+          const updated = { ...prev }
+          delete updated[room]
+          return updated
+        })
+        showToast(`✅ Wallpaper for ${room} room deleted!`)
+      } else {
+        const err = await res.json()
+        alert('Failed to delete background: ' + (err.error || res.statusText))
+      }
+    } catch (err) {
+      alert('Error: ' + err.message)
+    }
   }
 
   const [playlists, setPlaylists] = useState([])
@@ -1225,6 +1269,11 @@ export default function AdminPanel() {
         const data = await res.json()
         setVisits(data.visits || [])
       }
+      if (tab === 'chat_backgrounds') {
+        const res = await adminFetch('/api/chat_backgrounds')
+        const data = await res.json()
+        setChatBackgrounds(data.backgrounds || {})
+      }
     } catch {}
     setLoadingData(false)
   }
@@ -1328,9 +1377,22 @@ export default function AdminPanel() {
 
   const formatCount = (n) => {
     if (!n) return '—'
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
-    return n.toString()
+    const num = Number(n)
+    if (isNaN(num)) return n.toString()
+
+    // Pre-round to 3 significant figures to handle rollovers (e.g. 999900 -> 1000000)
+    const roundedNum = Number(num.toPrecision(3))
+
+    const formatWithPrec = (value, suffix) => {
+      let formatted = Number(value.toPrecision(3)).toString()
+      return formatted + suffix
+    }
+
+    if (roundedNum >= 1e12) return formatWithPrec(roundedNum / 1e12, 'T')
+    if (roundedNum >= 1e9) return formatWithPrec(roundedNum / 1e9, 'B')
+    if (roundedNum >= 1e6) return formatWithPrec(roundedNum / 1e6, 'M')
+    if (roundedNum >= 1000) return formatWithPrec(roundedNum / 1000, 'K')
+    return roundedNum.toString()
   }
 
   const getOrdinal = (n) => {
@@ -1426,6 +1488,7 @@ export default function AdminPanel() {
             { id: 'most_followed', label: '📊 Most Followed' },
             { id: 'viral_reels', label: '🔥 Viral Reels Today' },
             { id: 'visitors', label: '👥 Visitors' },
+            { id: 'chat_backgrounds', label: '💬 Chat Wallpaper' },
           ].map(t => (
             <button
               key={t.id}
@@ -2306,6 +2369,130 @@ export default function AdminPanel() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CHAT WALLPAPER TAB ────────────────────────────────────────── */}
+        {tab === 'chat_backgrounds' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, marginBottom: 4 }}>
+                  Chat Room Wallpapers
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>
+                  Upload a custom background wallpaper for each chat room. The image will be displayed as a subtle light watermark in the chat interface.
+                </p>
+              </div>
+            </div>
+
+            {loadingData ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+                {[
+                  { key: 'all', name: 'Global Chat (All)' },
+                  { key: 'hindi', name: 'Hindi Room' },
+                  { key: 'telugu', name: 'Telugu Room' },
+                  { key: 'tamil', name: 'Tamil Room' },
+                  { key: 'kannada', name: 'Kannada Room' },
+                  { key: 'malayalam', name: 'Malayalam Room' }
+                ].map(room => {
+                  const bgUrl = chatBackgrounds[room.key]
+                  const isUploading = uploadingBgRoom === room.key
+
+                  return (
+                    <div key={room.key} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 20, borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                      <h3 style={{ margin: 0, fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        💬 {room.name}
+                      </h3>
+                      
+                      <div style={{ 
+                        height: 160, 
+                        borderRadius: 12, 
+                        border: '1px dashed var(--border)', 
+                        background: bgUrl 
+                          ? `linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)), url(${bgUrl}) center/cover no-repeat` 
+                          : 'rgba(99, 102, 241, 0.03)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                        {isUploading ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                            <div className="spinner" />
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Uploading to Cloudinary...</span>
+                          </div>
+                        ) : bgUrl ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, zIndex: 1, padding: 12, background: 'rgba(255, 255, 255, 0.9)', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', backdropFilter: 'blur(4px)' }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#2e7d32' }}>✓ Custom Wallpaper Active</span>
+                            <a href={bgUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'underline' }}>View Original Image</a>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Default Chat Background</span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 10, marginTop: 'auto' }}>
+                        {bgUrl ? (
+                          <button 
+                            className="btn btn-ghost" 
+                            style={{ flex: 1, color: '#ff5252', background: 'rgba(255, 82, 82, 0.08)', fontWeight: 600 }}
+                            onClick={() => handleDeleteChatBackground(room.key)}
+                          >
+                            🗑️ Delete Wallpaper
+                          </button>
+                        ) : (
+                          <label style={{ flex: 1, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              style={{ display: 'none' }} 
+                              onChange={async (e) => {
+                                const file = e.target.files[0]
+                                if (!file) return
+                                setUploadingBgRoom(room.key)
+                                const reader = new FileReader()
+                                reader.readAsDataURL(file)
+                                reader.onload = async () => {
+                                  try {
+                                    const res = await adminFetch('/api/admin/upload', {
+                                      method: 'POST',
+                                      body: { image: reader.result }
+                                    })
+                                    const text = await res.text()
+                                    let data
+                                    try {
+                                      data = JSON.parse(text)
+                                    } catch(e) {
+                                      throw new Error(`Server Error: ${res.status} - ${text.substring(0, 40)}`)
+                                    }
+                                    if (data.url) {
+                                      await handleSaveChatBackground(room.key, data.url)
+                                    } else {
+                                      throw new Error(data.error || 'Upload failed')
+                                    }
+                                  } catch (err) {
+                                    alert('Upload failed: ' + err.message)
+                                  } finally {
+                                    setUploadingBgRoom(null)
+                                  }
+                                }
+                              }}
+                            />
+                            <div className="btn" style={{ width: '100%', textAlign: 'center', background: 'var(--gradient)', color: 'white', fontWeight: 600 }}>
+                              📤 Upload Image
+                            </div>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

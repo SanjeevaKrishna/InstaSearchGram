@@ -4,9 +4,22 @@ import { Users, Image } from 'lucide-react'
 export default function CelebrityCard({ celebrity }) {
   const formatCount = (n) => {
     if (!n) return '—'
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
-    return n.toString()
+    const num = Number(n)
+    if (isNaN(num)) return n.toString()
+
+    // Pre-round to 3 significant figures to handle rollovers (e.g. 999900 -> 1000000)
+    const roundedNum = Number(num.toPrecision(3))
+
+    const formatWithPrec = (value, suffix) => {
+      let formatted = Number(value.toPrecision(3)).toString()
+      return formatted + suffix
+    }
+
+    if (roundedNum >= 1e12) return formatWithPrec(roundedNum / 1e12, 'T')
+    if (roundedNum >= 1e9) return formatWithPrec(roundedNum / 1e9, 'B')
+    if (roundedNum >= 1e6) return formatWithPrec(roundedNum / 1e6, 'M')
+    if (roundedNum >= 1000) return formatWithPrec(roundedNum / 1000, 'K')
+    return roundedNum.toString()
   }
 
   return (

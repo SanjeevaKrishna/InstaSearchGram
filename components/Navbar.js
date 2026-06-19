@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
+import Logo from './Logo'
 import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, MessageSquare } from 'lucide-react'
 
 export default function Navbar() {
@@ -45,14 +46,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/">
             <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <img 
-                src="/logo.png" 
-                alt="Spialr Logo" 
-                style={{ 
-                  height: 34, 
-                  display: 'block' 
-                }} 
-              />
+              <Logo height={30} />
             </div>
           </Link>
 

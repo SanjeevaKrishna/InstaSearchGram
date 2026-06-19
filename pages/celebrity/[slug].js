@@ -44,24 +44,19 @@ export default function CelebrityPage() {
     const num = Number(n)
     if (isNaN(num)) return n.toString()
 
-    const cleanFormat = (val, suffix) => {
-      const formatted = val.toFixed(1)
-      return formatted.endsWith('.0') ? val.toFixed(0) + suffix : formatted + suffix
+    // Pre-round to 3 significant figures to handle rollovers (e.g. 999900 -> 1000000)
+    const roundedNum = Number(num.toPrecision(3))
+
+    const formatWithPrec = (value, suffix) => {
+      let formatted = Number(value.toPrecision(3)).toString()
+      return formatted + suffix
     }
 
-    if (num >= 1e12) {
-      return cleanFormat(num / 1e12, 'T')
-    }
-    if (num >= 1e9) {
-      return cleanFormat(num / 1e9, 'B')
-    }
-    if (num >= 1e6) {
-      return cleanFormat(num / 1e6, 'M')
-    }
-    if (num >= 1000) {
-      return cleanFormat(num / 1000, 'K')
-    }
-    return num.toString()
+    if (roundedNum >= 1e12) return formatWithPrec(roundedNum / 1e12, 'T')
+    if (roundedNum >= 1e9) return formatWithPrec(roundedNum / 1e9, 'B')
+    if (roundedNum >= 1e6) return formatWithPrec(roundedNum / 1e6, 'M')
+    if (roundedNum >= 1000) return formatWithPrec(roundedNum / 1000, 'K')
+    return roundedNum.toString()
   }
 
 

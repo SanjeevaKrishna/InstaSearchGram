@@ -23,6 +23,7 @@ export default function App({ Component, pageProps }) {
         strategy="afterInteractive"
       />
       <Head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.png" type="image/png" />
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/favicon.png" />

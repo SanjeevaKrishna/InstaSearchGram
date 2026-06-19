@@ -1,5 +1,12 @@
 import { supabase } from '../../lib/supabase'
 
+// 2-minute memory cache to prevent heavy database loads and network latency on concurrent queries
+let liveCache = {
+  data: null,
+  timestamp: 0
+}
+const CACHE_DURATION = 2 * 60 * 1000 // 2 minutes
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET'])
@@ -7,40 +14,33 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Fetch live date settings
-    const { data: settingsData, error: settingsError } = await supabase
-      .from('live_settings')
-      .select('*')
-      .eq('id', 1)
-      .maybeSingle()
-
-    if (settingsError) throw settingsError
-
-    // 2. Fetch most followed profiles (paginated to load all, bypassing the 1000-row default limit)
-    let profilesData = []
-    let from = 0
-    let to = 999
-    while (true) {
-      const { data, error: profilesError } = await supabase
-        .from('most_followed')
-        .select('*')
-        .order('followers_count', { ascending: false })
-        .range(from, to)
-
-      if (profilesError) throw profilesError
-      
-      profilesData = profilesData.concat(data || [])
-      if (!data || data.length < 1000) break
-      from += 1000
-      to += 1000
+    const now = Date.now()
+    if (liveCache.data && (now - liveCache.timestamp < CACHE_DURATION)) {
+      // Set Edge CDN and Browser caching headers (cache for 60s, stale-while-revalidate for 10 minutes)
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
+      return res.status(200).json(liveCache.data)
     }
 
-    // 3. Fetch viral reels today
-    const { data: reelsData, error: reelsError } = await supabase
-      .from('viral_reels')
-      .select('*')
+    // Fetch live settings, 3 pages of most followed (supporting up to 3000 rows in parallel), and viral reels concurrently
+    const [settingsResult, profilesResult1, profilesResult2, profilesResult3, reelsResult] = await Promise.all([
+      supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
+      supabase.from('viral_reels').select('*')
+    ])
 
-    if (reelsError) throw reelsError
+    if (settingsResult.error) throw settingsResult.error
+    if (profilesResult1.error) throw profilesResult1.error
+    if (profilesResult2.error) throw profilesResult2.error
+    if (profilesResult3.error) throw profilesResult3.error
+    if (reelsResult.error) throw reelsResult.error
+
+    const settingsData = settingsResult.data
+    const profilesData = (profilesResult1.data || [])
+      .concat(profilesResult2.data || [])
+      .concat(profilesResult3.data || [])
+    const reelsData = reelsResult.data
 
     const sortedReels = (reelsData || []).sort((a, b) => {
       const rankA = a.order_index || 999999
@@ -57,13 +57,25 @@ export default async function handler(req, res) {
       day: 'numeric',
       year: 'numeric'
     })
-    return res.status(200).json({
+
+    const responseData = {
       live_date: settingsData?.live_date || currentDate,
       most_followed: profilesData || [],
       viral_reels: sortedReels
-    })
+    }
+
+    // Save to server-side memory cache
+    liveCache = {
+      data: responseData,
+      timestamp: now
+    }
+
+    // Set Edge CDN and Browser caching headers
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
+    return res.status(200).json(responseData)
   } catch (err) {
     console.error('Public API Live Error:', err)
     return res.status(500).json({ error: err.message || 'Failed to fetch live data' })
   }
 }
+
