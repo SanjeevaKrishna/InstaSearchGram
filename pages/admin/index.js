@@ -749,14 +749,36 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
     return { tabCategory, describingTag };
   };
 
-  const parsed = parseCategoryAndTag(initial?.category);
+  const parseMultipleCategories = (rawCategoryString) => {
+    if (!rawCategoryString) return [{ tabCategory: 'Creators', describingTag: '' }];
+    const parts = rawCategoryString.split(',');
+    return parts.map(part => {
+      const subparts = part.split(':');
+      if (subparts.length >= 2) {
+        return {
+          tabCategory: subparts[0].trim(),
+          describingTag: subparts[1].trim()
+        };
+      }
+      const singleParsed = parseCategoryAndTag(part);
+      return {
+        tabCategory: singleParsed.tabCategory,
+        describingTag: singleParsed.describingTag
+      };
+    });
+  };
+
+  const parseMultipleLanguages = (rawLanguageString) => {
+    if (!rawLanguageString) return [''];
+    return rawLanguageString.split(',').map(l => l.trim()).filter(Boolean);
+  };
 
   const [form, setForm] = useState(initial || {
     name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0', language: ''
   })
   
-  const [tabCategory, setTabCategory] = useState(parsed.tabCategory)
-  const [describingTag, setDescribingTag] = useState(parsed.describingTag)
+  const [selectedCategories, setSelectedCategories] = useState(() => parseMultipleCategories(initial?.category))
+  const [selectedLanguages, setSelectedLanguages] = useState(() => parseMultipleLanguages(initial?.language))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -778,9 +800,10 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           updated.order_index = match.order_index?.toString() || '0'
           updated.language = match.language || ''
           
-          const parsedMatch = parseCategoryAndTag(match.category)
-          setTabCategory(parsedMatch.tabCategory)
-          setDescribingTag(parsedMatch.describingTag)
+          const parsedCats = parseMultipleCategories(match.category)
+          setSelectedCategories(parsedCats)
+          const parsedLangs = parseMultipleLanguages(match.language)
+          setSelectedLanguages(parsedLangs)
         } else {
           if (updated.id) {
             delete updated.id
@@ -790,8 +813,8 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
             updated.order_index = '0'
             updated.language = ''
             setNotice('')
-            setTabCategory('Actors')
-            setDescribingTag('')
+            setSelectedCategories([{ tabCategory: 'Creators', describingTag: '' }])
+            setSelectedLanguages([''])
           }
         }
       }
@@ -801,9 +824,22 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
 
   const handleSave = async () => {
     if (!form.name.trim()) return setError('Name is required')
-    if (!describingTag.trim()) return setError('Description tag is required')
+    
+    // Validate categories
+    if (selectedCategories.length === 0) return setError('At least one category is required')
+    for (let i = 0; i < selectedCategories.length; i++) {
+      if (!selectedCategories[i].describingTag.trim()) {
+        return setError(`Description tag is required for category #${i + 1}`)
+      }
+    }
 
-    const combinedCategory = `${tabCategory}:${describingTag.trim()}`
+    const combinedCategory = selectedCategories
+      .map(c => `${c.tabCategory}:${c.describingTag.trim()}`)
+      .join(', ')
+
+    // Filter duplicates and empty strings from languages
+    const uniqueLangs = Array.from(new Set(selectedLanguages.map(l => l.trim()).filter(Boolean)))
+    const combinedLanguage = uniqueLangs.join(', ') || null
 
     setSaving(true)
     setError('')
@@ -815,7 +851,8 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           id: initial?.id || form.id,
           followers_count: form.followers_count ? Number(form.followers_count) : 0,
           order_index: form.order_index ? Number(form.order_index) : 0,
-          category: combinedCategory
+          category: combinedCategory,
+          language: combinedLanguage
         },
       })
       const data = await res.json()
@@ -862,44 +899,132 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div>
-          <label style={labelStyle}>Category Tab (for Filtering)</label>
-          <select
-            className="input-field"
-            value={tabCategory}
-            onChange={e => setTabCategory(e.target.value)}
-          >
-            {predefinedTabCategories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Description Tag (for Display)</label>
-          <input
-            className="input-field"
-            value={describingTag}
-            onChange={e => setDescribingTag(e.target.value)}
-            placeholder="e.g. Actor, Singer, Cricketer, Meme Page"
-          />
-        </div>
+      <div style={{ display: 'grid', gap: 12, border: '1px solid var(--border)', borderRadius: 12, padding: 14, background: 'var(--surface2)' }}>
+        <label style={{ ...labelStyle, marginBottom: 0, fontWeight: 700 }}>Categories & Tags</label>
+        {selectedCategories.map((cat, idx) => (
+          <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              {idx === 0 && <label style={{ ...labelStyle, fontSize: 11 }}>Category Tab</label>}
+              <select
+                className="input-field"
+                value={cat.tabCategory}
+                onChange={e => {
+                  const updated = [...selectedCategories]
+                  updated[idx].tabCategory = e.target.value
+                  setSelectedCategories(updated)
+                }}
+              >
+                {predefinedTabCategories.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1.5 }}>
+              {idx === 0 && <label style={{ ...labelStyle, fontSize: 11 }}>Description Tag</label>}
+              <input
+                className="input-field"
+                value={cat.describingTag}
+                onChange={e => {
+                  const updated = [...selectedCategories]
+                  updated[idx].describingTag = e.target.value
+                  setSelectedCategories(updated)
+                }}
+                placeholder="e.g. Actor, Singer, Cricketer"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%', marginTop: idx === 0 ? 18 : 0 }}>
+              <button
+                className="btn"
+                style={{
+                  background: 'rgba(255,82,82,0.1)',
+                  border: '1px solid rgba(255,82,82,0.2)',
+                  color: '#ff5252',
+                  borderRadius: 8,
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  if (selectedCategories.length > 1) {
+                    setSelectedCategories(selectedCategories.filter((_, i) => i !== idx))
+                  } else {
+                    const updated = [...selectedCategories]
+                    updated[0].describingTag = ''
+                    setSelectedCategories(updated)
+                  }
+                }}
+                title="Remove Category"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
+        <button
+          className="btn btn-ghost"
+          style={{ fontSize: 12, color: 'var(--accent)', padding: '6px 12px', alignSelf: 'flex-start', border: '1px dashed var(--accent)', borderRadius: 8 }}
+          onClick={() => setSelectedCategories([...selectedCategories, { tabCategory: 'Creators', describingTag: '' }])}
+        >
+          ➕ Add Another Category
+        </button>
       </div>
 
-      <div>
-        <label style={labelStyle}>Language</label>
-        <select
-          className="input-field"
-          value={form.language || ''}
-          onChange={e => set('language', e.target.value)}
+      <div style={{ display: 'grid', gap: 12, border: '1px solid var(--border)', borderRadius: 12, padding: 14, background: 'var(--surface2)' }}>
+        <label style={{ ...labelStyle, marginBottom: 0, fontWeight: 700 }}>Languages</label>
+        {selectedLanguages.map((lang, idx) => (
+          <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              {idx === 0 && <label style={{ ...labelStyle, fontSize: 11 }}>Language</label>}
+              <select
+                className="input-field"
+                value={lang}
+                onChange={e => {
+                  const updated = [...selectedLanguages]
+                  updated[idx] = e.target.value
+                  setSelectedLanguages(updated)
+                }}
+              >
+                <option value="">None (English/Global)</option>
+                <option value="Hindi">Hindi</option>
+                <option value="Telugu">Telugu</option>
+                <option value="Tamil">Tamil</option>
+                <option value="Kannada">Kannada</option>
+                <option value="Malayalam">Malayalam</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%', marginTop: idx === 0 ? 18 : 0 }}>
+              <button
+                className="btn"
+                style={{
+                  background: 'rgba(255,82,82,0.1)',
+                  border: '1px solid rgba(255,82,82,0.2)',
+                  color: '#ff5252',
+                  borderRadius: 8,
+                  padding: '10px 14px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  if (selectedLanguages.length > 1) {
+                    setSelectedLanguages(selectedLanguages.filter((_, i) => i !== idx))
+                  } else {
+                    const updated = [...selectedLanguages]
+                    updated[0] = ''
+                    setSelectedLanguages(updated)
+                  }
+                }}
+                title="Remove Language"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
+        <button
+          className="btn btn-ghost"
+          style={{ fontSize: 12, color: 'var(--accent)', padding: '6px 12px', alignSelf: 'flex-start', border: '1px dashed var(--accent)', borderRadius: 8 }}
+          onClick={() => setSelectedLanguages([...selectedLanguages, ''])}
         >
-          <option value="">None (English/Global)</option>
-          <option value="Hindi">Hindi</option>
-          <option value="Telugu">Telugu</option>
-          <option value="Tamil">Tamil</option>
-          <option value="Kannada">Kannada</option>
-          <option value="Malayalam">Malayalam</option>
-        </select>
+          ➕ Add Another Language
+        </button>
       </div>
 
       <div>
@@ -2222,11 +2347,14 @@ export default function AdminPanel() {
                         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                           Category: <strong style={{ color: 'var(--text)' }}>{(() => {
                             if (!profile.category) return 'None';
-                            if (profile.category.includes(':')) {
-                              const parts = profile.category.split(':');
-                              return `${parts[1]} (${parts[0]})`;
-                            }
-                            return profile.category;
+                            return profile.category.split(',').map(c => {
+                              const trimmed = c.trim();
+                              if (trimmed.includes(':')) {
+                                const parts = trimmed.split(':');
+                                return `${parts[1]} (${parts[0]})`;
+                              }
+                              return trimmed;
+                            }).join(', ');
                           })()}</strong> &nbsp;·&nbsp; Language: <strong style={{ color: 'var(--text)' }}>{profile.language || 'None'}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
                         </div>
                       </div>
