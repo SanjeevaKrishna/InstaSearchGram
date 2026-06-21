@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
-import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronDown, Pin } from 'lucide-react'
+import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles } from 'lucide-react'
 
 const getOrdinal = (n) => {
   if (!n) return ''
@@ -185,8 +185,17 @@ const playSound = (type) => {
 
 export default function LivePage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'viral_reels'
+  const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'voting'
   const [liveData, setLiveData] = useState({ live_date: '', most_followed: [], viral_reels: [] })
+  
+  // Voting states
+  const [selectedProfile, setSelectedProfile] = useState(null)
+  const [showConfirmPopup, setShowConfirmPopup] = useState(null)
+  const [userVotes, setUserVotes] = useState({})
+  const [userDevotes, setUserDevotes] = useState({})
+  const [isSubmittingVote, setIsSubmittingVote] = useState(false)
+  const [showSuccessAnim, setShowSuccessAnim] = useState(null)
+  const [showStatsModal, setShowStatsModal] = useState(null)
   const [currentDate, setCurrentDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -197,18 +206,6 @@ export default function LivePage() {
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
   const [displayLimit, setDisplayLimit] = useState(50)
 
-  // Favorites and Reordering State Management
-  const [profilesList, setProfilesList] = useState([])
-  const [favoriteIds, setFavoriteIds] = useState(new Set())
-  const [favoritesInitialized, setFavoritesInitialized] = useState(false)
-  const [draggedId, setDraggedId] = useState(null)
-  const [isLongPressing, setIsLongPressing] = useState(false)
-  const [justDroppedId, setJustDroppedId] = useState(null)
-
-  const longPressTimeout = useRef(null)
-  const touchStartY = useRef(0)
-  const touchStartX = useRef(0)
-  const isDraggingActive = useRef(false)
   const loaderRef = useRef(null)
 
   // Infinite Scroll Observer
@@ -235,199 +232,6 @@ export default function LivePage() {
     }
   }, [loading, searchQuery, selectedCategory, selectedLanguage, activeTab])
 
-  // Initialize Favorites and Profiles List (run only once after live data is fetched)
-  useEffect(() => {
-    if (liveData.most_followed.length > 0 && !favoritesInitialized) {
-      try {
-        const stored = localStorage.getItem('spialr_favorites_ids')
-        let idsSet = new Set()
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed)) {
-            idsSet = new Set(parsed)
-            setFavoriteIds(idsSet)
-          }
-        }
-        
-        // Favorites float to the top of the initial list
-        const starred = liveData.most_followed.filter(p => idsSet.has(p.id))
-        const unstarred = liveData.most_followed.filter(p => !idsSet.has(p.id))
-        setProfilesList([...starred, ...unstarred])
-        setFavoritesInitialized(true)
-      } catch (e) {
-        console.error('Error loading favorites from localStorage:', e)
-        setProfilesList(liveData.most_followed)
-        setFavoritesInitialized(true)
-      }
-    }
-  }, [liveData.most_followed, favoritesInitialized])
-
-  // Toggle favorite status
-  const toggleFavorite = (profile) => {
-    const newFavoriteIds = new Set(favoriteIds)
-    const isAdding = !newFavoriteIds.has(profile.id)
-
-    if (isAdding) {
-      playSound('fav')
-      newFavoriteIds.add(profile.id)
-      setProfilesList(prev => {
-        const list = prev.filter(p => p.id !== profile.id)
-        // Find where the first non-starred profile is to insert at the end of the starred group
-        const firstNonStarredIdx = list.findIndex(p => !newFavoriteIds.has(p.id))
-        if (firstNonStarredIdx === -1) {
-          return [profile, ...list]
-        } else {
-          list.splice(firstNonStarredIdx, 0, profile)
-          return list
-        }
-      })
-    } else {
-      playSound('unfav')
-      newFavoriteIds.delete(profile.id)
-      setProfilesList(prev => {
-        const list = prev.filter(p => p.id !== profile.id)
-        // Sort unstarred profiles by their original rank
-        const sortedUnstarred = list.filter(p => !newFavoriteIds.has(p.id)).sort((a, b) => {
-          const idxA = liveData.most_followed.findIndex(p => p.id === a.id)
-          const idxB = liveData.most_followed.findIndex(p => p.id === b.id)
-          return idxA - idxB
-        })
-        const officialIdx = liveData.most_followed.findIndex(p => p.id === profile.id)
-        
-        let insertIdx = sortedUnstarred.findIndex(p => {
-          const idxP = liveData.most_followed.findIndex(item => item.id === p.id)
-          return idxP > officialIdx
-        })
-        if (insertIdx === -1) {
-          sortedUnstarred.push(profile)
-        } else {
-          sortedUnstarred.splice(insertIdx, 0, profile)
-        }
-        
-        const starred = list.filter(p => newFavoriteIds.has(p.id))
-        return [...starred, ...sortedUnstarred]
-      })
-    }
-    setFavoriteIds(newFavoriteIds)
-    localStorage.setItem('spialr_favorites_ids', JSON.stringify(Array.from(newFavoriteIds)))
-  }
-
-  // Refs for stable state access in global window listeners
-  const draggedIdRef = useRef(null)
-  const isLongPressingRef = useRef(false)
-
-  const setDraggedIdState = (id) => {
-    draggedIdRef.current = id
-    setDraggedId(id)
-  }
-
-  const setIsLongPressingState = (val) => {
-    isLongPressingRef.current = val
-    setIsLongPressing(val)
-  }
-
-  // Global window listeners for drag movement & release to prevent pointer capture loss bugs
-  const handleGlobalPointerMove = (e) => {
-    if (longPressTimeout.current && !isDraggingActive.current) {
-      const diffY = Math.abs(e.clientY - touchStartY.current)
-      const diffX = Math.abs(e.clientX - touchStartX.current)
-      if (diffY > 8 || diffX > 8) {
-        clearTimeout(longPressTimeout.current)
-        longPressTimeout.current = null
-        cleanupGlobalListeners()
-      }
-    }
-
-    if (isDraggingActive.current && draggedIdRef.current) {
-      if (e.cancelable) {
-        e.preventDefault()
-      }
-
-      const element = document.elementFromPoint(e.clientX, e.clientY)
-      if (!element) return
-
-      const targetItem = element.closest('[data-profile-id]')
-      if (targetItem) {
-        const targetId = targetItem.getAttribute('data-profile-id')
-        const targetIdNum = isNaN(Number(targetId)) ? targetId : Number(targetId)
-        
-        if (targetIdNum !== draggedIdRef.current) {
-          playSound('swap')
-          setProfilesList(prev => {
-            const list = [...prev]
-            const draggedIdx = list.findIndex(p => p.id === draggedIdRef.current)
-            const targetIdx = list.findIndex(p => p.id === targetIdNum)
-            
-            if (draggedIdx !== -1 && targetIdx !== -1) {
-              const [removed] = list.splice(draggedIdx, 1)
-              list.splice(targetIdx, 0, removed)
-            }
-            return list
-          })
-        }
-      }
-    }
-  }
-
-  const handleGlobalPointerUp = () => {
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current)
-      longPressTimeout.current = null
-    }
-
-    if (draggedIdRef.current && isDraggingActive.current) {
-      playSound('drop')
-      setJustDroppedId(draggedIdRef.current)
-      setTimeout(() => {
-        setJustDroppedId(null)
-      }, 1000)
-    }
-
-    cleanupGlobalListeners()
-    setIsLongPressingState(false)
-    setDraggedIdState(null)
-    isDraggingActive.current = false
-  }
-
-  const cleanupGlobalListeners = () => {
-    window.removeEventListener('pointermove', handleGlobalPointerMove)
-    window.removeEventListener('pointerup', handleGlobalPointerUp)
-    window.removeEventListener('pointercancel', handleGlobalPointerUp)
-  }
-
-  // Pointer-event based unified drag & drop reordering (supports long-press on both desktop & mobile)
-  const handlePointerDown = (e, id) => {
-    // Ignore button clicks (like the star favorite toggle button)
-    if (e.target.closest('button')) return
-    
-    // Only left click drag for mouse
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current)
-    }
-
-    touchStartY.current = e.clientY
-    touchStartX.current = e.clientX
-    isDraggingActive.current = false
-
-    // Attach global listeners immediately to track moves and releases anywhere, even if DOM re-orders
-    window.addEventListener('pointermove', handleGlobalPointerMove, { passive: false })
-    window.addEventListener('pointerup', handleGlobalPointerUp)
-    window.addEventListener('pointercancel', handleGlobalPointerUp)
-
-    longPressTimeout.current = setTimeout(() => {
-      playSound('dragStart')
-      setIsLongPressingState(true)
-      setDraggedIdState(id)
-      isDraggingActive.current = true
-
-      if (navigator.vibrate) {
-        navigator.vibrate(50)
-      }
-    }, 400)
-  }
-
   // Reset display limit when filter state changes to optimize initial load & render speed
   useEffect(() => {
     setDisplayLimit(50)
@@ -444,6 +248,16 @@ export default function LivePage() {
         const formatted = savedRoom.charAt(0).toUpperCase() + savedRoom.slice(1)
         setSelectedLanguage(formatted)
       }
+    }
+
+    // Load user vote counts from localStorage
+    try {
+      const votes = JSON.parse(localStorage.getItem('spialr_votes_map') || '{}')
+      const devotes = JSON.parse(localStorage.getItem('spialr_devotes_map') || '{}')
+      setUserVotes(votes)
+      setUserDevotes(devotes)
+    } catch (e) {
+      console.error(e)
     }
   }, [])
 
@@ -468,6 +282,120 @@ export default function LivePage() {
         setError(err.message)
         setLoading(false)
       })
+  }
+
+  const fetchLiveDataFresh = () => {
+    setLoading(true)
+    setError(null)
+    fetch('/api/live?fresh=true')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load live data')
+        return res.json()
+      })
+      .then((data) => {
+        setLiveData({
+          live_date: data.live_date || '',
+          most_followed: data.most_followed || [],
+          viral_reels: data.viral_reels || [],
+        })
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error(err)
+        setError(err.message)
+        setLoading(false)
+      })
+  }
+
+  const handleOpenConfirm = (type) => {
+    setShowConfirmPopup(type)
+  }
+
+  const handleConfirmVoteAction = async () => {
+    if (!selectedProfile || !showConfirmPopup) return
+    setIsSubmittingVote(true)
+    const type = showConfirmPopup === 'vote' ? 'vote' : 'devote'
+    
+    // Front-end spam click cooldown defense
+    const lastAction = localStorage.getItem('spialr_last_action_time')
+    const now = Date.now()
+    if (lastAction && (now - Number(lastAction) < 1000)) {
+      alert('Please wait a moment between actions.')
+      setIsSubmittingVote(false)
+      return
+    }
+    
+    try {
+      const res = await fetch('/api/vote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          profileId: selectedProfile.id,
+          type
+        })
+      })
+      
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit vote')
+      }
+      
+      // Update local storage tracking counts
+      if (type === 'vote') {
+        const updatedVotes = { ...userVotes, [selectedProfile.id]: (userVotes[selectedProfile.id] || 0) + 1 }
+        setUserVotes(updatedVotes)
+        localStorage.setItem('spialr_votes_map', JSON.stringify(updatedVotes))
+      } else {
+        const updatedDevotes = { ...userDevotes, [selectedProfile.id]: (userDevotes[selectedProfile.id] || 0) + 1 }
+        setUserDevotes(updatedDevotes)
+        localStorage.setItem('spialr_devotes_map', JSON.stringify(updatedDevotes))
+      }
+      
+      localStorage.setItem('spialr_last_action_time', now.toString())
+      
+      // Show success animation overlay
+      setShowSuccessAnim({ name: selectedProfile.name, type })
+      setTimeout(() => {
+        setShowSuccessAnim(null)
+      }, 1500)
+      
+      // Close popups
+      setShowConfirmPopup(null)
+      setSelectedProfile(null)
+      
+      // Refetch fresh live data to update the rankings
+      fetchLiveDataFresh()
+      
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setIsSubmittingVote(false)
+    }
+  }
+
+  const formatVotes = (votes) => {
+    const v = votes || 0
+    if (v > 0) return `+${v}`
+    return v.toString()
+  }
+
+  const renderMovement = (profile) => {
+    // If a profile has 0 votes, force no rank movement percentage (display a dash)
+    if (!(profile.votes || 0)) {
+      return <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>—</span>
+    }
+    const curr = profile.current_vote_rank
+    const prev = profile.previous_vote_rank
+    if (!curr || !prev || curr === prev) {
+      return <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>—</span>
+    }
+    if (prev > curr) {
+      return <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>↑ {prev - curr}</span>
+    } else {
+      return <span style={{ color: '#dc2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>↓ {curr - prev}</span>
+    }
   }
 
   useEffect(() => {
@@ -514,159 +442,171 @@ export default function LivePage() {
         <div className="fade-in header-section" style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
+          gap: 16,
           marginBottom: 32,
         }}>
-          <div className="header-top-row" style={{
+          {/* Live Status + Date Row */}
+          <div className="header-status-row" style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            gap: 12,
             flexWrap: 'wrap',
-            gap: 16
           }}>
-            <h1 className="live-title-h1" style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(26px, 4.5vw, 36px)',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              lineHeight: 1.2
-            }}>
-              {activeTab === 'most_followed' ? (
-                <>Most Followed <span className="gradient-text">Instagram Accounts</span></>
-              ) : (
-                <>Most Viral <span className="gradient-text">Instagram Reels</span></>
-              )}
-            </h1>
-            {/* Date Badge */}
-            {currentDate && (
-              <div className="date-badge" style={{
+            {/* Live Refresh Button */}
+            <button 
+              onClick={fetchLiveData}
+              className="live-badge-btn"
+              style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 8,
-                padding: '8px 16px',
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                fontSize: 13,
-                fontWeight: 600,
-                color: 'var(--text-dim)',
-              }}>
-                <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
-                <span>{currentDate}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Subtabs Selection */}
-        <div className="fade-in subtabs-container" style={{
-          display: 'flex',
-          background: 'var(--surface2)',
-          borderRadius: '100px',
-          padding: 3,
-          marginBottom: 32,
-          gap: 4,
-          border: '1px solid var(--border)',
-          maxWidth: 350,
-          margin: '0 auto 32px'
-        }}>
-          <button
-            onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
-            onMouseEnter={() => setHoveredTab('most_followed')}
-            onMouseLeave={() => setHoveredTab(null)}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '8px 12px',
-              borderRadius: '100px',
-              border: 'none',
-              fontSize: 12.5,
-              fontWeight: 700,
-              background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
-              color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
-              boxShadow: activeTab === 'most_followed' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-              transform: hoveredTab === 'most_followed' && activeTab !== 'most_followed' ? 'scale(1.02)' : 'scale(1)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
-              <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
-              <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
-              <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
-              <line x1="2" y1="21" x2="22" y2="21" stroke="#e0e0e0" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            Most Followed
-          </button>
-          <button
-            onClick={() => { setActiveTab('viral_reels'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
-            onMouseEnter={() => setHoveredTab('viral_reels')}
-            onMouseLeave={() => setHoveredTab(null)}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '8px 12px',
-              borderRadius: '100px',
-              border: 'none',
-              fontSize: 12.5,
-              fontWeight: 700,
-              background: activeTab === 'viral_reels' ? 'var(--surface)' : 'transparent',
-              color: activeTab === 'viral_reels' ? 'var(--text)' : 'var(--text-muted)',
-              boxShadow: activeTab === 'viral_reels' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-              transform: hoveredTab === 'viral_reels' && activeTab !== 'viral_reels' ? 'scale(1.02)' : 'scale(1)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
-              <path d="M12 2C8 6.5 8 11.5 10 13c.5-.5 1-1.5 1-2.5 1.5 1.5 2 3.5 1.5 5.5-.5 2 1.5 3.5 3.5 3 2.5-.5 4.5-3 3-6.5-1.5-3.5-5-4.5-5-7.5-.5 1.5-1 2.5-2 3.5C11.5 6 12 3.5 12 2z" fill="#ff9800" />
-              <path d="M12 14c-1 1-1.5 2-1.5 3s.5 2.5 1.5 2.5 2.5-1.5 2-3.5c-.2-.5-1-1.5-2-2z" fill="#f44336" />
-            </svg>
-            Viral Reels Today
-          </button>
-        </div>
-
-        {/* Badges / Controls Row */}
-        <div className="badges-control-row" style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          marginBottom: 24,
-          marginTop: -16,
-        }}>
-          {/* Live Button */}
-          <button 
-            onClick={fetchLiveData}
-            className="live-badge-btn"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'rgba(225, 48, 108, 0.1)',
-              padding: '6px 12px',
-              borderRadius: '100px',
-              border: '1px solid rgba(225, 48, 108, 0.2)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-            }}
-            title="Click to refresh data"
-          >
-            <span className="live-pulse" style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}>{activeTab === 'most_followed' ? <TrendingUp size={13} style={{ color: 'var(--accent)' }} /> : <Flame size={13} style={{ color: '#ff6b35' }} />}</span>
-            <span style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: 'var(--accent)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>{activeTab === 'most_followed' ? 'Live' : 'Trending'}</span>
-          </button>
-        </div>
+                gap: 6,
+                background: 'rgba(225, 48, 108, 0.08)',
+                padding: '6px 12px',
+                borderRadius: '100px',
+                border: '1px solid rgba(225, 48, 108, 0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                outline: 'none',
+              }}
+              title="Click to refresh data"
+            >
+              <span className="live-pulse" style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}>{activeTab === 'most_followed' ? <TrendingUp size={13} style={{ color: 'var(--accent)' }} /> : <ThumbsUp size={13} style={{ color: 'var(--accent)' }} />}</span>
+              <span style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: 'var(--accent)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>{activeTab === 'most_followed' ? 'Live' : 'Voting'}</span>
+            </button>
+ 
+             {/* Separator Dot */}
+             <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
+ 
+             {/* Date Display */}
+             {currentDate && (
+               <div style={{
+                 display: 'inline-flex',
+                 alignItems: 'center',
+                 gap: 6,
+                 fontSize: 13,
+                 fontWeight: 600,
+                 color: 'var(--text-dim)',
+               }}>
+                 <Calendar size={13} style={{ color: 'var(--text-muted)' }} />
+                 <span>Updated {currentDate}</span>
+               </div>
+             )}
+           </div>
+ 
+           {/* Heading */}
+           <h1 className="live-title-h1" style={{
+             fontFamily: 'var(--font-display)',
+             fontSize: 'clamp(28px, 5vw, 38px)',
+             fontWeight: 800,
+             letterSpacing: '-0.02em',
+             lineHeight: 1.15,
+             margin: 0,
+           }}>
+             {activeTab === 'most_followed' ? (
+               <>Most Followed <span className="gradient-text">Instagram Accounts</span></>
+             ) : (
+               <>Vote Your <span className="gradient-text">Favourites</span></>
+             )}
+           </h1>
+           {activeTab === 'voting' && (
+             <p style={{
+               fontSize: 'clamp(11px, 3.2vw, 13px)',
+               color: 'var(--text-dim)',
+               marginTop: 6,
+               marginBottom: 0,
+               fontWeight: 500,
+               lineHeight: 1.4,
+               letterSpacing: '0.01em',
+             }}>
+               Compare, upvote to support, or downvote to drag. Let the fan wars begin!
+             </p>
+           )}
+         </div>
+ 
+         {/* Subtabs Selection */}
+         <div className="fade-in subtabs-container" style={{
+           display: 'flex',
+           background: 'var(--surface2)',
+           borderRadius: '100px',
+           padding: 3,
+           marginBottom: 32,
+           gap: 4,
+           border: '1px solid var(--border)',
+           maxWidth: 350,
+           margin: '0 auto 32px'
+         }}>
+           <button
+             onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
+             onMouseEnter={() => setHoveredTab('most_followed')}
+             onMouseLeave={() => setHoveredTab(null)}
+             style={{
+               flex: 1,
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               padding: '8px 12px',
+               borderRadius: '100px',
+               border: 'none',
+               fontSize: 12.5,
+               fontWeight: 700,
+               background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
+               color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
+               boxShadow: activeTab === 'most_followed' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+               transform: hoveredTab === 'most_followed' && activeTab !== 'most_followed' ? 'scale(1.02)' : 'scale(1)',
+               transition: 'all 0.2s ease',
+             }}
+           >
+             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
+               <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
+               <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
+               <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
+               <line x1="2" y1="21" x2="22" y2="21" stroke="#e0e0e0" strokeWidth="2" strokeLinecap="round" />
+             </svg>
+             Most Followed
+           </button>
+           <button
+             onClick={() => { setActiveTab('voting'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
+             onMouseEnter={() => setHoveredTab('voting')}
+             onMouseLeave={() => setHoveredTab(null)}
+             style={{
+               flex: 1,
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               padding: '8px 12px',
+               borderRadius: '100px',
+               border: 'none',
+               fontSize: 12.5,
+               fontWeight: 700,
+               background: activeTab === 'voting' ? 'var(--surface)' : 'transparent',
+               color: activeTab === 'voting' ? 'var(--text)' : 'var(--text-muted)',
+               boxShadow: activeTab === 'voting' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+               transform: hoveredTab === 'voting' && activeTab !== 'voting' ? 'scale(1.02)' : 'scale(1)',
+               transition: 'all 0.2s ease',
+             }}
+           >
+             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, flexShrink: 0, opacity: activeTab === 'voting' ? 1 : 0.6 }}>
+                {/* Sword 1 (Red) */}
+                <path d="M8 16L19 5" stroke={activeTab === 'voting' ? '#ff4757' : 'currentColor'} />
+                <path d="M6 14L10 18" stroke={activeTab === 'voting' ? '#ff4757' : 'currentColor'} />
+                <path d="M8 16L4 20" stroke={activeTab === 'voting' ? '#ff4757' : 'currentColor'} />
+                {/* Sword 2 (Blue) */}
+                <path d="M16 16L5 5" stroke={activeTab === 'voting' ? '#2196f3' : 'currentColor'} />
+                <path d="M18 14L14 18" stroke={activeTab === 'voting' ? '#2196f3' : 'currentColor'} />
+                <path d="M16 16L20 20" stroke={activeTab === 'voting' ? '#2196f3' : 'currentColor'} />
+              </svg>
+             Voting
+           </button>
+         </div>
 
         {/* Main Content Area */}
         {loading ? (
@@ -839,7 +779,7 @@ export default function LivePage() {
 
             {/* Category Filter */}
             {liveData.most_followed.length > 0 && (() => {
-              const categories = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers', 'Favorites']
+              const categories = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers']
 
               return (
                 <div className="no-scrollbar category-filter-container" style={{
@@ -886,14 +826,11 @@ export default function LivePage() {
                 <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Check back later for update ranks.</p>
               </div>
             ) : (() => {
-              const filtered = profilesList.filter(p => {
-                const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase())
-                
+              // 1. Filter by category and language first
+              const categoryFiltered = (liveData.most_followed || []).filter(p => {
                 let matchesCategory = false
                 if (selectedCategory.toLowerCase() === 'all') {
                   matchesCategory = true
-                } else if (selectedCategory.toLowerCase() === 'favorites') {
-                  matchesCategory = favoriteIds.has(p.id)
                 } else {
                   matchesCategory = p.category && p.category.split(',').some(catStr => {
                     const parsed = parseCategoryAndTag(catStr)
@@ -903,7 +840,18 @@ export default function LivePage() {
 
                 const matchesLanguage = selectedLanguage === 'All' || 
                   (p.language && p.language.split(',').map(l => l.trim().toLowerCase()).includes(selectedLanguage.toLowerCase()))
-                return matchesSearch && matchesCategory && matchesLanguage
+                return matchesCategory && matchesLanguage
+              })
+
+              // 2. Assign category-specific rankings
+              const rankedCategoryList = categoryFiltered.map((p, idx) => ({
+                ...p,
+                categoryRank: idx + 1
+              }))
+
+              // 3. Filter by search query for display
+              const filtered = rankedCategoryList.filter(p => {
+                return p.name?.toLowerCase().includes(searchQuery.toLowerCase())
               })
 
               if (filtered.length === 0) {
@@ -915,92 +863,41 @@ export default function LivePage() {
               }
               return (
                 <div style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 16,
-                  background: 'var(--surface)',
+                  border: 'none',
+                  borderRadius: 0,
+                  background: 'transparent',
                   overflow: 'hidden',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
                 }}>
-                  {/* Table Header */}
-                  <div className="table-header" style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '14px 20px',
-                    background: 'var(--surface2)',
-                    borderBottom: '1px solid var(--border)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: 'var(--text-dim)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}>
-                    {/* Grip space */}
-                    <div style={{ width: 24, marginRight: 4 }} />
-                    <div className="col-rank">Rank</div>
-                    <div style={{ flex: 1, paddingLeft: 12 }}>Account</div>
-                    <div className="col-followers">Followers</div>
-                  </div>
-
                   {/* Table Body */}
                   {filtered.slice(0, displayLimit).map((profile, index) => {
-                    const officialRank = liveData.most_followed.findIndex(p => p.id === profile.id) + 1
-                    const isDragged = draggedId === profile.id
+                    const rankToDisplay = profile.categoryRank
                     return (
                       <div
                         key={profile.id}
-                        data-profile-id={profile.id}
-                        draggable="false"
-                        onPointerDown={(e) => handlePointerDown(e, profile.id)}
-                        className={`table-row table-row-hover ${profile.id === justDroppedId ? 'dropped-flash' : ''}`}
+                        className="table-row table-row-hover"
+                        onClick={() => setSelectedProfile(profile)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           padding: '12px 20px',
                           borderBottom: '1px solid var(--border)',
-                          backgroundColor: isDragged ? 'var(--surface2)' : 'var(--surface)',
-                          transition: 'background-color 0.2s ease, transform 0.15s ease',
-                          opacity: isDragged ? 0.6 : 1,
-                          transform: isDragged ? 'scale(1.02)' : 'scale(1)',
-                          boxShadow: isDragged ? '0 8px 24px rgba(0, 0, 0, 0.12)' : 'none',
-                          outline: isDragged ? '1px solid var(--accent)' : 'none',
-                          cursor: isLongPressing && draggedId === profile.id ? 'grabbing' : 'default',
-                          zIndex: isDragged ? 10 : 1,
+                          backgroundColor: 'var(--surface)',
+                          transition: 'background-color 0.2s ease',
                           position: 'relative',
-                          pointerEvents: isDragged ? 'none' : 'auto',
-                          touchAction: isDragged ? 'none' : 'auto',
+                          cursor: 'pointer'
                         }}
                       >
-                        {/* Grip Handle */}
-                        <div style={{
-                          width: 24,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'var(--text-muted)',
-                          marginRight: 4,
-                          cursor: isLongPressing && draggedId === profile.id ? 'grabbing' : 'grab',
-                        }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                            <circle cx="9" cy="5" r="1.5" fill="currentColor"/>
-                            <circle cx="9" cy="12" r="1.5" fill="currentColor"/>
-                            <circle cx="9" cy="19" r="1.5" fill="currentColor"/>
-                            <circle cx="15" cy="5" r="1.5" fill="currentColor"/>
-                            <circle cx="15" cy="12" r="1.5" fill="currentColor"/>
-                            <circle cx="15" cy="19" r="1.5" fill="currentColor"/>
-                          </svg>
-                        </div>
-
                         {/* Rank Position */}
                         <div className="col-rank" style={{
-                          fontSize: 15,
-                          fontWeight: 700,
+                          fontSize: 16,
+                          fontWeight: 800,
                           color: 'var(--accent)',
                           fontFamily: 'var(--font-display)',
                           width: 60,
                           textAlign: 'center',
                           flexShrink: 0
                         }}>
-                          #{officialRank}
+                          #{rankToDisplay}
                         </div>
 
                         {/* Profile Info (Avatar + Name) */}
@@ -1057,29 +954,6 @@ export default function LivePage() {
                               }}>
                                 {profile.name}
                               </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleFavorite(profile);
-                                }}
-                                style={{
-                                  background: 'transparent',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '4px 6px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: favoriteIds.has(profile.id) ? '#f59e0b' : 'var(--text-muted)',
-                                  transition: 'transform 0.2s ease, color 0.2s ease',
-                                  outline: 'none',
-                                }}
-                                title={favoriteIds.has(profile.id) ? "Remove from Favorites" : "Pin to Top (Favorite)"}
-                              >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill={favoriteIds.has(profile.id) ? "#f59e0b" : "none"} stroke="currentColor" strokeWidth="2.5">
-                                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                                </svg>
-                              </button>
                             </div>
                             {profile.category && (
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
@@ -1124,39 +998,13 @@ export default function LivePage() {
                         <div className="col-followers" style={{
                           width: 140,
                           textAlign: 'right',
-                          fontWeight: 600,
+                          fontWeight: 700,
                           fontSize: 14,
                           color: 'var(--text)',
                           fontFamily: 'var(--font-body)',
                           flexShrink: 0,
-                          position: 'relative',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'flex-end',
-                          overflow: 'visible'
                         }}>
-                          {favoriteIds.has(profile.id) && (
-                            <span className="glass-pin-badge fade-in" style={{
-                              position: 'absolute',
-                              right: '-8px',
-                              top: '50%',
-                              transform: 'translateY(-50%) rotate(45deg)',
-                              color: '#10b981',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              zIndex: 2,
-                              pointerEvents: 'none'
-                            }} title="Pinned to Top">
-                              <Pin size={22} style={{ fill: '#10b981' }} />
-                            </span>
-                          )}
-                          <span style={{
-                            marginRight: favoriteIds.has(profile.id) ? '20px' : '0px',
-                            transition: 'margin-right 0.2s ease'
-                          }}>
-                            {profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}
-                          </span>
+                          {profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}
                         </div>
                       </div>
                     )
@@ -1173,181 +1021,432 @@ export default function LivePage() {
             })()}
           </div>
         ) : (
-          /* VIRAL REELS TAB */
-          <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-            {liveData.viral_reels.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '80px 0', background: 'var(--surface2)', borderRadius: 20, border: '1px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <Flame size={36} style={{ color: '#ff6b35', marginBottom: 16 }} />
-                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, marginBottom: 6 }}>No viral reels today</h3>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Trending video links will update here.</p>
-              </div>
-            ) : (
-              <div style={{
-                border: '1px solid var(--border)',
-                borderRadius: 16,
-                background: 'var(--surface)',
-                overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
-              }}>
-                {/* Table Header */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '14px 20px',
-                  background: 'var(--surface2)',
-                  borderBottom: '1px solid var(--border)',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: 'var(--text-dim)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  <div style={{ width: 60, textAlign: 'center' }}>Rank</div>
-                  <div style={{ flex: 1, paddingLeft: 12 }}>Reel / Video</div>
-                  <div style={{ width: 100, textAlign: 'right' }}>Link</div>
-                </div>
-
-                {/* Table Body */}
-                {liveData.viral_reels.map((reel, idx) => {
-                  const rank = idx + 1
-                  return (
-                    <a
-                      key={reel.id}
-                      href={reel.instagram_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="table-row-hover"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '12px 20px',
-                        borderBottom: '1px solid var(--border)',
-                        transition: 'background-color 0.2s ease',
-                        textDecoration: 'none'
-                      }}
-                    >
-                      {/* Rank Position */}
-                      <div style={{
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: rank <= 3 ? 'var(--accent)' : 'var(--text-muted)',
-                        fontFamily: 'var(--font-display)',
-                        width: 60,
-                        textAlign: 'center',
-                        flexShrink: 0
-                      }}>
-                        #{rank}
-                      </div>
-
-                      {/* Reel Info (Thumbnail + Title/Creator) */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        flex: 1,
-                        minWidth: 0,
-                        paddingLeft: 12
-                      }}>
-                        {/* Thumbnail */}
-                        <div style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 8,
-                          overflow: 'hidden',
-                          background: 'var(--surface2)',
-                          border: '1px solid var(--border)',
-                          flexShrink: 0,
-                          position: 'relative',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
-                          {reel.photo_url ? (
-                            <>
-                              <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              <div style={{
-                                position: 'absolute',
-                                inset: 0,
-                                background: 'rgba(0,0,0,0.2)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}>
-                                <Play size={10} style={{ fill: '#ffffff', color: '#ffffff' }} />
-                              </div>
-                            </>
-                          ) : (
-                            <Film size={16} style={{ color: 'var(--text-muted)' }} />
-                          )}
-                        </div>
-
-                        {/* Title & Creator Name */}
-                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                          <span style={{
-                            fontWeight: 600,
-                            fontSize: 14,
-                            color: 'var(--text)',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}>
-                            {reel.title}
-                          </span>
-                          {reel.creator_name && (
-                            <span style={{
-                              alignSelf: 'flex-start',
-                              fontSize: 10,
-                              fontWeight: 500,
-                              color: 'var(--text-dim)',
-                              marginTop: 2
-                            }}>
-                              {reel.creator_name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action Link */}
-                      <div style={{
-                        width: 100,
-                        textAlign: 'right',
-                        fontWeight: 600,
-                        fontSize: 12,
-                        color: 'var(--accent)',
-                        fontFamily: 'var(--font-body)',
-                        flexShrink: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        gap: 4
-                      }}>
-                        <span>Watch</span>
-                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                      </div>
-                    </a>
-                  )
-                })}
+          /* VOTING TAB */
+          <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Search Input */}
+            {liveData.most_followed.length > 0 && (
+              <div style={{ position: 'relative', marginBottom: 4 }}>
+                <Search size={16} style={{
+                  position: 'absolute',
+                  left: 16,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                  pointerEvents: 'none'
+                }} />
+                <input
+                  type="text"
+                  placeholder="Search profiles by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="input-field"
+                  style={{
+                    paddingLeft: 44,
+                    width: '100%',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    fontSize: 14,
+                    height: 46,
+                    color: 'var(--text)',
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: 16,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      padding: 0
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             )}
+
+            {(() => {
+              // 1. Filter by language (Voting leaderboard is a single category-agnostic leaderboard)
+              const categoryFiltered = (liveData.most_followed || []).filter(p => {
+                const matchesCategory = true
+                const matchesLanguage = selectedLanguage === 'All' || 
+                  (p.language && p.language.split(',').map(l => l.trim().toLowerCase()).includes(selectedLanguage.toLowerCase()))
+                return matchesCategory && matchesLanguage
+              })
+
+              // 2. Sort by votes desc, then by followers desc, then by name asc
+              const sortedVotingList = [...categoryFiltered].sort((a, b) => {
+                const votesA = a.votes || 0
+                const votesB = b.votes || 0
+                if (votesA !== votesB) return votesB - votesA
+                
+                const followersA = a.followers_count || 0
+                const followersB = b.followers_count || 0
+                if (followersA !== followersB) return followersB - followersA
+                
+                return (a.name || '').localeCompare(b.name || '')
+              })
+
+              // 3. Assign category-specific rankings
+              const rankedVotingList = sortedVotingList.map((p, idx) => ({
+                ...p,
+                categoryRank: idx + 1
+              }))
+
+              // 4. Filter by search query for display
+              const filtered = rankedVotingList.filter(p => {
+                return p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+              })
+
+              if (filtered.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                    No profiles match the filter criteria
+                  </div>
+                )
+              }
+              return (
+                <div style={{ border: 'none', borderRadius: 0, background: 'transparent', overflow: 'hidden' }}>
+                  {filtered.slice(0, displayLimit).map((profile, index) => {
+                    const rankToDisplay = profile.categoryRank
+                    return (
+                      <div
+                        key={profile.id}
+                        className="table-row table-row-hover"
+                        onClick={() => setSelectedProfile(profile)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '12px 20px',
+                          borderBottom: '1px solid var(--border)',
+                          backgroundColor: 'var(--surface)',
+                          transition: 'background-color 0.2s ease',
+                          position: 'relative',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {/* Rank Position */}
+                        <div className="col-rank" style={{
+                          fontSize: 16,
+                          fontWeight: 800,
+                          color: 'var(--accent)',
+                          fontFamily: 'var(--font-display)',
+                          width: 60,
+                          textAlign: 'center',
+                          flexShrink: 0
+                        }}>
+                          #{rankToDisplay}
+                        </div>
+
+                        {/* Profile Info (Avatar + Name) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingLeft: 12 }}>
+                          {/* Avatar */}
+                          <div style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: '50%',
+                            background: 'var(--gradient)',
+                            padding: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: '50%',
+                              background: 'var(--surface)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 800,
+                              fontSize: 14,
+                              overflow: 'hidden'
+                            }}>
+                              {profile.photo_url ? (
+                                <img src={profile.photo_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                profile.name?.charAt(0)
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Name */}
+                          <span className="profile-name" style={{
+                            fontWeight: 700,
+                            fontSize: 16,
+                            color: 'var(--text)',
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word',
+                            lineHeight: 1.25,
+                          }}>
+                            {profile.name}
+                          </span>
+                        </div>
+
+                        {/* Votes Count */}
+                        <div style={{
+                          width: 90,
+                          textAlign: 'right',
+                          fontWeight: 700,
+                          fontSize: 14.5,
+                          color: (profile.votes || 0) > 0 ? '#10b981' : (profile.votes || 0) < 0 ? '#dc2626' : 'var(--text)',
+                          fontFamily: 'var(--font-body)',
+                          flexShrink: 0,
+                        }}>
+                          {formatVotes(profile.votes)}
+                        </div>
+
+                        {/* Rank Movement */}
+                        <div style={{ width: 70, textAlign: 'right', fontSize: 14, flexShrink: 0 }}>
+                          {renderMovement(profile)}
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {filtered.length > displayLimit && (
+                    <div ref={loaderRef} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface2)', gap: 8 }}>
+                      <div className="spinner" style={{ width: 18, height: 18 }} />
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Loading more profiles...</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+        {/* ── VOTING ACTION DIALOG MODAL ────────────────────────────────── */}
+        {selectedProfile && (
+          <div className="vote-dialog-backdrop" onClick={() => setSelectedProfile(null)}>
+            <div className="vote-dialog-card" onClick={e => e.stopPropagation()}>
+              <div className="vote-dialog-header">
+                <h3 className="vote-dialog-title">
+                  {selectedProfile.name}
+                </h3>
+                <button className="vote-dialog-close" onClick={() => setSelectedProfile(null)}>
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="vote-dialog-buttons">
+                {/* Vote button */}
+                <button className="vote-dialog-btn btn-vote" onClick={() => handleOpenConfirm('vote')}>
+                  <ThumbsUp size={18} strokeWidth={2.5} />
+                  <span>Vote</span>
+                </button>
+
+                {/* De-vote button */}
+                <button className="vote-dialog-btn btn-devote" onClick={() => handleOpenConfirm('devote')}>
+                  <ThumbsDown size={18} strokeWidth={2.5} />
+                  <span>De-vote</span>
+                </button>
+
+                {/* View Profile button */}
+                {activeTab === 'voting' && (
+                  <button 
+                    className="vote-dialog-btn btn-profile" 
+                    onClick={() => {
+                      setShowStatsModal(selectedProfile)
+                      setSelectedProfile(null)
+                    }}
+                  >
+                    <User size={18} strokeWidth={2.5} />
+                    <span>View Prof</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── VOTING STATISTICS MODAL ────────────────────────────────────── */}
+        {showStatsModal && (
+          <div className="popup-backdrop" onClick={() => setShowStatsModal(null)}>
+            <div className="popup-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, margin: 0 }}>
+                  {showStatsModal.name}
+                </h3>
+                <button
+                  onClick={() => setShowStatsModal(null)}
+                  style={{
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '50%',
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, marginTop: -12 }}>
+                Live Community Standing & Statistics
+              </p>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 12,
+                marginBottom: 8
+              }}>
+                {/* Card 1: Current Vote Rank */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px 12px',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
+                  transition: 'transform 0.2s ease'
+                }}>
+                  <TrendingUp size={22} strokeWidth={2} style={{ color: 'var(--accent)', marginBottom: 10 }} />
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>
+                    #{showStatsModal.current_vote_rank || '—'}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                    Current Rank
+                  </div>
+                </div>
+
+                {/* Card 2: Current Votes */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px 12px',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
+                  transition: 'transform 0.2s ease'
+                }}>
+                  <ThumbsUp size={22} strokeWidth={2} style={{ color: (showStatsModal.votes || 0) > 0 ? '#10b981' : (showStatsModal.votes || 0) < 0 ? '#dc2626' : 'var(--text-muted)', marginBottom: 10 }} />
+                  <div style={{ fontSize: 20, fontWeight: 800, color: (showStatsModal.votes || 0) > 0 ? '#10b981' : (showStatsModal.votes || 0) < 0 ? '#dc2626' : 'var(--text)', fontFamily: 'var(--font-display)' }}>
+                    {(showStatsModal.votes || 0) > 0 ? '+' : ''}{showStatsModal.votes || 0}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                    Current Votes
+                  </div>
+                </div>
+
+                {/* Card 3: Highest Vote Rank */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px 12px',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
+                  transition: 'transform 0.2s ease'
+                }}>
+                  <Sparkles size={22} strokeWidth={2} style={{ color: '#10b981', marginBottom: 10 }} />
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#10b981', fontFamily: 'var(--font-display)' }}>
+                    #{showStatsModal.highest_vote_rank || '—'}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                    Highest Rank
+                  </div>
+                </div>
+
+                {/* Card 4: Lowest Vote Rank */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px 12px',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
+                  transition: 'transform 0.2s ease'
+                }}>
+                  <TrendingUp size={22} strokeWidth={2} style={{ color: '#f59e0b', marginBottom: 10, transform: 'rotate(180deg)' }} />
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#f59e0b', fontFamily: 'var(--font-display)' }}>
+                    #{showStatsModal.lowest_vote_rank || '—'}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                    Lowest Rank
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── CONFIRMATION POPUP ────────────────────────────────────────── */}
+        {showConfirmPopup && (
+          <div className="popup-backdrop" onClick={() => setShowConfirmPopup(null)}>
+            <div className="popup-card" onClick={e => e.stopPropagation()}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, marginBottom: 12 }}>
+                {showConfirmPopup === 'vote' ? `Vote for ${selectedProfile.name}?` : 'Remove Vote?'}
+              </h3>
+              <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 24, lineHeight: 1.5 }}>
+                {showConfirmPopup === 'vote' ? (
+                  <>This will become your <strong>{getOrdinal((userVotes[selectedProfile.id] || 0) + 1)}</strong> vote for this profile, bringing the total from <strong>{selectedProfile.votes || 0}</strong> to <strong>{(selectedProfile.votes || 0) + 1}</strong> {Math.abs((selectedProfile.votes || 0) + 1) === 1 ? 'vote' : 'votes'}.</>
+                ) : (
+                  <>This will become your <strong>{getOrdinal((userDevotes[selectedProfile.id] || 0) + 1)}</strong> de-vote for this profile, bringing the total from <strong>{selectedProfile.votes || 0}</strong> to <strong>{(selectedProfile.votes || 0) - 1}</strong> {Math.abs((selectedProfile.votes || 0) - 1) === 1 ? 'vote' : 'votes'}.</>
+                )}
+              </p>
+              
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button className="btn btn-ghost" onClick={() => setShowConfirmPopup(null)}>Cancel</button>
+                <button
+                  className={showConfirmPopup === 'vote' ? 'btn btn-primary' : 'btn btn-danger'}
+                  onClick={handleConfirmVoteAction}
+                  disabled={isSubmittingVote}
+                >
+                  {isSubmittingVote ? 'Processing...' : (showConfirmPopup === 'vote' ? 'Vote' : 'Remove Vote')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SUCCESS ANIMATION OVERLAY ─────────────────────────────────── */}
+        {showSuccessAnim && (
+          <div className="success-overlay">
+            <div className="success-badge" style={{
+              borderColor: showSuccessAnim.type === 'vote' ? '#10b981' : '#dc2626',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6
+            }}>
+              {showSuccessAnim.type === 'vote' ? (
+                <ThumbsUp size={44} style={{ color: '#10b981' }} className="live-pulse" />
+              ) : (
+                <ThumbsUp size={44} style={{ color: '#dc2626', transform: 'rotate(180deg)' }} className="live-pulse" />
+              )}
+              <span style={{ fontSize: 13, fontWeight: 800, color: showSuccessAnim.type === 'vote' ? '#10b981' : '#dc2626' }}>
+                {showSuccessAnim.type === 'vote' ? '+1 Vote' : '-1 Vote'}
+              </span>
+            </div>
           </div>
         )}
       </main>
 
       <style jsx global>{`
-        .favorite-row {
-          transition: transform 0.15s ease, background-color 0.2s ease;
-        }
-
-        .favorite-row:hover {
-          background-color: var(--surface2) !important;
-        }
-
-        .favorite-row:last-child {
-          border-bottom: none !important;
-        }
-
         .live-pulse {
           animation: pulse-scale 1.8s infinite;
         }
@@ -1407,30 +1506,20 @@ export default function LivePage() {
             padding: 12px 12px 60px !important;
           }
           .header-section {
-            margin-bottom: 12px !important;
-            gap: 8px !important;
-          }
-          .header-top-row {
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
+            margin-bottom: 20px !important;
+            gap: 12px !important;
             align-items: center !important;
             text-align: center !important;
-            gap: 8px !important;
+          }
+          .header-status-row {
+            justify-content: center !important;
           }
           .live-title-h1 {
             text-align: center !important;
-            font-size: clamp(19px, 5.2vw, 26px) !important;
+            font-size: clamp(22px, 5.5vw, 28px) !important;
             line-height: 1.2 !important;
             white-space: normal !important;
             width: 100% !important;
-          }
-          .date-badge {
-            margin: 0 auto !important;
-          }
-          .badges-control-row {
-            margin-bottom: 16px !important;
-            margin-top: -12px !important;
           }
           .subtabs-container {
             margin: 0 auto 12px !important;
@@ -1472,6 +1561,224 @@ export default function LivePage() {
             transform: scale(0.9);
             opacity: 0.8;
           }
+        }
+
+        /* Bottom Sheet Backdrop */
+        .bottom-sheet-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(8px);
+          z-index: 1000;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Centered Dialog Modal */
+        .vote-dialog-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(8px);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: fadeIn 0.25s ease forwards;
+        }
+
+        .vote-dialog-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 24px;
+          width: 100%;
+          max-width: 420px;
+          padding: 24px;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+          position: relative;
+          animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .vote-dialog-header {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          width: 100%;
+        }
+
+        .vote-dialog-title {
+          font-family: var(--font-display);
+          font-weight: 800;
+          font-size: 19px;
+          color: var(--text);
+          margin: 0;
+          text-align: center;
+          padding: 0 30px;
+        }
+
+        .vote-dialog-close {
+          position: absolute;
+          right: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          background: var(--surface2);
+          border: 1px solid var(--border);
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--text-muted);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .vote-dialog-close:hover {
+          background: var(--border);
+          color: var(--text);
+        }
+
+        .vote-dialog-buttons {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .vote-dialog-btn {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 14px 10px;
+          border-radius: 16px;
+          background: var(--surface2);
+          border: 1px solid var(--border);
+          color: var(--text);
+          font-weight: 700;
+          font-size: 13.5px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .vote-dialog-btn:hover {
+          background: var(--border);
+          transform: translateY(-2px);
+        }
+
+        .vote-dialog-btn:active {
+          transform: scale(0.96);
+          background: var(--border-bright);
+        }
+
+        .vote-dialog-btn.btn-vote {
+          color: #10b981;
+          border-color: rgba(16, 185, 129, 0.2);
+        }
+        .vote-dialog-btn.btn-vote:hover {
+          background: rgba(16, 185, 129, 0.08);
+          border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        .vote-dialog-btn.btn-devote {
+          color: #dc2626;
+          border-color: rgba(220, 38, 38, 0.2);
+        }
+        .vote-dialog-btn.btn-devote:hover {
+          background: rgba(220, 38, 38, 0.08);
+          border-color: rgba(220, 38, 38, 0.4);
+        }
+
+        .vote-dialog-btn.btn-profile {
+          color: var(--accent);
+          border-color: rgba(225, 48, 108, 0.2);
+        }
+        .vote-dialog-btn.btn-profile:hover {
+          background: rgba(225, 48, 108, 0.08);
+          border-color: rgba(225, 48, 108, 0.4);
+        }
+
+        /* Confirmation Popup */
+        .popup-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+          z-index: 1100;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: fadeIn 0.25s ease forwards;
+        }
+
+        .popup-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          width: 100%;
+          max-width: 400px;
+          padding: 24px;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+          animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* Success Animation Overlay */
+        .success-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(6px);
+          z-index: 1200;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: fadeIn 0.2s ease forwards;
+        }
+
+        .success-badge {
+          background: var(--surface);
+          border: 1.5px solid var(--border);
+          border-radius: 50%;
+          width: 120px;
+          height: 120px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+          animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+
+        @keyframes scaleIn {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes bounceIn {
+          0% { transform: scale(0.3); opacity: 0; }
+          50% { transform: scale(1.1); }
+          70% { transform: scale(0.9); }
+          100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
     </>

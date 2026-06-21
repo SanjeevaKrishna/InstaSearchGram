@@ -231,6 +231,8 @@ export default function CelebrityPage() {
           </div>
         ) : null}
 
+
+
         {/* Tabs Navigation or Beautiful Divider */}
         {celebrity.hide_search ? (
           <div style={{

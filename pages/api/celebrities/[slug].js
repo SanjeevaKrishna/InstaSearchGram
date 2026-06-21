@@ -26,7 +26,29 @@ export default async function handler(req, res) {
 
     if (postsError) throw postsError
 
-    res.status(200).json({ celebrity, posts: posts || [] })
+    // Fetch voting stats from most_followed table matching the celebrity name (trimmed and exact queries)
+    let votingInfo = null
+    if (celebrity.name) {
+      const { data: exactMatch } = await supabase
+        .from('most_followed')
+        .select('votes, current_vote_rank, highest_vote_rank, lowest_vote_rank')
+        .eq('name', celebrity.name)
+        .maybeSingle()
+
+      if (exactMatch) {
+        votingInfo = exactMatch
+      } else {
+        const trimmedName = celebrity.name.trim()
+        const { data: ilikeMatch } = await supabase
+          .from('most_followed')
+          .select('votes, current_vote_rank, highest_vote_rank, lowest_vote_rank')
+          .ilike('name', `${trimmedName}%`)
+          .maybeSingle()
+        votingInfo = ilikeMatch
+      }
+    }
+
+    res.status(200).json({ celebrity, posts: posts || [], votingInfo: votingInfo || null })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Server error' })

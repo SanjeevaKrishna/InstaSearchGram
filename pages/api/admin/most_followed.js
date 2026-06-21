@@ -1,4 +1,5 @@
 import { getAdminClient } from '../../../lib/supabase'
+import { recalculateVotingRanks } from '../../../lib/voting'
 
 function verifyAdmin(req) {
   const auth = req.headers['x-admin-token']
@@ -52,7 +53,8 @@ export default async function handler(req, res) {
         followers_text: followers_text || '',
         order_index: order_index ? Number(order_index) : 0,
         category: category || '',
-        language: language || null
+        language: language || null,
+        votes: 0
       }
 
       const { data, error } = await supabase
@@ -62,12 +64,16 @@ export default async function handler(req, res) {
         .single()
 
       if (error) return res.status(500).json({ error: error.message })
+
+      // Trigger ranking recalculation
+      await recalculateVotingRanks()
+
       return res.status(201).json({ profile: data })
     }
 
     // PUT - update a profile or trigger auto-reordering
     if (req.method === 'PUT') {
-      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, action } = req.body
+      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, action, votes } = req.body
 
       // Sub-action: Reorder profiles by followers count descending
       if (action === 'reorder') {
@@ -125,6 +131,23 @@ export default async function handler(req, res) {
         }
         return res.status(200).json({ profiles: updatedProfiles, success: true })
       }
+      
+      // Sub-action: Set votes and recalculate ranks
+      if (action === 'set_votes') {
+        if (!id) return res.status(400).json({ error: 'ID is required' })
+
+        const { error: updateErr } = await supabase
+          .from('most_followed')
+          .update({ votes: Number(votes || 0) })
+          .eq('id', id)
+
+        if (updateErr) return res.status(500).json({ error: updateErr.message })
+
+        // Recalculate ranks instantly
+        await recalculateVotingRanks()
+
+        return res.status(200).json({ success: true })
+      }
 
       // Normal single record update
       if (!id) return res.status(400).json({ error: 'ID is required' })
@@ -161,6 +184,10 @@ export default async function handler(req, res) {
         .eq('id', id)
 
       if (error) return res.status(500).json({ error: error.message })
+
+      // Recalculate ranks instantly after deleting
+      await recalculateVotingRanks()
+
       return res.status(200).json({ success: true })
     }
 

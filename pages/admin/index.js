@@ -1405,10 +1405,10 @@ export default function AdminPanel() {
         const data = await res.json()
         setMostFollowed(data.profiles || [])
       }
-      if (tab === 'viral_reels') {
-        const res = await adminFetch('/api/admin/viral_reels')
+      if (tab === 'voting_management') {
+        const res = await adminFetch('/api/admin/most_followed')
         const data = await res.json()
-        setViralReels(data.reels || [])
+        setMostFollowed(data.profiles || [])
       }
       if (tab === 'visitors') {
         const res = await adminFetch('/api/admin/visits')
@@ -1429,6 +1429,25 @@ export default function AdminPanel() {
     await adminFetch('/api/admin/most_followed', { method: 'DELETE', body: { id } })
     setMostFollowed(p => p.filter(x => x.id !== id))
     showToast('✅ Profile deleted')
+  }
+
+  const updateVotes = async (id, votesVal) => {
+    try {
+      const res = await adminFetch('/api/admin/most_followed', {
+        method: 'PUT',
+        body: { id, votes: Number(votesVal), action: 'set_votes' }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      showToast('✅ Votes updated successfully!')
+      
+      // Reload most followed data to show refreshed ranks
+      const loadRes = await adminFetch('/api/admin/most_followed')
+      const loadData = await loadRes.json()
+      setMostFollowed(loadData.profiles || [])
+    } catch (err) {
+      alert('Error updating votes: ' + err.message)
+    }
   }
 
   const deleteViralReel = async (id) => {
@@ -1611,18 +1630,18 @@ export default function AdminPanel() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-display)' }}>Database Usage (Estimated)</span>
             <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
-              {(((JSON.stringify(celebrities).length + JSON.stringify(posts).length + JSON.stringify(mostFollowed).length + JSON.stringify(viralReels).length) / 1024 / 1024) || 0).toFixed(2)} MB / 500 MB
+              {(((JSON.stringify(celebrities).length + JSON.stringify(posts).length + JSON.stringify(mostFollowed).length) / 1024 / 1024) || 0).toFixed(2)} MB / 500 MB
             </span>
           </div>
           <div style={{ width: '100%', height: 8, background: 'var(--surface2)', borderRadius: 4, overflow: 'hidden' }}>
             <div style={{ 
               height: '100%', 
               background: 'var(--gradient)', 
-              width: `${Math.min(100, Math.max(0.5, ((JSON.stringify(celebrities).length + JSON.stringify(posts).length + JSON.stringify(mostFollowed).length + JSON.stringify(viralReels).length) / 1024 / 1024) / 500 * 100))}%` 
+              width: `${Math.min(100, Math.max(0.5, ((JSON.stringify(celebrities).length + JSON.stringify(posts).length + JSON.stringify(mostFollowed).length) / 1024 / 1024) / 500 * 100))}%` 
             }} />
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-            Rows tracked: {celebrities.length} celebrities, {posts.length} posts, {mostFollowed.length} most followed, {viralReels.length} viral reels
+            Rows tracked: {celebrities.length} celebrities, {posts.length} posts, {mostFollowed.length} most followed
           </div>
         </div>
       </div>
@@ -1635,7 +1654,7 @@ export default function AdminPanel() {
             { id: 'posts', label: '🎬 Posts & Reels' },
             { id: 'news', label: '📰 InstaNews' },
             { id: 'most_followed', label: '📊 Most Followed' },
-            { id: 'viral_reels', label: '🔥 Viral Reels Today' },
+            { id: 'voting_management', label: '🗳️ Voting Management' },
             { id: 'visitors', label: '👥 Visitors' },
             { id: 'chat_backgrounds', label: '💬 Chat Wallpaper' },
           ].map(t => (
@@ -2248,7 +2267,7 @@ export default function AdminPanel() {
         )}
 
         {/* ── LIVE DATE CARD (Only visible in Live-related tabs) ────────── */}
-        {(tab === 'most_followed' || tab === 'viral_reels') && (
+        {(tab === 'most_followed' || tab === 'voting_management') && (
           <div className="card" style={{ marginBottom: 28, padding: '20px' }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
               📅 Live Page Date
@@ -2381,49 +2400,21 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* ── VIRAL REELS TAB ───────────────────────────────────────────── */}
-        {tab === 'viral_reels' && (
+        {/* ── VOTING MANAGEMENT TAB ───────────────────────────────────────────── */}
+        {tab === 'voting_management' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
-                Viral Reels Today ({viralReels.length})
+                Voting Leaderboard Management ({mostFollowed.length})
               </h2>
-              {!showViralReelsForm && !editingViralReels && (
-                <button className="btn btn-primary" onClick={() => setShowViralReelsForm(true)}>
-                  + Add Reel
-                </button>
-              )}
             </div>
-
-            {(showViralReelsForm || editingViralReels) && (
-              <AdminModal
-                isOpen={showViralReelsForm || !!editingViralReels}
-                onClose={() => { setShowViralReelsForm(false); setEditingViralReels(null); }}
-                title={editingViralReels ? '✏️ Edit Viral Reel' : '➕ Add New Viral Reel'}
-              >
-                <ViralReelsForm
-                  initial={editingViralReels}
-                  onSave={(reel) => {
-                    if (editingViralReels) {
-                      setViralReels(r => r.map(x => x.id === reel.id ? reel : x))
-                    } else {
-                      setViralReels(r => [reel, ...r])
-                    }
-                    setShowViralReelsForm(false)
-                    setEditingViralReels(null)
-                    showToast('✅ Viral reel saved!')
-                  }}
-                  onCancel={() => { setShowViralReelsForm(false); setEditingViralReels(null) }}
-                />
-              </AdminModal>
-            )}
 
             <div style={{ marginBottom: 16 }}>
               <input
                 className="input-field"
-                value={searchViralReels}
-                onChange={e => setSearchViralReels(e.target.value)}
-                placeholder="🔍 Search reels by title or creator name..."
+                value={searchMostFollowed}
+                onChange={e => setSearchMostFollowed(e.target.value)}
+                placeholder="🔍 Search profiles by name or category..."
               />
             </div>
 
@@ -2432,51 +2423,74 @@ export default function AdminPanel() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(() => {
-                  const filtered = viralReels.filter(reel => 
-                    reel.title?.toLowerCase().includes(searchViralReels.toLowerCase()) ||
-                    reel.creator_name?.toLowerCase().includes(searchViralReels.toLowerCase())
+                  const filtered = mostFollowed.filter(profile => 
+                    profile.name?.toLowerCase().includes(searchMostFollowed.toLowerCase()) ||
+                    profile.category?.toLowerCase().includes(searchMostFollowed.toLowerCase())
                   )
-                  if (filtered.length === 0) {
+                  const sortedFiltered = [...filtered].sort((a, b) => (b.votes || 0) - (a.votes || 0))
+
+                  if (sortedFiltered.length === 0) {
                     return (
                       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                        {viralReels.length === 0 ? "No viral reels added yet. Click \"+ Add Reel\" to begin!" : "No matching viral reels found."}
+                        {mostFollowed.length === 0 ? "No profiles found in Most Followed database." : "No matching profiles found."}
                       </div>
                     )
                   }
-                  return filtered.map((reel, index) => (
-                    <div key={reel.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', width: 36, textAlign: 'center' }}>
-                        {getOrdinal(index + 1)}
-                      </div>
-                      {reel.photo_url ? (
-                        <img src={reel.photo_url} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
+
+                  return sortedFiltered.map((profile) => (
+                    <div key={profile.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {profile.photo_url ? (
+                        <img src={profile.photo_url} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
                       ) : (
-                        <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🎬</div>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👤</div>
                       )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{reel.title}</div>
-                        {reel.creator_name && (
-                          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 4 }}>
-                            {reel.creator_name}
-                          </div>
-                        )}
-                        <a href={reel.instagram_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}>
-                          {reel.instagram_link}
-                        </a>
+
+                      <div style={{ flex: 1, minWidth: 200 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>{profile.name}</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
+                          Current Rank: <strong style={{ color: 'var(--accent)' }}>#{profile.current_vote_rank || '—'}</strong> | Votes: <strong style={{ color: (profile.votes || 0) > 0 ? '#10b981' : (profile.votes || 0) < 0 ? '#dc2626' : 'var(--text)' }}>{(profile.votes || 0) > 0 ? '+' : ''}{profile.votes || 0}</strong>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                          onClick={() => { setEditingViralReels({ ...reel, order_index: reel.order_index?.toString(), creator_name: reel.creator_name || '' }); setShowViralReelsForm(false) }}>
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteViralReel(reel.id)}
+
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          type="number"
+                          placeholder="Votes"
+                          id={`votes-input-${profile.id}`}
+                          defaultValue={profile.votes || 0}
                           style={{
-                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                            color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                            width: 80,
+                            height: 36,
+                            padding: '0 8px',
+                            borderRadius: 8,
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface2)',
+                            color: 'var(--text)',
+                            fontSize: 13,
+                            textAlign: 'center'
+                          }}
+                        />
+                        <button
+                          className="btn btn-primary"
+                          style={{ padding: '6px 12px', fontSize: 12, height: 36 }}
+                          onClick={() => {
+                            const input = document.getElementById(`votes-input-${profile.id}`);
+                            const val = input ? input.value : 0;
+                            updateVotes(profile.id, val);
                           }}
                         >
-                          Delete
+                          Set Votes
+                        </button>
+                        <button
+                          className="btn btn-ghost"
+                          style={{ padding: '6px 12px', fontSize: 12, height: 36, border: '1px solid var(--border)' }}
+                          onClick={() => {
+                            const input = document.getElementById(`votes-input-${profile.id}`);
+                            if (input) input.value = 0;
+                            updateVotes(profile.id, 0);
+                          }}
+                        >
+                          Reset
                         </button>
                       </div>
                     </div>
@@ -2486,6 +2500,7 @@ export default function AdminPanel() {
             )}
           </div>
         )}
+
 
         {/* ── VISITORS TAB ──────────────────────────────────────────────── */}
         {tab === 'visitors' && (
