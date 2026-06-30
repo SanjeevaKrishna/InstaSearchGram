@@ -3,11 +3,11 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../../components/Navbar'
 import PostCard from '../../components/PostCard'
-import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2 } from 'lucide-react'
+import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent } from 'lucide-react'
 
 export default function CelebrityPage() {
   const router = useRouter()
-  const { slug } = router.query
+  const { slug, compare } = router.query
 
   const [celebrity, setCelebrity] = useState(null)
   const [postsCount, setPostsCount] = useState(0)
@@ -20,6 +20,19 @@ export default function CelebrityPage() {
   const [dateTo, setDateTo] = useState('')
   const [activeTab, setActiveTab] = useState('posts')
 
+  // Compare states
+  const [compareCelebrity, setCompareCelebrity] = useState(null)
+  const [loadingCompare, setLoadingCompare] = useState(false)
+
+  const getWinner = (val1, val2) => {
+    const n1 = Number(val1 || 0)
+    const n2 = Number(val2 || 0)
+    if (n1 === 0 && n2 === 0) return { cel1: false, cel2: false }
+    if (n1 > n2) return { cel1: true, cel2: false }
+    if (n2 > n1) return { cel1: false, cel2: true }
+    return { cel1: false, cel2: false }
+  }
+
   useEffect(() => {
     if (!slug) return
     setLoading(true)
@@ -29,10 +42,28 @@ export default function CelebrityPage() {
         setCelebrity(d.celebrity)
         setPostsCount(d.posts?.length || 0)
         setPosts(d.posts || [])
-        setLoading(false)
+        
+        if (compare) {
+          setLoadingCompare(true)
+          fetch(`/api/celebrities/${compare}`)
+            .then(r => r.json())
+            .then(compData => {
+              setCompareCelebrity(compData.celebrity)
+              setLoadingCompare(false)
+              setLoading(false)
+            })
+            .catch(err => {
+              console.error("Error loading comparison profile:", err)
+              setLoadingCompare(false)
+              setLoading(false)
+            })
+        } else {
+          setCompareCelebrity(null)
+          setLoading(false)
+        }
       })
       .catch(() => setLoading(false))
-  }, [slug])
+  }, [slug, compare])
 
   const goResults = (params) => {
     const query = new URLSearchParams({ slug, ...params })
@@ -89,6 +120,278 @@ export default function CelebrityPage() {
     </>
   )
 
+  if (loadingCompare) return (
+    <>
+      <Navbar />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
+        <div className="spinner" style={{ width: 40, height: 40 }} />
+      </div>
+    </>
+  )
+
+  if (compareCelebrity) {
+    const cel1Followers = Number(celebrity.followers_count || 0)
+    const cel2Followers = Number(compareCelebrity.followers_count || 0)
+
+    const cel1Posts = Number(celebrity.posts_count || postsCount || 0)
+    const cel2Posts = Number(compareCelebrity.posts_count || 0)
+
+    const followersWinner = getWinner(cel1Followers, cel2Followers)
+    const postsWinner = getWinner(cel1Posts, cel2Posts)
+    const reelViewsWinner = getWinner(celebrity.total_reel_views, compareCelebrity.total_reel_views)
+    const reelLikesWinner = getWinner(celebrity.total_reel_likes, compareCelebrity.total_reel_likes)
+    const postLikesWinner = getWinner(celebrity.total_post_likes, compareCelebrity.total_post_likes)
+    const commentsWinner = getWinner(celebrity.total_comments, compareCelebrity.total_comments)
+    const sharesWinner = getWinner(celebrity.total_shares, compareCelebrity.total_shares)
+    const repostsWinner = getWinner(celebrity.total_reposts, compareCelebrity.total_reposts)
+    const avgViewsWinner = getWinner(celebrity.average_views, compareCelebrity.average_views)
+    const avgReelLikesWinner = getWinner(celebrity.average_reel_likes, compareCelebrity.average_reel_likes)
+    const avgPostLikesWinner = getWinner(celebrity.average_post_likes, compareCelebrity.average_post_likes)
+    const followersInteractionWinner = getWinner(celebrity.followers_interaction, compareCelebrity.followers_interaction)
+
+    const renderMetricComparison = (label, icon, val1, val2, winnerObj, cardClass, isPercent = false) => {
+      const formattedVal1 = isPercent ? (val1 ? Number(val1).toFixed(2) + '%' : '0.00%') : formatCount(val1)
+      const formattedVal2 = isPercent ? (val2 ? Number(val2).toFixed(2) + '%' : '0.00%') : formatCount(val2)
+
+      return (
+        <div style={{ marginBottom: 12 }}>
+          {/* Metric Label Header */}
+          <div style={{ 
+            textAlign: 'center', 
+            fontSize: 11, 
+            fontWeight: 800, 
+            color: 'var(--text-muted)', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.08em',
+            marginBottom: 6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 4
+          }}>
+            {icon}
+            <span>{label}</span>
+          </div>
+          
+          {/* Split Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {/* Left Card */}
+            <div className={`analytics-card-compact ${cardClass}`} style={{ position: 'relative', width: '100%', border: '1px solid var(--border)' }}>
+              {winnerObj.cel1 && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: 6, 
+                  right: 6, 
+                  background: 'var(--accent)', 
+                  color: '#fff', 
+                  borderRadius: '50%',
+                  width: 20,
+                  height: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(225, 48, 108, 0.25)'
+                }}>
+                  <TrendingUp size={10} strokeWidth={3} />
+                </div>
+              )}
+              <div className="analytics-card-num-compact" style={{ fontSize: 20 }}>
+                {formattedVal1}
+              </div>
+            </div>
+
+            {/* Right Card */}
+            <div className={`analytics-card-compact ${cardClass}`} style={{ position: 'relative', width: '100%', border: '1px solid var(--border)' }}>
+              {winnerObj.cel2 && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: 6, 
+                  right: 6, 
+                  background: 'var(--accent)', 
+                  color: '#fff', 
+                  borderRadius: '50%',
+                  width: 20,
+                  height: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(225, 48, 108, 0.25)'
+                }}>
+                  <TrendingUp size={10} strokeWidth={3} />
+                </div>
+              )}
+              <div className="analytics-card-num-compact" style={{ fontSize: 20 }}>
+                {formattedVal2}
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        <Head>
+          <title>{celebrity.name} vs {compareCelebrity.name} — Spialr</title>
+        </Head>
+
+        <Navbar />
+
+        <main style={{ maxWidth: 600, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }} className="fade-in">
+          {/* Back Button */}
+          <button 
+            onClick={() => router.push(`/celebrity/${slug}`)} 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: 13, 
+              color: 'var(--text-muted)', 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: 4, 
+              marginBottom: 24, 
+              cursor: 'pointer', 
+              padding: 0 
+            }}
+          >
+            ← Back to Profile
+          </button>
+
+          {/* Profile Split Header */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28, position: 'relative' }}>
+            
+            {/* VS Divider badge */}
+            <div style={{
+              position: 'absolute',
+              left: '50%',
+              top: '35px',
+              transform: 'translateX(-50%)',
+              background: 'var(--accent)',
+              color: '#fff',
+              fontSize: 11,
+              fontWeight: 800,
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 10px rgba(225, 48, 108, 0.3)',
+              zIndex: 10
+            }}>
+              VS
+            </div>
+
+            {/* Left Celebrity Header */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
+              <div style={{
+                width: 70, height: 70, borderRadius: 14, background: 'var(--surface2)', border: '2px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800,
+                overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.12)', flexShrink: 0, marginBottom: 12
+              }}>
+                {celebrity.photo_url ? (
+                  <img src={celebrity.photo_url} alt={celebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                ) : celebrity.name?.charAt(0).toUpperCase()}
+              </div>
+
+              <h2 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 16,
+                fontWeight: 800,
+                color: 'var(--text)',
+                marginBottom: 2,
+                textAlign: 'center',
+                width: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {celebrity.name}
+              </h2>
+              {celebrity.instagram_handle && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 8, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  @{celebrity.instagram_handle}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>
+                  {formatCount(celebrity.followers_count)} followers
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {formatCount(celebrity.posts_count || postsCount)} posts
+                </span>
+              </div>
+            </div>
+
+            {/* Right Celebrity Header */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
+              <div style={{
+                width: 70, height: 70, borderRadius: 14, background: 'var(--surface2)', border: '2px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800,
+                overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.12)', flexShrink: 0, marginBottom: 12
+              }}>
+                {compareCelebrity.photo_url ? (
+                  <img src={compareCelebrity.photo_url} alt={compareCelebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                ) : compareCelebrity.name?.charAt(0).toUpperCase()}
+              </div>
+
+              <h2 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 16,
+                fontWeight: 800,
+                color: 'var(--text)',
+                marginBottom: 2,
+                textAlign: 'center',
+                width: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {compareCelebrity.name}
+              </h2>
+              {compareCelebrity.instagram_handle && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 8, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  @{compareCelebrity.instagram_handle}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>
+                  {formatCount(compareCelebrity.followers_count)} followers
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {formatCount(compareCelebrity.posts_count)} posts
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+          <div style={{ width: '100%', height: '1px', background: 'var(--border)', margin: '24px 0 20px' }} />
+
+          {/* Account Insights Section */}
+          <h3 className="analytics-title" style={{ justifyContent: 'center', marginBottom: 20 }}>
+            <TrendingUp size={18} strokeWidth={2.5} /> Comparative Insights
+          </h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {renderMetricComparison('Reel Views', <Eye size={14} style={{ color: '#ff6b35' }} />, celebrity.total_reel_views, compareCelebrity.total_reel_views, reelViewsWinner, 'analytics-card-views')}
+            {renderMetricComparison('Reel Likes', <Heart size={14} style={{ color: '#ff2a5f' }} />, celebrity.total_reel_likes, compareCelebrity.total_reel_likes, reelLikesWinner, 'analytics-card-reel-likes')}
+            {renderMetricComparison('Post Likes', <ThumbsUp size={14} style={{ color: '#ffa751' }} />, celebrity.total_post_likes, compareCelebrity.total_post_likes, postLikesWinner, 'analytics-card-post-likes')}
+            {renderMetricComparison('Total Comments', <MessageSquare size={14} style={{ color: '#8f00ff' }} />, celebrity.total_comments, compareCelebrity.total_comments, commentsWinner, 'analytics-card-comments')}
+            {renderMetricComparison('Total Shares', <Share2 size={14} style={{ color: '#2ec4b6' }} />, celebrity.total_shares, compareCelebrity.total_shares, sharesWinner, 'analytics-card-shares')}
+            {renderMetricComparison('Total Repost', <Repeat2 size={14} style={{ color: '#10b981' }} />, celebrity.total_reposts, compareCelebrity.total_reposts, repostsWinner, 'analytics-card-reposts')}
+            {renderMetricComparison('Average Views', <Eye size={14} style={{ color: '#ff6b35' }} />, celebrity.average_views, compareCelebrity.average_views, avgViewsWinner, 'analytics-card-views')}
+            {renderMetricComparison('Average Reel Likes', <Heart size={14} style={{ color: '#ff2a5f' }} />, celebrity.average_reel_likes, compareCelebrity.average_reel_likes, avgReelLikesWinner, 'analytics-card-reel-likes')}
+            {renderMetricComparison('Average Post Likes', <ThumbsUp size={14} style={{ color: '#ffa751' }} />, celebrity.average_post_likes, compareCelebrity.average_post_likes, avgPostLikesWinner, 'analytics-card-post-likes')}
+            {renderMetricComparison('Followers Interaction', <Percent size={14} style={{ color: '#e1306c' }} />, celebrity.followers_interaction, compareCelebrity.followers_interaction, followersInteractionWinner, 'analytics-card-comments', true)}
+          </div>
+        </main>
+      </>
+    )
+  }
+
   return (
     <>
       <Head>
@@ -119,38 +422,62 @@ export default function CelebrityPage() {
           </div>
 
           {/* Name, Handle & Metadata */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 24,
-              fontWeight: 800,
-              color: 'var(--text)',
-              marginBottom: 4,
-              letterSpacing: '-0.02em'
-            }}>
-              {celebrity.name}
-            </h1>
-            {celebrity.instagram_handle && (
-              <div style={{ 
-                fontSize: 15, 
-                color: 'var(--text-muted)', 
-                fontWeight: 600,
-                fontFamily: 'var(--font-body)',
-                marginBottom: 8 
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 24,
+                fontWeight: 800,
+                color: 'var(--text)',
+                marginBottom: 4,
+                letterSpacing: '-0.02em'
               }}>
-                @{celebrity.instagram_handle}
+                {celebrity.name}
+              </h1>
+              {celebrity.instagram_handle && (
+                <div style={{ 
+                  fontSize: 15, 
+                  color: 'var(--text-muted)', 
+                  fontWeight: 600,
+                  fontFamily: 'var(--font-body)',
+                  marginBottom: 8 
+                }}>
+                  @{celebrity.instagram_handle}
+                </div>
+              )}
+              {/* Inline Followers & Posts Metadata */}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
+                  <strong>{formatCount(celebrity.followers_count)}</strong> followers
+                </span>
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--border-bright)' }} />
+                <span style={{ fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
+                  <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts
+                </span>
               </div>
-            )}
-            {/* Inline Followers & Posts Metadata */}
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
-                <strong>{formatCount(celebrity.followers_count)}</strong> followers
-              </span>
-              <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--border-bright)' }} />
-              <span style={{ fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
-                <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts
-              </span>
             </div>
+
+            {/* Compare Button */}
+            <button
+              onClick={() => router.push(`/all?compare=${slug}`)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: 700,
+                background: 'var(--accent)',
+                color: 'white',
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(225, 48, 108, 0.25)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                flexShrink: 0
+              }}
+              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+              onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+            >
+              Compare
+            </button>
           </div>
         </div>
 
@@ -509,6 +836,8 @@ export default function CelebrityPage() {
           </div>
         )}
       </main>
+
+
     </>
   )
 }

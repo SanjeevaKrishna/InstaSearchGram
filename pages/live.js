@@ -594,16 +594,9 @@ export default function LivePage() {
                transition: 'all 0.2s ease',
              }}
            >
-             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, flexShrink: 0, opacity: activeTab === 'voting' ? 1 : 0.6 }}>
-                {/* Sword 1 (Red) */}
-                <path d="M8 16L19 5" stroke={activeTab === 'voting' ? '#ff4757' : 'currentColor'} />
-                <path d="M6 14L10 18" stroke={activeTab === 'voting' ? '#ff4757' : 'currentColor'} />
-                <path d="M8 16L4 20" stroke={activeTab === 'voting' ? '#ff4757' : 'currentColor'} />
-                {/* Sword 2 (Blue) */}
-                <path d="M16 16L5 5" stroke={activeTab === 'voting' ? '#2196f3' : 'currentColor'} />
-                <path d="M18 14L14 18" stroke={activeTab === 'voting' ? '#2196f3' : 'currentColor'} />
-                <path d="M16 16L20 20" stroke={activeTab === 'voting' ? '#2196f3' : 'currentColor'} />
-              </svg>
+             <span style={{ marginRight: 6, fontSize: 14, flexShrink: 0, opacity: activeTab === 'voting' ? 1 : 0.6 }}>
+                👥
+              </span>
              Voting
            </button>
          </div>

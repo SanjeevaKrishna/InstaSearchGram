@@ -38,8 +38,8 @@ export default function BottomNav() {
       )
     },
     { 
-      name: 'Live', 
-      path: '/live', 
+      name: 'Trending', 
+      path: '/trending', 
       iconOutline: (
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
@@ -49,6 +49,20 @@ export default function BottomNav() {
       iconFilled: (
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
           <path d="M16 6l2.29 2.29-4.88 4.88-3-3L2 18.59 3.41 20l7-7 3 3 6.29-6.29L22 12V6h-6z"/>
+        </svg>
+      )
+    },
+    { 
+      name: 'Live', 
+      path: '/live', 
+      iconOutline: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+        </svg>
+      ),
+      iconFilled: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
         </svg>
       )
     },
@@ -63,24 +77,6 @@ export default function BottomNav() {
       iconFilled: (
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
           <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-        </svg>
-      )
-    },
-    { 
-      name: 'InstaNews', 
-      path: '/instanews', 
-      iconOutline: (
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-      ),
-      iconFilled: (
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 6H7v2h5V9zm5 0h-4v2h4V9zm0 4H7v2h10v-2zm0 4H7v2h10v-2z"/>
         </svg>
       )
     }

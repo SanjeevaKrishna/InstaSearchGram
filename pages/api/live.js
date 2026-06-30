@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
       supabase.from('viral_reels').select('*'),
-      supabase.from('celebrities').select('name, slug')
+      supabase.from('celebrities').select('name, slug, photo_url')
     ])
 
     if (settingsResult.error) throw settingsResult.error
@@ -43,11 +43,11 @@ export default async function handler(req, res) {
     const reelsData = reelsResult.data
     const celebritiesData = celebritiesResult.data || []
 
-    // Build mapping from trimmed name to slug
+    // Build mapping from trimmed name to slug and photo_url
     const celebrityMap = {}
     for (const c of celebritiesData) {
       if (c.name && c.slug) {
-        celebrityMap[c.name.toLowerCase().trim()] = c.slug
+        celebrityMap[c.name.toLowerCase().trim()] = { slug: c.slug, photo_url: c.photo_url }
       }
     }
 
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
       .concat(profilesResult3.data || [])
       .map(profile => ({
         ...profile,
-        celebritySlug: profile.name ? (celebrityMap[profile.name.toLowerCase().trim()] || null) : null
+        celebritySlug: profile.name ? (celebrityMap[profile.name.toLowerCase().trim()]?.slug || null) : null
       }))
 
     const sortedReels = (reelsData || []).sort((a, b) => {
@@ -67,6 +67,16 @@ export default async function handler(req, res) {
         return rankA - rankB
       }
       return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedReels = sortedReels.map(reel => {
+      const nameKey = (reel.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...reel,
+        creator_photo_url: reel.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null
+      }
     })
 
     const currentDate = new Date().toLocaleDateString('en-US', {
@@ -79,7 +89,7 @@ export default async function handler(req, res) {
     const responseData = {
       live_date: settingsData?.live_date || currentDate,
       most_followed: profilesData || [],
-      viral_reels: sortedReels
+      viral_reels: mappedReels
     }
 
     // Save to server-side memory cache

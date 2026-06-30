@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import PostCard from '../../components/PostCard'
+import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'is_admin_token'
@@ -193,6 +194,10 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         total_comments: initial.total_comments !== undefined && initial.total_comments !== null ? initial.total_comments.toString() : '',
         total_shares: initial.total_shares !== undefined && initial.total_shares !== null ? initial.total_shares.toString() : '',
         total_reposts: initial.total_reposts !== undefined && initial.total_reposts !== null ? initial.total_reposts.toString() : '',
+        average_views: initial.average_views !== undefined && initial.average_views !== null ? initial.average_views.toString() : '',
+        average_reel_likes: initial.average_reel_likes !== undefined && initial.average_reel_likes !== null ? initial.average_reel_likes.toString() : '',
+        average_post_likes: initial.average_post_likes !== undefined && initial.average_post_likes !== null ? initial.average_post_likes.toString() : '',
+        followers_interaction: initial.followers_interaction !== undefined && initial.followers_interaction !== null ? initial.followers_interaction.toString() : '',
         hide_search: !!initial.hide_search,
         description: initial.description || ''
       }
@@ -202,6 +207,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
       has_full_details: false, order_index: '0',
       total_reel_views: '', total_reel_likes: '', total_post_likes: '',
       total_comments: '', total_shares: '', total_reposts: '', hide_search: false,
+      average_views: '', average_reel_likes: '', average_post_likes: '', followers_interaction: '',
       description: ''
     }
   })
@@ -230,6 +236,10 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           total_comments: form.total_comments ? Number(form.total_comments) : 0,
           total_shares: form.total_shares ? Number(form.total_shares) : 0,
           total_reposts: form.total_reposts ? Number(form.total_reposts) : 0,
+          average_views: form.average_views ? Number(form.average_views) : 0,
+          average_reel_likes: form.average_reel_likes ? Number(form.average_reel_likes) : 0,
+          average_post_likes: form.average_post_likes ? Number(form.average_post_likes) : 0,
+          followers_interaction: form.followers_interaction ? Number(form.followers_interaction) : 0,
           hide_search: !!form.hide_search,
           description: form.description || ''
         },
@@ -345,6 +355,26 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         <div>
           <label style={labelStyle}>Total Repost</label>
           <input className="input-field" type="number" value={form.total_reposts} onChange={e => set('total_reposts', e.target.value)} placeholder="e.g. 3500" />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Average Views</label>
+          <input className="input-field" type="number" value={form.average_views || ''} onChange={e => set('average_views', e.target.value)} placeholder="e.g. 1200000" />
+        </div>
+        <div>
+          <label style={labelStyle}>Average Reel Likes</label>
+          <input className="input-field" type="number" value={form.average_reel_likes || ''} onChange={e => set('average_reel_likes', e.target.value)} placeholder="e.g. 45000" />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Average Post Likes</label>
+          <input className="input-field" type="number" value={form.average_post_likes || ''} onChange={e => set('average_post_likes', e.target.value)} placeholder="e.g. 25000" />
+        </div>
+        <div>
+          <label style={labelStyle}>Followers Interaction (%)</label>
+          <input className="input-field" type="number" step="0.01" value={form.followers_interaction || ''} onChange={e => set('followers_interaction', e.target.value)} placeholder="e.g. 5.25" />
         </div>
       </div>
       <div>
@@ -1078,7 +1108,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
 
 function ViralReelsForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial || {
-    title: '', photo_url: '', instagram_link: '', order_index: '0', creator_name: ''
+    title: '', photo_url: '', instagram_link: '', order_index: '0', creator_name: '', creator_photo_url: ''
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -1098,6 +1128,7 @@ function ViralReelsForm({ initial, onSave, onCancel }) {
           id: initial?.id,
           order_index: form.order_index ? Number(form.order_index) : 0,
           creator_name: form.creator_name || '',
+          creator_photo_url: form.creator_photo_url || '',
         },
       })
       const data = await res.json()
@@ -1132,6 +1163,46 @@ function ViralReelsForm({ initial, onSave, onCancel }) {
         <label style={labelStyle}>Instagram URL *</label>
         <input className="input-field" value={form.instagram_link} onChange={e => set('instagram_link', e.target.value)} placeholder="e.g. https://instagram.com/reel/..." />
       </div>
+
+      <div>
+        <label style={labelStyle}>Creator Profile Photo</label>
+        {form.creator_photo_url ? (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <img src={form.creator_photo_url} alt="Creator avatar" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
+            <button className="btn btn-ghost" onClick={() => set('creator_photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
+          </div>
+        ) : (
+          <div>
+            <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
+              const file = e.target.files[0]
+              if (!file) return
+              setSaving(true)
+              setError('')
+              const reader = new FileReader()
+              reader.readAsDataURL(file)
+              reader.onload = async () => {
+                try {
+                  const res = await adminFetch('/api/admin/upload', {
+                    method: 'POST',
+                    body: { image: reader.result }
+                  })
+                  const text = await res.text()
+                  let data
+                  try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error`) }
+                  if (data.url) set('creator_photo_url', data.url)
+                  else throw new Error(data.error || 'Upload failed')
+                } catch(err) {
+                  setError(err.message || 'Failed to upload creator image')
+                } finally {
+                  setSaving(false)
+                }
+              }
+            }} />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select a circular avatar image to upload securely</div>
+          </div>
+        )}
+      </div>
+
       <div>
         <label style={labelStyle}>Reel Thumbnail Photo</label>
         {form.photo_url ? (
@@ -1170,6 +1241,7 @@ function ViralReelsForm({ initial, onSave, onCancel }) {
           </div>
         )}
       </div>
+
       {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
         <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
@@ -1196,6 +1268,79 @@ export default function AdminPanel() {
   const [viralReels, setViralReels] = useState([])
   const [showViralReelsForm, setShowViralReelsForm] = useState(false)
   const [editingViralReels, setEditingViralReels] = useState(null)
+  const [draggedIndex, setDraggedIndex] = useState(null)
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+    e.currentTarget.style.opacity = '0.5'
+  }
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.opacity = '1'
+    setDraggedIndex(null)
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === dropIndex) return
+
+    const newReels = [...viralReels]
+    const [draggedItem] = newReels.splice(draggedIndex, 1)
+    newReels.splice(dropIndex, 0, draggedItem)
+
+    const reordered = newReels.map((reel, idx) => ({
+      ...reel,
+      order_index: idx + 1
+    }))
+
+    setViralReels(reordered)
+
+    try {
+      const orders = reordered.map(r => ({ id: r.id, order_index: r.order_index }))
+      await adminFetch('/api/admin/reorder_reels', {
+        method: 'POST',
+        body: { orders }
+      })
+      showToast('✅ Ranking order updated!')
+    } catch (err) {
+      alert('Failed to save order: ' + err.message)
+      loadData()
+    }
+  }
+
+  const moveReel = async (index, direction) => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    if (newIndex < 0 || newIndex >= viralReels.length) return
+
+    const newReels = [...viralReels]
+    const temp = newReels[index]
+    newReels[index] = newReels[newIndex]
+    newReels[newIndex] = temp
+
+    const reordered = newReels.map((reel, idx) => ({
+      ...reel,
+      order_index: idx + 1
+    }))
+
+    setViralReels(reordered)
+
+    try {
+      const orders = reordered.map(r => ({ id: r.id, order_index: r.order_index }))
+      await adminFetch('/api/admin/reorder_reels', {
+        method: 'POST',
+        body: { orders }
+      })
+      showToast('✅ Ranking order updated!')
+    } catch (err) {
+      alert('Failed to save order: ' + err.message)
+      loadData()
+    }
+  }
 
   const [visits, setVisits] = useState([])
 
@@ -1395,11 +1540,6 @@ export default function AdminPanel() {
         const postData = await postRes.json()
         setPosts(postData.posts || [])
       }
-      if (tab === 'news') {
-        const newsRes = await adminFetch('/api/admin/news')
-        const newsData = await newsRes.json()
-        setNews(newsData.news || [])
-      }
       if (tab === 'most_followed') {
         const res = await adminFetch('/api/admin/most_followed')
         const data = await res.json()
@@ -1419,6 +1559,11 @@ export default function AdminPanel() {
         const res = await adminFetch('/api/chat_backgrounds')
         const data = await res.json()
         setChatBackgrounds(data.backgrounds || {})
+      }
+      if (tab === 'reels') {
+        const res = await adminFetch('/api/admin/viral_reels')
+        const data = await res.json()
+        setViralReels(data.reels || [])
       }
     } catch {}
     setLoadingData(false)
@@ -1517,6 +1662,10 @@ export default function AdminPanel() {
           total_comments: cel.total_comments ? Number(cel.total_comments) : 0,
           total_shares: cel.total_shares ? Number(cel.total_shares) : 0,
           total_reposts: cel.total_reposts ? Number(cel.total_reposts) : 0,
+          average_views: cel.average_views ? Number(cel.average_views) : 0,
+          average_reel_likes: cel.average_reel_likes ? Number(cel.average_reel_likes) : 0,
+          average_post_likes: cel.average_post_likes ? Number(cel.average_post_likes) : 0,
+          followers_interaction: cel.followers_interaction ? Number(cel.followers_interaction) : 0,
         }
       })
       const data = await res.json()
@@ -1652,9 +1801,9 @@ export default function AdminPanel() {
           {[
             { id: 'celebrities', label: '👤 Celebrities' },
             { id: 'posts', label: '🎬 Posts & Reels' },
-            { id: 'news', label: '📰 InstaNews' },
+            { id: 'reels', label: '🔥 Trending Reels' },
             { id: 'most_followed', label: '📊 Most Followed' },
-            { id: 'voting_management', label: '🗳️ Voting Management' },
+            { id: 'voting_management', label: '🏆 Voting Management' },
             { id: 'visitors', label: '👥 Visitors' },
             { id: 'chat_backgrounds', label: '💬 Chat Wallpaper' },
           ].map(t => (
@@ -1846,6 +1995,10 @@ export default function AdminPanel() {
                               total_comments: cel.total_comments?.toString() || '',
                               total_shares: cel.total_shares?.toString() || '',
                               total_reposts: cel.total_reposts?.toString() || '',
+                              average_views: cel.average_views?.toString() || '',
+                              average_reel_likes: cel.average_reel_likes?.toString() || '',
+                              average_post_likes: cel.average_post_likes?.toString() || '',
+                              followers_interaction: cel.followers_interaction?.toString() || '',
                               hide_search: !!cel.hide_search,
                               tags: ''
                             });
@@ -2157,114 +2310,7 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* ── NEWS TAB ────────────────────────────────────────────────────── */}
-        {tab === 'news' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
-                InstaNews ({news.length})
-              </h2>
-              {!showNewsForm && !editingNews && (
-                <button className="btn btn-primary" onClick={() => setShowNewsForm(true)}>
-                  + Add News
-                </button>
-              )}
-            </div>
 
-            {(showNewsForm || editingNews) && (
-              <AdminModal
-                isOpen={showNewsForm || !!editingNews}
-                onClose={() => { setShowNewsForm(false); setEditingNews(null); }}
-                title={editingNews ? '✏️ Edit News' : '➕ Add InstaNews'}
-              >
-                <NewsForm
-                  initial={editingNews}
-                  onSave={(item) => {
-                    if (editingNews) {
-                      setNews(n => n.map(x => x.id === item.id ? item : x))
-                    } else {
-                      setNews(n => [item, ...n])
-                    }
-                    setShowNewsForm(false)
-                    setEditingNews(null)
-                    showToast('✅ News saved!')
-                  }}
-                  onCancel={() => { setShowNewsForm(false); setEditingNews(null) }}
-                />
-              </AdminModal>
-            )}
-
-            <div style={{ marginBottom: 16 }}>
-              <input
-                className="input-field"
-                value={searchNews}
-                onChange={e => setSearchNews(e.target.value)}
-                placeholder="🔍 Search news by title or content..."
-              />
-            </div>
-
-            {loadingData ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {(() => {
-                  const filtered = news.filter(item => 
-                    item.title?.toLowerCase().includes(searchNews.toLowerCase()) ||
-                    item.content?.toLowerCase().includes(searchNews.toLowerCase())
-                  )
-                  filtered.sort((a, b) => {
-                    const rankA = a.order_index ?? 999999
-                    const rankB = b.order_index ?? 999999
-                    if (rankA !== rankB) return rankA - rankB
-                    const dateA = new Date(a.published_date || a.created_at)
-                    const dateB = new Date(b.published_date || b.created_at)
-                    return dateB - dateA
-                  })
-                  if (filtered.length === 0) {
-                    return (
-                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                        {news.length === 0 ? "No news yet. Add your first one! 👆" : "No matching news found."}
-                      </div>
-                    )
-                  }
-                  return filtered.map(item => (
-                    <div key={item.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                      {item.image_url ? (
-                        <img src={item.image_url} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
-                      ) : (
-                        <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>📰</div>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.title}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          <span style={{ color: '#00e5ff', fontWeight: 600 }}>👁 {item.views || 0} views</span> &nbsp;·&nbsp; {item.published_date ? `📅 ${item.published_date}` : new Date(item.created_at).toLocaleDateString()} &nbsp;·&nbsp; <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Rank: #{item.order_index || 0}</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <a href={`/instanews/${item.slug}`} target="_blank">
-                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View</button>
-                        </a>
-                        <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                          onClick={() => { setEditingNews(item); setShowNewsForm(false) }}>
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteNews(item.id)}
-                          style={{
-                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                            color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                })()}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── LIVE DATE CARD (Only visible in Live-related tabs) ────────── */}
         {(tab === 'most_followed' || tab === 'voting_management') && (
@@ -2663,6 +2709,181 @@ export default function AdminPanel() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TRENDING REELS TAB ────────────────────────────────────────── */}
+        {tab === 'reels' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
+                Trending Reels ({viralReels.length})
+              </h2>
+              {!showViralReelsForm && !editingViralReels && (
+                <button className="btn btn-primary" onClick={() => setShowViralReelsForm(true)}>
+                  + Add Reel
+                </button>
+              )}
+            </div>
+
+            {(showViralReelsForm || editingViralReels) && (
+              <AdminModal
+                isOpen={showViralReelsForm || !!editingViralReels}
+                onClose={() => { setShowViralReelsForm(false); setEditingViralReels(null); }}
+                title={editingViralReels ? '✏️ Edit Reel' : '➕ Add Trending Reel'}
+              >
+                <ViralReelsForm
+                  initial={editingViralReels}
+                  onSave={(reel) => {
+                    if (editingViralReels) {
+                      setViralReels(r => r.map(x => x.id === reel.id ? reel : x))
+                    } else {
+                      setViralReels(r => [reel, ...r])
+                    }
+                    setShowViralReelsForm(false)
+                    setEditingViralReels(null)
+                    showToast('✅ Reel saved!')
+                  }}
+                  onCancel={() => { setShowViralReelsForm(false); setEditingViralReels(null) }}
+                />
+              </AdminModal>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="input-field"
+                value={searchViralReels}
+                onChange={e => setSearchViralReels(e.target.value)}
+                placeholder="🔍 Search reels by title or creator..."
+              />
+            </div>
+
+            {loadingData ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(() => {
+                  const filtered = viralReels.filter(item => 
+                    item.title?.toLowerCase().includes(searchViralReels.toLowerCase()) ||
+                    item.creator_name?.toLowerCase().includes(searchViralReels.toLowerCase())
+                  )
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        {viralReels.length === 0 ? "No trending reels yet. Add your first one! 👆" : "No matching reels found."}
+                      </div>
+                    )
+                  }
+                  return filtered.map(item => {
+                    const globalIdx = viralReels.findIndex(x => x.id === item.id)
+                    const isFirst = globalIdx === 0
+                    const isLast = globalIdx === viralReels.length - 1
+
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="card" 
+                        draggable="true"
+                        onDragStart={(e) => handleDragStart(e, globalIdx)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, globalIdx)}
+                        style={{ 
+                          display: 'flex', 
+                          gap: 14, 
+                          alignItems: 'center',
+                          cursor: 'grab',
+                          userSelect: 'none',
+                          border: draggedIndex === globalIdx ? '2px dashed var(--accent)' : '1px solid var(--border)',
+                          transition: 'all 0.15s ease',
+                          background: draggedIndex === globalIdx ? 'var(--surface2)' : 'var(--surface)'
+                        }}
+                      >
+                        {/* Drag Handle */}
+                        <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', cursor: 'grab' }}>
+                          <GripVertical size={16} />
+                        </div>
+
+                        {/* Move controls for touch/accessibility */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveReel(globalIdx, 'up'); }}
+                            disabled={isFirst}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: isFirst ? 'var(--border)' : 'var(--text-dim)',
+                              cursor: isFirst ? 'default' : 'pointer',
+                              padding: 2,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Move Up"
+                          >
+                            <ChevronUp size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveReel(globalIdx, 'down'); }}
+                            disabled={isLast}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: isLast ? 'var(--border)' : 'var(--text-dim)',
+                              cursor: isLast ? 'default' : 'pointer',
+                              padding: 2,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Move Down"
+                          >
+                            <ChevronDown size={16} />
+                          </button>
+                        </div>
+
+                        {item.photo_url ? (
+                          <img src={item.photo_url} alt="" style={{ width: 90, height: 50, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)', pointerEvents: 'none' }} />
+                        ) : (
+                          <div style={{ width: 90, height: 50, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, pointerEvents: 'none' }}>🎬</div>
+                        )}
+                        
+                        <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.title}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Rank: #{globalIdx + 1}</span>
+                            &nbsp;·&nbsp;
+                            {item.creator_photo_url && (
+                              <img src={item.creator_photo_url} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />
+                            )}
+                            <span>Creator: <strong>{item.creator_name || '@anonymous'}</strong></span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <a href={item.instagram_link} target="_blank" rel="noopener noreferrer">
+                            <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View Link</button>
+                          </a>
+                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                            onClick={() => { setEditingViralReels(item); setShowViralReelsForm(false) }}>
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteViralReel(item.id)}
+                            style={{
+                              background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                              color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             )}
           </div>

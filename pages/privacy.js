@@ -27,8 +27,7 @@ export default function Privacy() {
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>24-Hour Viral Reels</h2>
           <p style={{ marginBottom: 16 }}>Our 24-Hour Viral Reels section showcases popular public Instagram reels. We only display publicly available metadata (such as titles, creator names, and public thumbnails). Any interaction or click redirects you to Instagram, which is governed by Meta's privacy policy. We do not collect or monitor your viewing history, Instagram credentials, or personal engagement statistics.</p>
 
-          <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>InstaNews (News Section)</h2>
-          <p style={{ marginBottom: 16 }}>We provide updates and articles about social media trends and creators. To measure content performance, we track basic anonymous view counts. This tracking is aggregate and does not capture any personally identifiable information (PII) such as IP addresses, search logs, or individual user data.</p>
+
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>Third-Party Links</h2>
           <p style={{ marginBottom: 16 }}>Spialr links to Instagram posts and reels. Clicking these links takes you to Instagram, which has its own privacy policy. We are not responsible for Instagram's data practices.</p>

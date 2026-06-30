@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Logo from './Logo'
-import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, MessageSquare } from 'lucide-react'
+import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, MessageSquare, Flame } from 'lucide-react'
 
 export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -60,17 +60,14 @@ export default function Navbar() {
               <Link href="/all">
                 <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>All Profiles</button>
               </Link>
+              <Link href="/trending">
+                <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Trending</button>
+              </Link>
               <Link href="/live">
                 <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Live</button>
               </Link>
               <Link href="/chat">
                 <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Chat</button>
-              </Link>
-              <Link href="/instanews">
-                <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>InstaNews</button>
-              </Link>
-              <Link href="/about">
-                <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>About</button>
               </Link>
             </div>
 
@@ -140,11 +137,11 @@ export default function Navbar() {
                   <Link href="/request" className="dropdown-item" onClick={closeDropdown}>
                     <PlusCircle size={14} style={{ marginRight: 8 }} /> Request Creator / Suggest Profile
                   </Link>
-                  <Link href="/instanews" className="dropdown-item" onClick={closeDropdown}>
-                    <Newspaper size={14} style={{ marginRight: 8 }} /> InstaNews
+                  <Link href="/trending" className="dropdown-item" onClick={closeDropdown}>
+                    <TrendingUp size={14} style={{ marginRight: 8 }} /> Trending
                   </Link>
                   <Link href="/live" className="dropdown-item" onClick={closeDropdown}>
-                    <TrendingUp size={14} style={{ marginRight: 8 }} /> Trending / Live
+                    <Flame size={14} style={{ marginRight: 8 }} /> Live
                   </Link>
                   <Link href="/chat" className="dropdown-item" onClick={closeDropdown}>
                     <MessageSquare size={14} style={{ marginRight: 8 }} /> Chat Room

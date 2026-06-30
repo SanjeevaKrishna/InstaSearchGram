@@ -1,14 +1,14 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
-import { TrendingUp, BarChart3, Newspaper, Search } from 'lucide-react'
+import { TrendingUp, BarChart3, Trophy, Search } from 'lucide-react'
 
 export default function About() {
   return (
     <>
       <Head>
-        <title>About Spialr — Instagram Rankings, Insights & News</title>
-        <meta name="description" content="Discover Spialr - a professional analytics platform featuring live creator ranks, daily InstaNews, total views, reel likes, post likes, and instant keyword search." />
+        <title>About Spialr — Instagram Rankings, Insights & Trending Reels</title>
+        <meta name="description" content="Discover Spialr - a professional analytics platform featuring live creator ranks, trending Reels ranking, total views, reel likes, post likes, and instant keyword search." />
       </Head>
       
       <Navbar />
@@ -71,18 +71,18 @@ export default function About() {
               </p>
             </div>
 
-            {/* Card 3: InstaNews */}
+            {/* Card 3: Top Viral Reels */}
             <div className="card" style={{ padding: 24, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0, 180, 219, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Newspaper size={18} style={{ color: '#00b4db' }} />
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255, 215, 0, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Trophy size={18} style={{ color: '#ffb300' }} />
                 </div>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, margin: 0 }}>
-                  Daily InstaNews
+                  Top Viral Reels
                 </h3>
               </div>
               <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.6, margin: 0 }}>
-                Stay updated with a dedicated daily news feed covering trending articles, viral events, and major announcements about popular online celebrities and digital creators.
+                Explore the top trending and viral Instagram Reels of the last 24 hours. We track and rank popular video content dynamically so you are always up to date.
               </p>
             </div>
 
