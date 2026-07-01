@@ -3,6 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
 import { Send, MessageSquare, User, Clock, AlertCircle, Sparkles, Users, Globe, Hash, CornerUpLeft, Copy, Trash2, X, ShieldCheck } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 // Fun nickname generators to make anonymous chats readable
 const adjectives = ['Swift', 'Bright', 'Jolly', 'Clever', 'Wild', 'Silent', 'Cool', 'Epic', 'Fiery', 'Gentle', 'Happy', 'Mystic', 'Brave', 'Loyal', 'Quick']
@@ -149,15 +150,38 @@ export default function ChatPage() {
     }
   }
 
-  // Poll for messages every 3 seconds
+  // Subscribe to real-time chat messages and load initial messages
   useEffect(() => {
     fetchMessages(room)
 
-    const interval = setInterval(() => {
-      fetchMessages(room, true)
-    }, 3000)
+    if (!supabase) return
 
-    return () => clearInterval(interval)
+    const channel = supabase
+      .channel(`chat_messages:${room}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `room=eq.${room}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setMessages(prev => {
+              if (prev.some(m => m.id === payload.new.id)) return prev
+              return [...prev, payload.new]
+            })
+          } else if (payload.eventType === 'DELETE') {
+            setMessages(prev => prev.filter(m => m.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [room])
 
   // Scroll to bottom helper
@@ -587,7 +611,7 @@ export default function ChatPage() {
             flexDirection: 'column',
             gap: 20,
             background: roomBackgrounds[room]
-              ? `linear-gradient(rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.93)), url(${roomBackgrounds[room]}) center/cover no-repeat`
+              ? `linear-gradient(rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.84)), url(${roomBackgrounds[room]}) center/cover no-repeat`
               : 'rgba(99, 102, 241, 0.018)', // Chill soft indigo pastel background
             scrollbarWidth: 'thin'
           }}>

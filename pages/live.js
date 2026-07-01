@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
 import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const getOrdinal = (n) => {
   if (!n) return ''
@@ -400,6 +401,53 @@ export default function LivePage() {
 
   useEffect(() => {
     fetchLiveData()
+
+    if (!supabase) return
+
+    const channel = supabase
+      .channel('most_followed_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'most_followed'
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            setLiveData(prev => {
+              const updatedList = (prev.most_followed || []).map(profile => {
+                if (profile.id === payload.new.id) {
+                  return { ...profile, ...payload.new }
+                }
+                return profile
+              })
+              return {
+                ...prev,
+                most_followed: updatedList
+              }
+            })
+          } else if (payload.eventType === 'INSERT') {
+            setLiveData(prev => {
+              if ((prev.most_followed || []).some(p => p.id === payload.new.id)) return prev
+              return {
+                ...prev,
+                most_followed: [...(prev.most_followed || []), payload.new]
+              }
+            })
+          } else if (payload.eventType === 'DELETE') {
+            setLiveData(prev => ({
+              ...prev,
+              most_followed: (prev.most_followed || []).filter(p => p.id !== payload.old.id)
+            }))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   return (
