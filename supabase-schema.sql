@@ -19,6 +19,7 @@ create table if not exists celebrities (
   total_comments bigint default 0,
   total_shares bigint default 0,
   total_reposts bigint default 0,
+  most_likes bigint default 0,
   hide_search boolean default false,
   description text,
   created_at timestamptz default now()

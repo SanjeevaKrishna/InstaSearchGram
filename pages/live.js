@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -915,10 +915,12 @@ export default function LivePage() {
                   {/* Table Body */}
                   {filtered.slice(0, displayLimit).map((profile, index) => {
                     const rankToDisplay = profile.categoryRank
+
                     return (
-                      <div
-                        key={profile.id}
-                        className="table-row table-row-hover"
+                      <Fragment key={profile.id}>
+                        <div
+                          key={profile.id}
+                          className="table-row table-row-hover"
                         onClick={() => setSelectedProfile(profile)}
                         style={{
                           display: 'flex',
@@ -1051,8 +1053,9 @@ export default function LivePage() {
                           {profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}
                         </div>
                       </div>
-                    )
-                  })}
+                    </Fragment>
+                  )
+                })}
 
                   {filtered.length > displayLimit && (
                     <div ref={loaderRef} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface2)', gap: 8 }}>
@@ -1161,11 +1164,13 @@ export default function LivePage() {
                 <div style={{ border: 'none', borderRadius: 0, background: 'transparent', overflow: 'hidden' }}>
                   {filtered.slice(0, displayLimit).map((profile, index) => {
                     const rankToDisplay = profile.categoryRank
+
                     return (
-                      <div
-                        key={profile.id}
-                        className="table-row table-row-hover"
-                        onClick={() => setSelectedProfile(profile)}
+                      <Fragment key={profile.id}>
+                        <div
+                          key={profile.id}
+                          className="table-row table-row-hover"
+                          onClick={() => setSelectedProfile(profile)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1255,8 +1260,9 @@ export default function LivePage() {
                           {renderMovement(profile)}
                         </div>
                       </div>
-                    )
-                  })}
+                    </Fragment>
+                  )
+                })}
 
                   {filtered.length > displayLimit && (
                     <div ref={loaderRef} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface2)', gap: 8 }}>

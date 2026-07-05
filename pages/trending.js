@@ -489,15 +489,17 @@ export default function TrendingPage() {
               overflow: 'hidden',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.02)',
             }}>
-              {activeReels.map((reel) => {
-                const absoluteRank = activeReels.indexOf(reel) + 1
+              {activeReels.map((reel, idx) => {
+                const absoluteRank = idx + 1
+
                 return (
-                  <LeaderboardRow 
-                    key={reel.id} 
-                    reel={reel}
-                    absoluteRank={absoluteRank} 
-                    isMostViewed={activeTab === 'most_viewed'}
-                  />
+                  <div key={reel.id}>
+                    <LeaderboardRow 
+                      reel={reel}
+                      absoluteRank={absoluteRank} 
+                      isMostViewed={activeTab === 'most_viewed'}
+                    />
+                  </div>
                 )
               })}
             </div>

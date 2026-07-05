@@ -206,11 +206,20 @@ export default function AllCelebrities() {
           </div>
         ) : (
           <div style={{ position: 'relative', background: '#fff', borderRadius: '12px', overflow: 'hidden', paddingBottom: '24px' }}>
-            {sortedLetters.map(letter => (
-              <div key={letter} id={`letter-${letter}`} style={{ display: 'flex', flexDirection: 'column', scrollMarginTop: '80px' }}>
-                {grouped[letter].map((cel, index) => renderProfileItem(cel, index, letter))}
-              </div>
-            ))}
+            {(() => {
+              let globalIndex = 0
+              return sortedLetters.map(letter => (
+                <div key={letter} id={`letter-${letter}`} style={{ display: 'flex', flexDirection: 'column', scrollMarginTop: '80px' }}>
+                  {grouped[letter].map((cel, index) => {
+                    return (
+                      <div key={cel.id}>
+                        {renderProfileItem(cel, index, letter)}
+                      </div>
+                    )
+                  })}
+                </div>
+              ))
+            })()}
             
             {celebrities.length === 0 && (
               <div style={{ textAlign: 'center', color: '#757575', padding: 40 }}>

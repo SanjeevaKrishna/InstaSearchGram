@@ -4,6 +4,8 @@ We have completed the redesign of the leaderboard row details hierarchy, integra
 
 We have also implemented comprehensive Search Engine Optimization (SEO) fixes to resolve Google Search Console indexing and Soft 404 issues.
 
+Finally, we have integrated Adsterra advertisement units across key pages in a highly optimized, responsive, and performance-friendly manner.
+
 ## Changes Made
 
 ### 1. Database Schema
@@ -54,8 +56,33 @@ We have also implemented comprehensive Search Engine Optimization (SEO) fixes to
   - Converted these dynamic pages to Server-Side Rendering (SSR) via `getServerSideProps`.
   - The server queries the Supabase database. If the request celebrity slug or reel ID is not found, it returns `notFound: true`, instructing Next.js to serve the default error page with a real **HTTP 404 Not Found** status code. This completely resolves Google Search Console Soft 404 errors.
 
+### 8. Adsterra Ads Integration
+* **[components/AdUnits.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/components/AdUnits.js): [NEW]**
+  - Created client-only React components for Adsterra's Native banner, 300x250 banner, and 320x50 mobile banner.
+  - Utilized `useState` + `useEffect` to guarantee ads only trigger after React mount, avoiding hydration mismatches.
+  - Wrapped iframe-based banner codes in isolated `srcDoc` iframe documents to prevent `window.atOptions` configuration collisions when rendering multiple distinct scripts.
+* **[styles/globals.css](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/styles/globals.css):**
+  - Added `.mobile-only-ad` media query to hide 320x50 mobile units on screen widths larger than 768px.
+* **[pages/index.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/index.js):**
+  - Placed `Banner320x50` (mobile-only) below the search input field container.
+* **[pages/celebrity/[slug].js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/celebrity/%5Bslug%5D.js):**
+  - Placed `NativeAdUnit` right below the "About" biography section.
+  - Placed `Banner300x250` at the very bottom of the page wrapper before the closing `<main>`.
+* **[pages/trending.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/trending.js):**
+  - Placed `NativeAdUnit` after every 9 reels in the standing rows.
+  - Placed `Banner300x250` after the 15th reel standing row.
+* **[pages/live.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/live.js):**
+  - Placed `Banner320x50` (mobile-only) below the subtabs/dropdown filters row.
+  - Placed `NativeAdUnit` after every 18 rows in the Most Followed and Voting standings lists.
+  - Placed `Banner300x250` after the 36th row in the standings lists.
+* **[pages/all.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/all.js):**
+  - Placed `Banner320x50` (mobile-only) below the page title.
+  - Placed `NativeAdUnit` after every 18 profiles in the alphabetical list.
+  - Placed `Banner300x250` after the 36th profile.
+
 ---
 
 ## Verification Results
 * Both the public leaderboard `/trending` page and the `/admin` page compiled successfully (`200 OK` on server).
 * Non-existent paths like `/celebrity/does-not-exist` and `/reel/does-not-exist` return a real `404` status code.
+* All modified routing pages (`/`, `/all`, `/trending`, `/live`, `/celebrity/[slug]`) compile successfully with ads and respond with `200 OK`.

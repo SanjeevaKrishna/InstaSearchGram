@@ -198,6 +198,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         average_reel_likes: initial.average_reel_likes !== undefined && initial.average_reel_likes !== null ? initial.average_reel_likes.toString() : '',
         average_post_likes: initial.average_post_likes !== undefined && initial.average_post_likes !== null ? initial.average_post_likes.toString() : '',
         followers_interaction: initial.followers_interaction !== undefined && initial.followers_interaction !== null ? initial.followers_interaction.toString() : '',
+        most_likes: initial.most_likes !== undefined && initial.most_likes !== null ? initial.most_likes.toString() : '',
         hide_search: !!initial.hide_search,
         description: initial.description || ''
       }
@@ -208,6 +209,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
       total_reel_views: '', total_reel_likes: '', total_post_likes: '',
       total_comments: '', total_shares: '', total_reposts: '', hide_search: false,
       average_views: '', average_reel_likes: '', average_post_likes: '', followers_interaction: '',
+      most_likes: '',
       description: ''
     }
   })
@@ -240,6 +242,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           average_reel_likes: form.average_reel_likes ? Number(form.average_reel_likes) : 0,
           average_post_likes: form.average_post_likes ? Number(form.average_post_likes) : 0,
           followers_interaction: form.followers_interaction ? Number(form.followers_interaction) : 0,
+          most_likes: form.most_likes ? Number(form.most_likes) : 0,
           hide_search: !!form.hide_search,
           description: form.description || ''
         },
@@ -367,7 +370,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           <input className="input-field" type="number" value={form.average_reel_likes || ''} onChange={e => set('average_reel_likes', e.target.value)} placeholder="e.g. 45000" />
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
           <label style={labelStyle}>Average Post Likes</label>
           <input className="input-field" type="number" value={form.average_post_likes || ''} onChange={e => set('average_post_likes', e.target.value)} placeholder="e.g. 25000" />
@@ -375,6 +378,10 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         <div>
           <label style={labelStyle}>Followers Interaction (%)</label>
           <input className="input-field" type="number" step="0.01" value={form.followers_interaction || ''} onChange={e => set('followers_interaction', e.target.value)} placeholder="e.g. 5.25" />
+        </div>
+        <div>
+          <label style={labelStyle}>Most Likes</label>
+          <input className="input-field" type="number" value={form.most_likes || ''} onChange={e => set('most_likes', e.target.value)} placeholder="e.g. 85000" />
         </div>
       </div>
       <div>

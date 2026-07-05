@@ -124,6 +124,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
     const avgReelLikesWinner = getWinner(celebrity.average_reel_likes, compareCelebrity.average_reel_likes)
     const avgPostLikesWinner = getWinner(celebrity.average_post_likes, compareCelebrity.average_post_likes)
     const followersInteractionWinner = getWinner(celebrity.followers_interaction, compareCelebrity.followers_interaction)
+    const mostLikesWinner = getWinner(celebrity.most_likes, compareCelebrity.most_likes)
 
     const renderMetricComparison = (label, icon, val1, val2, winnerObj, cardClass, isPercent = false) => {
       const formattedVal1 = isPercent ? (val1 ? Number(val1).toFixed(2) + '%' : '0.00%') : formatCount(val1)
@@ -362,6 +363,21 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             {renderMetricComparison('Average Reel Likes', <Heart size={14} style={{ color: '#ff2a5f' }} />, celebrity.average_reel_likes, compareCelebrity.average_reel_likes, avgReelLikesWinner, 'analytics-card-reel-likes')}
             {renderMetricComparison('Average Post Likes', <ThumbsUp size={14} style={{ color: '#ffa751' }} />, celebrity.average_post_likes, compareCelebrity.average_post_likes, avgPostLikesWinner, 'analytics-card-post-likes')}
             {renderMetricComparison('Followers Interaction', <Percent size={14} style={{ color: '#e1306c' }} />, celebrity.followers_interaction, compareCelebrity.followers_interaction, followersInteractionWinner, 'analytics-card-comments', true)}
+            {renderMetricComparison('Most Likes', <Heart size={14} style={{ color: '#ff2a5f' }} />, celebrity.most_likes, compareCelebrity.most_likes, mostLikesWinner, 'analytics-card-reel-likes')}
+          </div>
+          
+          <div 
+            className="gradient-text"
+            style={{
+              textAlign: 'center',
+              fontSize: 14,
+              fontWeight: 700,
+              marginTop: 24,
+              fontStyle: 'italic',
+              letterSpacing: '0.02em'
+            }}
+          >
+            Your View, Your Like, Your Comment, Your Repost Counts
           </div>
         </main>
       </>
