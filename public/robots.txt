@@ -4,4 +4,4 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://www.spialr.com/sitemap.xml
+Sitemap: https://spialr.com/sitemap.xml

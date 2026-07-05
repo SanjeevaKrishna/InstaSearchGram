@@ -51,10 +51,10 @@ export default async function handler(req, res) {
 
     const supabase = getAdminClient()
 
-    // GET - list all viral reels
+    // GET - list all most viewed reels
     if (req.method === 'GET') {
       const { data, error } = await supabase
-        .from('viral_reels')
+        .from('most_viewed_reels')
         .select('*')
 
       if (error) return res.status(500).json({ error: error.message })
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ reels: sorted })
     }
 
-    // POST - add a new viral reel
+    // POST - add a new most viewed reel
     if (req.method === 'POST') {
       const { title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, created_at } = req.body
       if (!title) return res.status(400).json({ error: 'Title is required' })
@@ -90,7 +90,7 @@ export default async function handler(req, res) {
       }
 
       const { data, error } = await supabase
-        .from('viral_reels')
+        .from('most_viewed_reels')
         .insert([payload])
         .select()
         .single()
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
       return res.status(201).json({ reel: data })
     }
 
-    // PUT - update a viral reel
+    // PUT - update a most viewed reel
     if (req.method === 'PUT') {
       const { id, title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, created_at } = req.body
       if (!id) return res.status(400).json({ error: 'ID is required' })
@@ -118,7 +118,7 @@ export default async function handler(req, res) {
       }
 
       const { data, error } = await supabase
-        .from('viral_reels')
+        .from('most_viewed_reels')
         .update(payload)
         .eq('id', id)
         .select()
@@ -128,20 +128,20 @@ export default async function handler(req, res) {
       return res.status(200).json({ reel: data })
     }
 
-    // DELETE - remove a viral reel
+    // DELETE - remove a most viewed reel
     if (req.method === 'DELETE') {
       const { id } = req.body
       if (!id) return res.status(400).json({ error: 'ID is required' })
 
       // Fetch the reel first to clean up its images
       const { data: reel } = await supabase
-        .from('viral_reels')
+        .from('most_viewed_reels')
         .select('photo_url, creator_photo_url')
         .eq('id', id)
         .maybeSingle()
 
       const { error } = await supabase
-        .from('viral_reels')
+        .from('most_viewed_reels')
         .delete()
         .eq('id', id)
 

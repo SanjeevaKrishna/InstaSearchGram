@@ -485,13 +485,13 @@ export default function LivePage() {
 
       <Navbar />
 
-      <main className="main-container" style={{ maxWidth: 850, margin: '0 auto', padding: '40px 20px 80px' }}>
+      <main className="main-container" style={{ maxWidth: 850, margin: '0 auto', padding: '16px 20px 80px' }}>
         {/* Header section with live pulse indicator and manual date */}
         <div className="fade-in header-section" style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 16,
-          marginBottom: 32,
+          gap: 8,
+          marginBottom: 16,
         }}>
           {/* Live Status + Date Row */}
           <div className="header-status-row" style={{
@@ -578,76 +578,170 @@ export default function LivePage() {
                Compare, upvote to support, or downvote to drag. Let the fan wars begin!
              </p>
            )}
-         </div>
- 
-         {/* Subtabs Selection */}
-         <div className="fade-in subtabs-container" style={{
-           display: 'flex',
-           background: 'var(--surface2)',
-           borderRadius: '100px',
-           padding: 3,
-           marginBottom: 32,
-           gap: 4,
-           border: '1px solid var(--border)',
-           maxWidth: 350,
-           margin: '0 auto 32px'
-         }}>
-           <button
-             onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
-             onMouseEnter={() => setHoveredTab('most_followed')}
-             onMouseLeave={() => setHoveredTab(null)}
-             style={{
-               flex: 1,
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center',
-               padding: '8px 12px',
-               borderRadius: '100px',
-               border: 'none',
-               fontSize: 12.5,
-               fontWeight: 700,
-               background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
-               color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
-               boxShadow: activeTab === 'most_followed' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-               transform: hoveredTab === 'most_followed' && activeTab !== 'most_followed' ? 'scale(1.02)' : 'scale(1)',
-               transition: 'all 0.2s ease',
-             }}
-           >
-             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
-               <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
-               <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
-               <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
-               <line x1="2" y1="21" x2="22" y2="21" stroke="#e0e0e0" strokeWidth="2" strokeLinecap="round" />
-             </svg>
-             Most Followed
-           </button>
-           <button
-             onClick={() => { setActiveTab('voting'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
-             onMouseEnter={() => setHoveredTab('voting')}
-             onMouseLeave={() => setHoveredTab(null)}
-             style={{
-               flex: 1,
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center',
-               padding: '8px 12px',
-               borderRadius: '100px',
-               border: 'none',
-               fontSize: 12.5,
-               fontWeight: 700,
-               background: activeTab === 'voting' ? 'var(--surface)' : 'transparent',
-               color: activeTab === 'voting' ? 'var(--text)' : 'var(--text-muted)',
-               boxShadow: activeTab === 'voting' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-               transform: hoveredTab === 'voting' && activeTab !== 'voting' ? 'scale(1.02)' : 'scale(1)',
-               transition: 'all 0.2s ease',
-             }}
-           >
-             <span style={{ marginRight: 6, fontSize: 14, flexShrink: 0, opacity: activeTab === 'voting' ? 1 : 0.6 }}>
-                👥
-              </span>
-             Voting
-           </button>
-         </div>
+          </div>
+
+          {/* Unified Navigation Row: Tabs (Left) & Language Dropdown (Right) */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 20,
+            flexWrap: 'wrap',
+            gap: 12,
+            position: 'relative',
+            zIndex: 10
+          }}>
+            {/* Subtabs Selection */}
+            <div className="fade-in subtabs-container" style={{
+              display: 'flex',
+              background: 'var(--surface2)',
+              borderRadius: '100px',
+              padding: 3,
+              gap: 4,
+              border: '1px solid var(--border)',
+              maxWidth: 350,
+              flex: '1 1 auto'
+            }}>
+              <button
+                onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
+                onMouseEnter={() => setHoveredTab('most_followed')}
+                onMouseLeave={() => setHoveredTab(null)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 12px',
+                  borderRadius: '100px',
+                  border: 'none',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
+                  color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
+                  boxShadow: activeTab === 'most_followed' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  transform: hoveredTab === 'most_followed' && activeTab !== 'most_followed' ? 'scale(1.02)' : 'scale(1)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
+                  <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
+                  <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
+                  <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
+                  <line x1="2" y1="21" x2="22" y2="21" stroke="#e0e0e0" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                Most Followed
+              </button>
+              <button
+                onClick={() => { setActiveTab('voting'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
+                onMouseEnter={() => setHoveredTab('voting')}
+                onMouseLeave={() => setHoveredTab(null)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 12px',
+                  borderRadius: '100px',
+                  border: 'none',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: activeTab === 'voting' ? 'var(--surface)' : 'transparent',
+                  color: activeTab === 'voting' ? 'var(--text)' : 'var(--text-muted)',
+                  boxShadow: activeTab === 'voting' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  transform: hoveredTab === 'voting' && activeTab !== 'voting' ? 'scale(1.02)' : 'scale(1)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span style={{ marginRight: 6, fontSize: 14, flexShrink: 0, opacity: activeTab === 'voting' ? 1 : 0.6 }}>
+                   👥
+                 </span>
+                Voting
+              </button>
+            </div>
+
+            {/* Language Filter Dropdown (aligned right side of the row) */}
+            {activeTab === 'most_followed' && !loading && !error && liveData && liveData.most_followed && liveData.most_followed.length > 0 && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: '100px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>{selectedLanguage}</span>
+                  <ChevronDown size={14} style={{
+                    transform: isLangDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease',
+                    color: 'var(--text-muted)'
+                  }} />
+                </button>
+
+                {isLangDropdownOpen && (
+                  <>
+                    <div 
+                      onClick={() => setIsLangDropdownOpen(false)}
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 99,
+                        background: 'transparent'
+                      }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: 6,
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+                      zIndex: 100,
+                      minWidth: 160,
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '4px 0',
+                    }}>
+                      {['All', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam'].map((lang) => {
+                        const isSelected = selectedLanguage === lang;
+                        return (
+                          <button
+                            key={lang}
+                            onClick={() => {
+                              setSelectedLanguage(lang);
+                              setIsLangDropdownOpen(false);
+                              localStorage.setItem('spialr_last_language', lang.toLowerCase());
+                            }}
+                            className={`lang-dropdown-item ${isSelected ? 'active' : ''}`}
+                          >
+                            {lang}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
         {/* Main Content Area */}
         {loading ? (
@@ -673,97 +767,6 @@ export default function LivePage() {
         ) : activeTab === 'most_followed' ? (
           /* MOST FOLLOWED TAB */
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Language Filter Dropdown */}
-            {liveData.most_followed.length > 0 && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                marginBottom: 4,
-                position: 'relative',
-                zIndex: 10
-              }}>
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                    style={{
-                      padding: '8px 18px',
-                      borderRadius: '100px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--surface)',
-                      color: 'var(--text)',
-                      fontSize: 13.5,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <span>{selectedLanguage}</span>
-                    <ChevronDown size={14} style={{
-                      transform: isLangDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s ease',
-                      color: 'var(--text-muted)'
-                    }} />
-                  </button>
-
-                  {isLangDropdownOpen && (
-                    <>
-                      {/* Click outside backdrop */}
-                      <div 
-                        onClick={() => setIsLangDropdownOpen(false)}
-                        style={{
-                          position: 'fixed',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          zIndex: 99,
-                          background: 'transparent'
-                        }}
-                      />
-                      {/* Dropdown Menu */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        marginTop: 6,
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 12,
-                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
-                        zIndex: 100,
-                        minWidth: 160,
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        padding: '4px 0',
-                      }}>
-                        {['All', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam'].map((lang) => {
-                          const isSelected = selectedLanguage === lang;
-                          return (
-                            <button
-                              key={lang}
-                              onClick={() => {
-                                setSelectedLanguage(lang);
-                                setIsLangDropdownOpen(false);
-                                localStorage.setItem('spialr_last_language', lang.toLowerCase());
-                              }}
-                              className={`lang-dropdown-item ${isSelected ? 'active' : ''}`}
-                            >
-                              {lang}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Search Input */}
             {liveData.most_followed.length > 0 && (

@@ -38,6 +38,11 @@ export default function ChatPage() {
   const [tempName, setTempName] = useState('')
   const [roomBackgrounds, setRoomBackgrounds] = useState({})
 
+  // Extra Premium Chat Features States
+  const [onlineCount, setOnlineCount] = useState(12)
+  const [showScrollBottom, setShowScrollBottom] = useState(false)
+  const feedContainerRef = useRef(null)
+
   // Swiping State
   const [swipingMessageId, setSwipingMessageId] = useState(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
@@ -133,6 +138,23 @@ export default function ChatPage() {
     }
   }, [router.isReady, router.query.room])
 
+  // Simulate dynamic active online users in chat rooms
+  useEffect(() => {
+    const seed = room.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const baseCount = (seed % 15) + 6 // 6 to 20 users
+    setOnlineCount(baseCount)
+
+    const interval = setInterval(() => {
+      setOnlineCount(prev => {
+        const delta = Math.floor(Math.random() * 3) - 1
+        const newCount = prev + delta
+        return Math.max(4, Math.min(30, newCount))
+      })
+    }, 15000)
+
+    return () => clearInterval(interval)
+  }, [room])
+
   // Fetch messages helper
   const fetchMessages = async (currentRoom, silent = false) => {
     if (!silent) setLoading(true)
@@ -193,6 +215,14 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Track scrolling to display quick nav to bottom button
+  const handleScroll = () => {
+    if (!feedContainerRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = feedContainerRef.current
+    const isScrolledUp = scrollHeight - scrollTop - clientHeight > 300
+    setShowScrollBottom(isScrolledUp)
+  }
 
   // Notification Toast Helper
   const showToast = (message) => {
@@ -378,8 +408,11 @@ export default function ChatPage() {
       const data = await res.json()
       if (data.error) throw new Error(data.error)
 
-      // Add to messages locally to display immediately before next poll
-      setMessages(prev => [...prev, data.message])
+      // Add to messages locally (deduplicating to prevent race condition double messages)
+      setMessages(prev => {
+        if (prev.some(m => m.id === data.message.id)) return prev
+        return [...prev, data.message]
+      })
     } catch (err) {
       console.error('Send message error:', err)
       setError('Could not send your message. Please try again.')
@@ -449,6 +482,21 @@ export default function ChatPage() {
       </Head>
 
       <Navbar />
+
+      {roomBackgrounds[room] && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: -1,
+          backgroundImage: `url(${roomBackgrounds[room]})`,
+          backgroundPosition: 'center',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+        }} />
+      )}
 
       <main className="chat-layout" style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px 24px', display: 'grid', gridTemplateColumns: '280px 1fr', gap: 24, height: 'calc(100vh - 60px)' }}>
         
@@ -571,6 +619,10 @@ export default function ChatPage() {
                 }}>
                   Welcome to {currentRoomInfo.label} Community
                 </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#10b981', fontWeight: 700, marginTop: 3 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 6px #10b981' }} className="live-pulse" />
+                  <span>{onlineCount} Online Now</span>
+                </div>
                 <p 
                   style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, margin: 0, marginTop: 2, lineHeight: 1.3 }} 
                   className="welcome-subtitle"
@@ -603,18 +655,20 @@ export default function ChatPage() {
           </div>
 
           {/* Messages Feed Container */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '24px 24px 90px', // space bottom for input
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20,
-            background: roomBackgrounds[room]
-              ? `linear-gradient(rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.84)), url(${roomBackgrounds[room]}) center/cover no-repeat`
-              : 'rgba(99, 102, 241, 0.018)', // Chill soft indigo pastel background
-            scrollbarWidth: 'thin'
-          }}>
+          <div 
+            ref={feedContainerRef}
+            onScroll={handleScroll}
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '24px 24px 90px', // space bottom for input
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 20,
+              background: roomBackgrounds[room] ? 'transparent' : 'rgba(99, 102, 241, 0.018)',
+              scrollbarWidth: 'thin'
+            }}
+          >
 
             {/* Message Feed list */}
             {loading ? (
@@ -883,9 +937,18 @@ export default function ChatPage() {
                             marginTop: 4,
                             color: 'var(--text-muted)',
                             marginRight: isMe ? 4 : 0,
-                            marginLeft: !isMe ? 4 : 0
+                            marginLeft: !isMe ? 4 : 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            justifyContent: isMe ? 'flex-end' : 'flex-start'
                           }}>
-                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            {isMe && (
+                              <span style={{ color: '#3b82f6', fontSize: 11, display: 'inline-flex', alignSelf: 'center', lineHeight: 1 }}>
+                                ✓✓
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -896,6 +959,36 @@ export default function ChatPage() {
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Floating Scroll to Bottom Button */}
+          {showScrollBottom && (
+            <button
+              onClick={scrollToBottom}
+              style={{
+                position: 'absolute',
+                bottom: replyingTo ? 125 : 100,
+                right: 28,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 6,
+                color: 'var(--text)',
+                animation: 'scaleIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+              }}
+              className="scroll-bottom-btn"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+          )}
 
           {/* Floating Glassmorphism Input Bar */}
           <div style={{
@@ -1017,12 +1110,12 @@ export default function ChatPage() {
                   type="text"
                   placeholder="Share your thoughts..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => setNewMessage(e.target.value.slice(0, 1000))}
                   style={{
                     flex: 1,
                     border: '1px solid var(--border)',
                     borderRadius: '100px',
-                    padding: '12px 24px',
+                    padding: '12px 64px 12px 24px',
                     fontSize: 14,
                     background: 'var(--surface)',
                     color: 'var(--text)',
@@ -1033,6 +1126,18 @@ export default function ChatPage() {
                   }}
                   className="chat-input-focus"
                 />
+                {newMessage.length > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    right: 18,
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: newMessage.length > 900 ? '#ff5252' : 'var(--text-muted)',
+                    pointerEvents: 'none'
+                  }}>
+                    {newMessage.length}/1000
+                  </span>
+                )}
               </div>
               <button
                 type="submit"

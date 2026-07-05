@@ -22,9 +22,14 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    const { orders } = req.body
+    const { orders, table = 'viral_reels' } = req.body
     if (!orders || !Array.isArray(orders)) {
       return res.status(400).json({ error: 'Orders array is required' })
+    }
+
+    const allowedTables = ['viral_reels', 'most_viewed_reels']
+    if (!allowedTables.includes(table)) {
+      return res.status(400).json({ error: 'Invalid table specified' })
     }
 
     const supabase = getAdminClient()
@@ -32,7 +37,7 @@ export default async function handler(req, res) {
     // Run reordering queries concurrently
     const promises = orders.map(({ id, order_index }) => 
       supabase
-        .from('viral_reels')
+        .from(table)
         .update({ order_index: Number(order_index) })
         .eq('id', id)
     )

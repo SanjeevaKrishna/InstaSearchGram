@@ -1106,9 +1106,41 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
   )
 }
 
-function ViralReelsForm({ initial, onSave, onCancel }) {
-  const [form, setForm] = useState(initial || {
-    title: '', photo_url: '', instagram_link: '', order_index: '0', creator_name: '', creator_photo_url: ''
+function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/viral_reels' }) {
+  const isMostViewed = apiEndpoint.includes('most_viewed')
+
+  const getInitialHoursAgo = (createdAt) => {
+    if (!createdAt) return '0 hours ago'
+    const diffMs = Date.now() - new Date(createdAt).getTime()
+    const hours = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)))
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  }
+
+  const [form, setForm] = useState(() => {
+    const initialDate = initial?.created_at 
+      ? new Date(initial.created_at).toISOString().substring(0, 10) 
+      : new Date().toISOString().substring(0, 10)
+
+    if (initial) {
+      return {
+        ...initial,
+        order_index: initial.order_index !== undefined && initial.order_index !== null ? initial.order_index.toString() : '0',
+        followers_text: initial.followers_text || '',
+        hours_ago: getInitialHoursAgo(initial.created_at),
+        uploaded_date: initialDate
+      }
+    }
+    return {
+      title: '',
+      photo_url: '',
+      instagram_link: '',
+      order_index: '0',
+      creator_name: '',
+      creator_photo_url: '',
+      followers_text: '',
+      hours_ago: '0 hours ago',
+      uploaded_date: initialDate
+    }
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -1121,7 +1153,15 @@ function ViralReelsForm({ initial, onSave, onCancel }) {
     setSaving(true)
     setError('')
     try {
-      const res = await adminFetch('/api/admin/viral_reels', {
+      const calculatedCreatedAt = isMostViewed 
+        ? new Date(form.uploaded_date + 'T12:00:00').toISOString() 
+        : (() => {
+            const match = (form.hours_ago || '').match(/\d+/)
+            const hours = match ? parseInt(match[0], 10) : 0
+            return new Date(Date.now() - (hours * 60 * 60 * 1000)).toISOString()
+          })()
+
+      const res = await adminFetch(apiEndpoint, {
         method: initial ? 'PUT' : 'POST',
         body: {
           ...form,
@@ -1129,6 +1169,8 @@ function ViralReelsForm({ initial, onSave, onCancel }) {
           order_index: form.order_index ? Number(form.order_index) : 0,
           creator_name: form.creator_name || '',
           creator_photo_url: form.creator_photo_url || '',
+          followers_text: form.followers_text || '',
+          created_at: calculatedCreatedAt
         },
       })
       const data = await res.json()
@@ -1242,6 +1284,26 @@ function ViralReelsForm({ initial, onSave, onCancel }) {
         )}
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Followers Count (e.g. 270M, 10k, 5 Crore)</label>
+          <input className="input-field" value={form.followers_text || ''} onChange={e => set('followers_text', e.target.value)} placeholder="e.g. 270M" />
+        </div>
+        <div>
+          {isMostViewed ? (
+            <>
+              <label style={labelStyle}>Uploaded Date</label>
+              <input className="input-field" type="date" value={form.uploaded_date} onChange={e => set('uploaded_date', e.target.value)} />
+            </>
+          ) : (
+            <>
+              <label style={labelStyle}>Time Added (e.g. 1 hour ago, 5 hours ago)</label>
+              <input className="input-field" value={form.hours_ago || ''} onChange={e => set('hours_ago', e.target.value)} placeholder="e.g. 5 hours ago" />
+            </>
+          )}
+        </div>
+      </div>
+
       {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
         <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
@@ -1270,6 +1332,10 @@ export default function AdminPanel() {
   const [editingViralReels, setEditingViralReels] = useState(null)
   const [draggedIndex, setDraggedIndex] = useState(null)
 
+  const [mostViewedReels, setMostViewedReels] = useState([])
+  const [showMostViewedReelsForm, setShowMostViewedReelsForm] = useState(false)
+  const [editingMostViewedReels, setEditingMostViewedReels] = useState(null)
+
   const handleDragStart = (e, index) => {
     setDraggedIndex(index)
     e.dataTransfer.effectAllowed = 'move'
@@ -1289,7 +1355,12 @@ export default function AdminPanel() {
     e.preventDefault()
     if (draggedIndex === null || draggedIndex === dropIndex) return
 
-    const newReels = [...viralReels]
+    const isMostViewed = tab === 'most_viewed_reels'
+    const targetList = isMostViewed ? mostViewedReels : viralReels
+    const setList = isMostViewed ? setMostViewedReels : setViralReels
+    const dbTable = isMostViewed ? 'most_viewed_reels' : 'viral_reels'
+
+    const newReels = [...targetList]
     const [draggedItem] = newReels.splice(draggedIndex, 1)
     newReels.splice(dropIndex, 0, draggedItem)
 
@@ -1298,13 +1369,13 @@ export default function AdminPanel() {
       order_index: idx + 1
     }))
 
-    setViralReels(reordered)
+    setList(reordered)
 
     try {
       const orders = reordered.map(r => ({ id: r.id, order_index: r.order_index }))
       await adminFetch('/api/admin/reorder_reels', {
         method: 'POST',
-        body: { orders }
+        body: { orders, table: dbTable }
       })
       showToast('✅ Ranking order updated!')
     } catch (err) {
@@ -1314,10 +1385,15 @@ export default function AdminPanel() {
   }
 
   const moveReel = async (index, direction) => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1
-    if (newIndex < 0 || newIndex >= viralReels.length) return
+    const isMostViewed = tab === 'most_viewed_reels'
+    const targetList = isMostViewed ? mostViewedReels : viralReels
+    const setList = isMostViewed ? setMostViewedReels : setViralReels
+    const dbTable = isMostViewed ? 'most_viewed_reels' : 'viral_reels'
 
-    const newReels = [...viralReels]
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    if (newIndex < 0 || newIndex >= targetList.length) return
+
+    const newReels = [...targetList]
     const temp = newReels[index]
     newReels[index] = newReels[newIndex]
     newReels[newIndex] = temp
@@ -1327,13 +1403,13 @@ export default function AdminPanel() {
       order_index: idx + 1
     }))
 
-    setViralReels(reordered)
+    setList(reordered)
 
     try {
       const orders = reordered.map(r => ({ id: r.id, order_index: r.order_index }))
       await adminFetch('/api/admin/reorder_reels', {
         method: 'POST',
-        body: { orders }
+        body: { orders, table: dbTable }
       })
       showToast('✅ Ranking order updated!')
     } catch (err) {
@@ -1365,6 +1441,7 @@ export default function AdminPanel() {
   const [searchNews, setSearchNews] = useState('')
   const [searchMostFollowed, setSearchMostFollowed] = useState('')
   const [searchViralReels, setSearchViralReels] = useState('')
+  const [searchMostViewedReels, setSearchMostViewedReels] = useState('')
 
   const showToast = (msg) => {
     setToast(msg)
@@ -1565,6 +1642,11 @@ export default function AdminPanel() {
         const data = await res.json()
         setViralReels(data.reels || [])
       }
+      if (tab === 'most_viewed_reels') {
+        const res = await adminFetch('/api/admin/most_viewed_reels')
+        const data = await res.json()
+        setMostViewedReels(data.reels || [])
+      }
     } catch {}
     setLoadingData(false)
   }
@@ -1599,6 +1681,13 @@ export default function AdminPanel() {
     if (!confirm('Delete this viral reel?')) return
     await adminFetch('/api/admin/viral_reels', { method: 'DELETE', body: { id } })
     setViralReels(r => r.filter(x => x.id !== id))
+    showToast('✅ Reel deleted')
+  }
+
+  const deleteMostViewedReel = async (id) => {
+    if (!confirm('Delete this most viewed reel?')) return
+    await adminFetch('/api/admin/most_viewed_reels', { method: 'DELETE', body: { id } })
+    setMostViewedReels(r => r.filter(x => x.id !== id))
     showToast('✅ Reel deleted')
   }
 
@@ -1802,6 +1891,7 @@ export default function AdminPanel() {
             { id: 'celebrities', label: '👤 Celebrities' },
             { id: 'posts', label: '🎬 Posts & Reels' },
             { id: 'reels', label: '🔥 Trending Reels' },
+            { id: 'most_viewed_reels', label: '👁️ Most Viewed Reels' },
             { id: 'most_followed', label: '📊 Most Followed' },
             { id: 'voting_management', label: '🏆 Voting Management' },
             { id: 'visitors', label: '👥 Visitors' },
@@ -1821,6 +1911,8 @@ export default function AdminPanel() {
                 setEditingMostFollowed(null)
                 setShowViralReelsForm(false)
                 setEditingViralReels(null)
+                setShowMostViewedReelsForm(false)
+                setEditingMostViewedReels(null)
               }}
               style={{
                 padding: '8px 20px',
@@ -2872,6 +2964,182 @@ export default function AdminPanel() {
                           </button>
                           <button
                             onClick={() => deleteViralReel(item.id)}
+                            style={{
+                              background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                              color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── MOST VIEWED REELS TAB ────────────────────────────────────────── */}
+        {tab === 'most_viewed_reels' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
+                Most Viewed Reels ({mostViewedReels.length})
+              </h2>
+              {!showMostViewedReelsForm && !editingMostViewedReels && (
+                <button className="btn btn-primary" onClick={() => setShowMostViewedReelsForm(true)}>
+                  + Add Reel
+                </button>
+              )}
+            </div>
+
+            {(showMostViewedReelsForm || editingMostViewedReels) && (
+              <AdminModal
+                isOpen={showMostViewedReelsForm || !!editingMostViewedReels}
+                onClose={() => { setShowMostViewedReelsForm(false); setEditingMostViewedReels(null); }}
+                title={editingMostViewedReels ? '✏️ Edit Reel' : '➕ Add Most Viewed Reel'}
+              >
+                <ViralReelsForm
+                  apiEndpoint="/api/admin/most_viewed_reels"
+                  initial={editingMostViewedReels}
+                  onSave={(reel) => {
+                    if (editingMostViewedReels) {
+                      setMostViewedReels(r => r.map(x => x.id === reel.id ? reel : x))
+                    } else {
+                      setMostViewedReels(r => [reel, ...r])
+                    }
+                    setShowMostViewedReelsForm(false)
+                    setEditingMostViewedReels(null)
+                    showToast('✅ Reel saved!')
+                  }}
+                  onCancel={() => { setShowMostViewedReelsForm(false); setEditingMostViewedReels(null) }}
+                />
+              </AdminModal>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="input-field"
+                value={searchMostViewedReels}
+                onChange={e => setSearchMostViewedReels(e.target.value)}
+                placeholder="🔍 Search reels by title or creator..."
+              />
+            </div>
+
+            {loadingData ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(() => {
+                  const filtered = mostViewedReels.filter(item => 
+                    item.title?.toLowerCase().includes(searchMostViewedReels.toLowerCase()) ||
+                    item.creator_name?.toLowerCase().includes(searchMostViewedReels.toLowerCase())
+                  )
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        {mostViewedReels.length === 0 ? "No most viewed reels yet. Add your first one! 👆" : "No matching reels found."}
+                      </div>
+                    )
+                  }
+                  return filtered.map(item => {
+                    const globalIdx = mostViewedReels.findIndex(x => x.id === item.id)
+                    const isFirst = globalIdx === 0
+                    const isLast = globalIdx === mostViewedReels.length - 1
+
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="card" 
+                        draggable="true"
+                        onDragStart={(e) => handleDragStart(e, globalIdx)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, globalIdx)}
+                        style={{ 
+                          display: 'flex', 
+                          gap: 14, 
+                          alignItems: 'center',
+                          cursor: 'grab',
+                          userSelect: 'none',
+                          border: draggedIndex === globalIdx ? '2px dashed var(--accent)' : '1px solid var(--border)',
+                          transition: 'all 0.15s ease',
+                          background: draggedIndex === globalIdx ? 'var(--surface2)' : 'var(--surface)'
+                        }}
+                      >
+                        {/* Drag Handle */}
+                        <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', cursor: 'grab' }}>
+                          <GripVertical size={16} />
+                        </div>
+
+                        {/* Move controls for touch/accessibility */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveReel(globalIdx, 'up'); }}
+                            disabled={isFirst}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: isFirst ? 'var(--border)' : 'var(--text-dim)',
+                              cursor: isFirst ? 'default' : 'pointer',
+                              padding: 2,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Move Up"
+                          >
+                            <ChevronUp size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveReel(globalIdx, 'down'); }}
+                            disabled={isLast}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: isLast ? 'var(--border)' : 'var(--text-dim)',
+                              cursor: isLast ? 'default' : 'pointer',
+                              padding: 2,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Move Down"
+                          >
+                            <ChevronDown size={16} />
+                          </button>
+                        </div>
+
+                        {item.photo_url ? (
+                          <img src={item.photo_url} alt="" style={{ width: 90, height: 50, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)', pointerEvents: 'none' }} />
+                        ) : (
+                          <div style={{ width: 90, height: 50, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, pointerEvents: 'none' }}>🎬</div>
+                        )}
+                        
+                        <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.title}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Rank: #{globalIdx + 1}</span>
+                            &nbsp;·&nbsp;
+                            {item.creator_photo_url && (
+                              <img src={item.creator_photo_url} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />
+                            )}
+                            <span>Creator: <strong>{item.creator_name || '@anonymous'}</strong></span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <a href={item.instagram_link} target="_blank" rel="noopener noreferrer">
+                            <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View Link</button>
+                          </a>
+                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                            onClick={() => { setEditingMostViewedReels(item); setShowMostViewedReelsForm(false) }}>
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteMostViewedReel(item.id)}
                             style={{
                               background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
                               color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',

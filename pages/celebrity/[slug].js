@@ -4,15 +4,16 @@ import Head from 'next/head'
 import Navbar from '../../components/Navbar'
 import PostCard from '../../components/PostCard'
 import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 
-export default function CelebrityPage() {
+export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity }) {
   const router = useRouter()
   const { slug, compare } = router.query
 
-  const [celebrity, setCelebrity] = useState(null)
-  const [postsCount, setPostsCount] = useState(0)
-  const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [celebrity, setCelebrity] = useState(initialCelebrity)
+  const [postsCount, setPostsCount] = useState(initialPosts?.length || 0)
+  const [posts, setPosts] = useState(initialPosts || [])
+  const [loading, setLoading] = useState(false)
 
   // Search states
   const [tagSearch, setTagSearch] = useState('')
@@ -21,7 +22,7 @@ export default function CelebrityPage() {
   const [activeTab, setActiveTab] = useState('posts')
 
   // Compare states
-  const [compareCelebrity, setCompareCelebrity] = useState(null)
+  const [compareCelebrity, setCompareCelebrity] = useState(initialCompareCelebrity)
   const [loadingCompare, setLoadingCompare] = useState(false)
 
   const getWinner = (val1, val2) => {
@@ -34,36 +35,11 @@ export default function CelebrityPage() {
   }
 
   useEffect(() => {
-    if (!slug) return
-    setLoading(true)
-    fetch(`/api/celebrities/${slug}`)
-      .then(r => r.json())
-      .then(d => {
-        setCelebrity(d.celebrity)
-        setPostsCount(d.posts?.length || 0)
-        setPosts(d.posts || [])
-        
-        if (compare) {
-          setLoadingCompare(true)
-          fetch(`/api/celebrities/${compare}`)
-            .then(r => r.json())
-            .then(compData => {
-              setCompareCelebrity(compData.celebrity)
-              setLoadingCompare(false)
-              setLoading(false)
-            })
-            .catch(err => {
-              console.error("Error loading comparison profile:", err)
-              setLoadingCompare(false)
-              setLoading(false)
-            })
-        } else {
-          setCompareCelebrity(null)
-          setLoading(false)
-        }
-      })
-      .catch(() => setLoading(false))
-  }, [slug, compare])
+    setCelebrity(initialCelebrity)
+    setPostsCount(initialPosts?.length || 0)
+    setPosts(initialPosts || [])
+    setCompareCelebrity(initialCompareCelebrity)
+  }, [initialCelebrity, initialPosts, initialCompareCelebrity])
 
   const goResults = (params) => {
     const query = new URLSearchParams({ slug, ...params })
@@ -840,4 +816,55 @@ export default function CelebrityPage() {
 
     </>
   )
+}
+
+export async function getServerSideProps(context) {
+  const { slug, compare } = context.query
+
+  try {
+    const { data: celebrity, error: celError } = await supabase
+      .from('celebrities')
+      .select('*')
+      .eq('slug', slug)
+      .single()
+
+    if (celError || !celebrity) {
+      return {
+        notFound: true
+      }
+    }
+
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('celebrity_id', celebrity.id)
+      .order('post_date', { ascending: false })
+
+    if (postsError) throw postsError
+
+    let compareCelebrity = null
+    if (compare) {
+      const { data: compData } = await supabase
+        .from('celebrities')
+        .select('*')
+        .eq('slug', compare)
+        .single()
+      if (compData) {
+        compareCelebrity = compData
+      }
+    }
+
+    return {
+      props: {
+        initialCelebrity: celebrity,
+        initialPosts: posts || [],
+        initialCompareCelebrity: compareCelebrity,
+      }
+    }
+  } catch (err) {
+    console.error('getServerSideProps error in celebrity slug page:', err)
+    return {
+      notFound: true
+    }
+  }
 }

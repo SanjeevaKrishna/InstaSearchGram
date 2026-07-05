@@ -16,6 +16,9 @@ export default function App({ Component, pageProps }) {
     }
   }, [router.pathname])
 
+  // Calculate canonical URL dynamically without query parameters
+  const canonicalUrl = `https://spialr.com${router.asPath.split('?')[0]}`
+
   return (
     <>
       <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3089879645930958"
@@ -28,20 +31,23 @@ export default function App({ Component, pageProps }) {
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/favicon.png" />
         
+        {/* Canonical Link */}
+        <link rel="canonical" href={canonicalUrl} />
+        
         {/* Primary Meta Tags */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta charSet="utf-8" />
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.spialr.com/" />
+        <meta property="og:url" content={canonicalUrl} />
         <meta property="og:site_name" content="Spialr" />
-        <meta property="og:image" content="https://www.spialr.com/og-image.jpg" />
+        <meta property="og:image" content="https://spialr.com/og-image.jpg" />
         
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://www.spialr.com/" />
-        <meta property="twitter:image" content="https://www.spialr.com/og-image.jpg" />
+        <meta property="twitter:url" content={canonicalUrl} />
+        <meta property="twitter:image" content="https://spialr.com/og-image.jpg" />
 
         {/* Google Search Console Verification */}
         {/* Replace content value with your actual verification code */}
@@ -55,10 +61,10 @@ export default function App({ Component, pageProps }) {
               "@context": "https://schema.org",
               "@type": "WebSite",
               "name": "Spialr",
-              "url": "https://www.spialr.com/",
+              "url": "https://spialr.com/",
               "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://www.spialr.com/results?q={search_term_string}",
+                "target": "https://spialr.com/results?q={search_term_string}",
                 "query-input": "required name=search_term_string"
               }
             })

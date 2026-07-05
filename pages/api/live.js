@@ -22,14 +22,15 @@ export default async function handler(req, res) {
       return res.status(200).json(liveCache.data)
     }
 
-    // Fetch live settings, 3 pages of most followed (supporting up to 3000 rows in parallel), viral reels and celebrities concurrently
-    const [settingsResult, profilesResult1, profilesResult2, profilesResult3, reelsResult, celebritiesResult] = await Promise.all([
+    // Fetch live settings, 3 pages of most followed (supporting up to 3000 rows in parallel), viral reels, most viewed reels and celebrities concurrently
+    const [settingsResult, profilesResult1, profilesResult2, profilesResult3, reelsResult, mostViewedResult, celebritiesResult] = await Promise.all([
       supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
       supabase.from('viral_reels').select('*'),
-      supabase.from('celebrities').select('name, slug, photo_url')
+      supabase.from('most_viewed_reels').select('*'),
+      supabase.from('celebrities').select('name, slug, photo_url, followers_count')
     ])
 
     if (settingsResult.error) throw settingsResult.error
@@ -37,17 +38,19 @@ export default async function handler(req, res) {
     if (profilesResult2.error) throw profilesResult2.error
     if (profilesResult3.error) throw profilesResult3.error
     if (reelsResult.error) throw reelsResult.error
+    if (mostViewedResult.error) throw mostViewedResult.error
     if (celebritiesResult.error) throw celebritiesResult.error
 
     const settingsData = settingsResult.data
     const reelsData = reelsResult.data
+    const mostViewedData = mostViewedResult.data
     const celebritiesData = celebritiesResult.data || []
 
-    // Build mapping from trimmed name to slug and photo_url
+    // Build mapping from trimmed name to slug, photo_url and followers_count
     const celebrityMap = {}
     for (const c of celebritiesData) {
       if (c.name && c.slug) {
-        celebrityMap[c.name.toLowerCase().trim()] = { slug: c.slug, photo_url: c.photo_url }
+        celebrityMap[c.name.toLowerCase().trim()] = { slug: c.slug, photo_url: c.photo_url, followers_count: c.followers_count }
       }
     }
 
@@ -75,7 +78,28 @@ export default async function handler(req, res) {
       return {
         ...reel,
         creator_photo_url: reel.creator_photo_url || (match ? match.photo_url : null),
-        creator_slug: match ? match.slug : null
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
+      }
+    })
+
+    const sortedMostViewed = (mostViewedData || []).sort((a, b) => {
+      const rankA = a.order_index || 999999
+      const rankB = b.order_index || 999999
+      if (rankA !== rankB) {
+        return rankA - rankB
+      }
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedMostViewed = sortedMostViewed.map(reel => {
+      const nameKey = (reel.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...reel,
+        creator_photo_url: reel.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
       }
     })
 
@@ -89,7 +113,8 @@ export default async function handler(req, res) {
     const responseData = {
       live_date: settingsData?.live_date || currentDate,
       most_followed: profilesData || [],
-      viral_reels: mappedReels
+      viral_reels: mappedReels,
+      most_viewed_reels: mappedMostViewed
     }
 
     // Save to server-side memory cache

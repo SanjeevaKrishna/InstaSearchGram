@@ -8,10 +8,10 @@
       "has": [
         {
           "type": "host",
-          "value": "spialr.com"
+          "value": "www.spialr.com"
         }
       ],
-      "destination": "https://www.spialr.com/:path*",
+      "destination": "https://spialr.com/:path*",
       "permanent": true
     }
   ]
