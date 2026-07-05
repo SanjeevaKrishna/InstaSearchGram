@@ -1133,6 +1133,7 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         ...initial,
         order_index: initial.order_index !== undefined && initial.order_index !== null ? initial.order_index.toString() : '0',
         followers_text: initial.followers_text || '',
+        views_text: initial.views_text || '',
         hours_ago: getInitialHoursAgo(initial.created_at),
         uploaded_date: initialDate
       }
@@ -1145,6 +1146,7 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
       creator_name: '',
       creator_photo_url: '',
       followers_text: '',
+      views_text: '',
       hours_ago: '0 hours ago',
       uploaded_date: initialDate
     }
@@ -1177,6 +1179,7 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
           creator_name: form.creator_name || '',
           creator_photo_url: form.creator_photo_url || '',
           followers_text: form.followers_text || '',
+          views_text: form.views_text || '',
           created_at: calculatedCreatedAt
         },
       })
@@ -1291,11 +1294,18 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
         <div>
           <label style={labelStyle}>Followers Count (e.g. 270M, 10k, 5 Crore)</label>
           <input className="input-field" value={form.followers_text || ''} onChange={e => set('followers_text', e.target.value)} placeholder="e.g. 270M" />
         </div>
+        <div>
+          <label style={labelStyle}>Views Count (e.g. 1.2M, 500k, 10 Crore)</label>
+          <input className="input-field" value={form.views_text || ''} onChange={e => set('views_text', e.target.value)} placeholder="e.g. 1.2M" />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
         <div>
           {isMostViewed ? (
             <>

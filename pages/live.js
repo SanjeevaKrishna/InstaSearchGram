@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
-import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles } from 'lucide-react'
+import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const getOrdinal = (n) => {
@@ -188,6 +188,27 @@ export default function LivePage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'voting'
   const [liveData, setLiveData] = useState({ live_date: '', most_followed: [], viral_reels: [] })
+
+  // Synchronize activeTab state with the tab query parameter
+  useEffect(() => {
+    if (router.isReady) {
+      const queryTab = router.query.tab
+      if (queryTab === 'voting' || queryTab === 'most_followed') {
+        setActiveTab(queryTab)
+      }
+    }
+  }, [router.isReady, router.query.tab])
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    setSearchQuery('')
+    setSelectedLanguage('All')
+    setIsLangDropdownOpen(false)
+    router.push({
+      pathname: '/live',
+      query: { tab }
+    }, undefined, { shallow: true })
+  }
   
   // Voting states
   const [selectedProfile, setSelectedProfile] = useState(null)
@@ -385,17 +406,25 @@ export default function LivePage() {
   const renderMovement = (profile) => {
     // If a profile has 0 votes, force no rank movement percentage (display a dash)
     if (!(profile.votes || 0)) {
-      return <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>—</span>
+      return <span className="vote-trend-badge vote-trend-stable">—</span>
     }
     const curr = profile.current_vote_rank
     const prev = profile.previous_vote_rank
     if (!curr || !prev || curr === prev) {
-      return <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>—</span>
+      return <span className="vote-trend-badge vote-trend-stable">—</span>
     }
     if (prev > curr) {
-      return <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>↑ {prev - curr}</span>
+      return (
+        <span className="vote-trend-badge vote-trend-up">
+          <ChevronUp className="vote-trend-icon" strokeWidth={3.5} />+{prev - curr}
+        </span>
+      )
     } else {
-      return <span style={{ color: '#dc2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>↓ {curr - prev}</span>
+      return (
+        <span className="vote-trend-badge vote-trend-down">
+          <ChevronDown className="vote-trend-icon" strokeWidth={3.5} />-{curr - prev}
+        </span>
+      )
     }
   }
 
@@ -603,7 +632,7 @@ export default function LivePage() {
               flex: '1 1 auto'
             }}>
               <button
-                onClick={() => { setActiveTab('most_followed'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
+                onClick={() => handleTabChange('most_followed')}
                 onMouseEnter={() => setHoveredTab('most_followed')}
                 onMouseLeave={() => setHoveredTab(null)}
                 style={{
@@ -633,7 +662,7 @@ export default function LivePage() {
                 Most Followed
               </button>
               <button
-                onClick={() => { setActiveTab('voting'); setSearchQuery(''); setSelectedLanguage('All'); setIsLangDropdownOpen(false); }}
+                onClick={() => handleTabChange('voting')}
                 onMouseEnter={() => setHoveredTab('voting')}
                 onMouseLeave={() => setHoveredTab(null)}
                 style={{
@@ -1242,9 +1271,9 @@ export default function LivePage() {
                           </span>
                         </div>
 
-                        {/* Votes Count */}
+                        {/* Votes Count (Voting Number) */}
                         <div style={{
-                          width: 90,
+                          width: 80,
                           textAlign: 'right',
                           fontWeight: 700,
                           fontSize: 14.5,
@@ -1255,10 +1284,18 @@ export default function LivePage() {
                           {formatVotes(profile.votes)}
                         </div>
 
-                        {/* Rank Movement */}
-                        <div style={{ width: 70, textAlign: 'right', fontSize: 14, flexShrink: 0 }}>
+                        {/* Indicator (Rank Movement) */}
+                        <div style={{
+                          width: 70,
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          alignItems: 'center',
+                          flexShrink: 0,
+                          paddingLeft: 10
+                        }}>
                           {renderMovement(profile)}
                         </div>
+
                       </div>
                     </Fragment>
                   )
@@ -1807,6 +1844,48 @@ export default function LivePage() {
           justify-content: center;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
           animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .vote-trend-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .vote-trend-badge {
+          display: flex;
+          align-items: center;
+          font-weight: 800;
+          line-height: 1;
+        }
+        .vote-trend-up {
+          font-size: 14px;
+          color: #10b981;
+        }
+        .vote-trend-down {
+          font-size: 14px;
+          color: #dc2626;
+        }
+        .vote-trend-stable {
+          font-size: 12px;
+          color: var(--text-muted);
+          font-weight: 800;
+        }
+        .vote-trend-icon {
+          width: 14px;
+          height: 14px;
+        }
+
+        @media (max-width: 580px) {
+          .vote-trend-up, .vote-trend-down {
+            font-size: 12px !important;
+          }
+          .vote-trend-stable {
+            font-size: 10px !important;
+          }
+          .vote-trend-icon {
+            width: 12px !important;
+            height: 12px !important;
+          }
         }
 
         @keyframes fadeIn {

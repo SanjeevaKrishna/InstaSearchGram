@@ -74,7 +74,7 @@ export default async function handler(req, res) {
 
     // POST - add a new most viewed reel
     if (req.method === 'POST') {
-      const { title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, created_at } = req.body
+      const { title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, views_text, created_at } = req.body
       if (!title) return res.status(400).json({ error: 'Title is required' })
       if (!instagram_link) return res.status(400).json({ error: 'Instagram link is required' })
 
@@ -86,6 +86,7 @@ export default async function handler(req, res) {
         creator_name: creator_name || '',
         creator_photo_url: creator_photo_url || '',
         followers_text: followers_text || '',
+        views_text: views_text || '',
         ...(created_at ? { created_at } : {})
       }
 
@@ -101,7 +102,7 @@ export default async function handler(req, res) {
 
     // PUT - update a most viewed reel
     if (req.method === 'PUT') {
-      const { id, title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, created_at } = req.body
+      const { id, title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, views_text, created_at } = req.body
       if (!id) return res.status(400).json({ error: 'ID is required' })
       if (!title) return res.status(400).json({ error: 'Title is required' })
       if (!instagram_link) return res.status(400).json({ error: 'Instagram link is required' })
@@ -114,6 +115,7 @@ export default async function handler(req, res) {
         creator_name: creator_name || '',
         creator_photo_url: creator_photo_url || '',
         followers_text: followers_text || '',
+        views_text: views_text || '',
         ...(created_at ? { created_at } : {})
       }
 

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../components/Navbar'
 import BottomNav from '../components/BottomNav'
-import { TrendingUp, Play, Film, ChevronUp, ChevronDown, Minus, ExternalLink, Users } from 'lucide-react'
+import { TrendingUp, Play, Film, ChevronUp, ChevronDown, Minus, ExternalLink, Users, Eye } from 'lucide-react'
 
 // Deterministic trend indicator calculation based on Reel ID/index
 const getTrend = (reel, index) => {
@@ -106,95 +106,40 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
           window.open(reel.instagram_link, '_blank', 'noopener,noreferrer')
         }
       }}
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        padding: '20px 24px',
-        gap: 20,
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        borderBottom: '1px solid var(--border)',
-        position: 'relative'
-      }}
     >
       {/* Rank & Trend badge */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: 36,
-        flexShrink: 0,
-        alignSelf: 'center'
-      }}>
-        <div style={{
-          fontSize: 20,
-          fontWeight: 800,
-          color: 'var(--text-muted)',
-          fontFamily: 'var(--font-display)',
-          lineHeight: 1
-        }}>
+      <div className="row-rank-container">
+        <div className="row-rank-num">
           #{absoluteRank}
         </div>
         
-        {/* Trend Indicator */}
         {!isMostViewed && (
-          <div style={{ marginTop: 6 }}>
+          <div className="row-trend-container">
             {trendType === 'up' && (
-              <span style={{ fontSize: 9, fontWeight: 800, color: '#00c853', display: 'flex', alignItems: 'center' }}>
-                <ChevronUp size={9} strokeWidth={3} /> {trendVal}
+              <span className="row-trend-badge trend-up">
+                <ChevronUp className="trend-icon" strokeWidth={3} /> {trendVal}
               </span>
             )}
             {trendType === 'down' && (
-              <span style={{ fontSize: 9, fontWeight: 800, color: '#ff1744', display: 'flex', alignItems: 'center' }}>
-                <ChevronDown size={9} strokeWidth={3} /> {trendVal}
+              <span className="row-trend-badge trend-down">
+                <ChevronDown className="trend-icon" strokeWidth={3} /> {trendVal}
               </span>
             )}
             {trendType === 'new' && (
-              <span style={{
-                fontSize: 7,
-                fontWeight: 900,
-                color: '#fff',
-                background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)',
-                padding: '1px 3px',
-                borderRadius: 3,
-                lineHeight: 1
-              }}>
+              <span className="row-trend-badge trend-new">
                 NEW
               </span>
             )}
             {trendType === 'stable' && (
-              <Minus size={9} strokeWidth={3} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+              <Minus className="trend-icon trend-stable" strokeWidth={3} />
             )}
           </div>
         )}
       </div>
 
       {/* Creator Avatar with gradient ring */}
-      <div style={{
-        width: 48,
-        height: 48,
-        borderRadius: '50%',
-        padding: 2,
-        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0
-      }}>
-        <div style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '50%',
-          overflow: 'hidden',
-          border: '2px solid #fff',
-          background: 'var(--surface2)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-muted)',
-          fontWeight: 700,
-          fontSize: 15
-        }}>
+      <div className="row-avatar-container">
+        <div className="row-avatar-inner">
           {reel.creator_photo_url ? (
             <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
           ) : initials}
@@ -202,17 +147,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
       </div>
 
       {/* Video Cover Thumbnail (Portrait Aspect Ratio) */}
-      <div className="row-thumbnail" style={{
-        width: 88,
-        height: 132,
-        borderRadius: 12,
-        background: '#09090b',
-        overflow: 'hidden',
-        position: 'relative',
-        flexShrink: 0,
-        border: '1px solid var(--border)',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-      }}>
+      <div className="row-thumbnail">
         {reel.photo_url ? (
           <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
         ) : (
@@ -220,93 +155,52 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
             <Film size={18} />
           </div>
         )}
-        <div className="play-overlay" style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0,0,0,0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: 0,
-          transition: 'opacity 0.2s ease'
-        }}>
-          <div style={{
-            width: 30,
-            height: 30,
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.95)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--accent)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-          }}>
+        <div className="play-overlay">
+          <div className="play-overlay-icon">
             <Play size={10} fill="currentColor" style={{ marginLeft: 1 }} />
           </div>
         </div>
       </div>
 
       {/* Title, Creator, Followers & Date Column */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="row-details-container">
         {/* Top: Video Caption (reel title) */}
-        <h4 className="row-title" style={{
-          margin: 0,
-          fontSize: 15,
-          fontWeight: 650,
-          color: 'var(--text)',
-          lineHeight: 1.4,
-          wordBreak: 'break-word',
-          whiteSpace: 'pre-wrap'
-        }}>
+        <h4 className="row-title">
           {reel.title}
         </h4>
 
         {/* Below that: Creator Name */}
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
+        <div className="row-creator-name">
           {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
         </div>
 
         {/* Below that: Follower count & Date beside each other */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          fontSize: 12,
-          color: 'var(--text-muted)',
-          fontWeight: 500,
-          flexWrap: 'wrap'
-        }}>
+        <div className="row-meta-container">
           {followersDisplay && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span className="row-meta-followers">
               <Users size={12} />
               {followersDisplay} followers
             </span>
           )}
-          {followersDisplay && timeAgo && <span style={{ opacity: 0.5 }}>•</span>}
-          {timeAgo && (
-            <span>{timeAgo}</span>
-          )}
+          {followersDisplay && (reel.views_text || timeAgo) && <span className="row-meta-dot desktop-only-dot">•</span>}
+          
+          <div className="row-meta-subrow">
+            {reel.views_text && (
+              <span className="row-meta-views">
+                <Eye size={12} />
+                {reel.views_text} views
+              </span>
+            )}
+            {reel.views_text && timeAgo && <span className="row-meta-dot">•</span>}
+            {timeAgo && (
+              <span className="row-meta-time">{timeAgo}</span>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Action Watch Button */}
-      <button 
-        className="btn row-watch-btn"
-        style={{
-          padding: '8px 14px',
-          borderRadius: 8,
-          fontSize: 12,
-          fontWeight: 700,
-          border: '1px solid var(--border)',
-          background: 'transparent',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          flexShrink: 0,
-          transition: 'all 0.2s ease',
-          alignSelf: 'center'
-        }}
-      >
+      <button className="btn row-watch-btn">
         <span>Watch</span>
         <Play size={10} fill="currentColor" />
       </button>
@@ -324,6 +218,15 @@ export default function TrendingPage() {
   const [liveDate, setLiveDate] = useState('')
 
   useEffect(() => {
+    // Generate real-time automatic updated date system locally
+    const today = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    })
+    setLiveDate(today)
+
     fetch('/api/live')
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch trending data')
@@ -332,7 +235,6 @@ export default function TrendingPage() {
       .then(data => {
         setViralReels(data.viral_reels || [])
         setMostViewedReels(data.most_viewed_reels || [])
-        setLiveDate(data.live_date || '')
         setLoading(false)
       })
       .catch(err => {
@@ -378,7 +280,7 @@ export default function TrendingPage() {
             fontWeight: 600,
             flexWrap: 'wrap'
           }}>
-            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>India Trends</span>
+            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{activeTab === 'trending' ? 'Viral Standings' : 'Most Viewed Standings'}</span>
             {liveDate && <span>•</span>}
             {liveDate && (
               <span>Leaderboard for {liveDate}</span>
@@ -479,7 +381,7 @@ export default function TrendingPage() {
               gap: 8
             }}>
               <TrendingUp size={16} style={{ color: 'var(--accent)' }} /> 
-              {activeTab === 'trending' ? 'Viral Standings' : 'Most Viewed Standings'}
+              {activeTab === 'trending' ? 'India Trends' : 'Most Viewed Trends'}
             </h3>
             
             <div style={{
@@ -511,6 +413,14 @@ export default function TrendingPage() {
 
       <style jsx global>{`
         .leaderboard-row {
+          display: flex;
+          align-items: flex-start;
+          padding: 20px 24px;
+          gap: 20px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid var(--border);
+          position: relative;
           background: transparent !important;
         }
         .leaderboard-row:hover {
@@ -529,25 +439,260 @@ export default function TrendingPage() {
         .leaderboard-row:hover .row-thumbnail img {
           transform: scale(1.05);
         }
+        .row-rank-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 36px;
+          flex-shrink: 0;
+          align-self: center;
+        }
+        .row-rank-num {
+          font-size: 20px;
+          font-weight: 800;
+          color: var(--text-muted);
+          font-family: var(--font-display);
+          line-height: 1;
+        }
+        .row-trend-container {
+          margin-top: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .row-trend-badge {
+          display: flex;
+          align-items: center;
+          font-weight: 800;
+          line-height: 1;
+        }
+        .trend-up {
+          font-size: 14px;
+          color: #00c853;
+        }
+        .trend-down {
+          font-size: 14px;
+          color: #ff1744;
+        }
+        .trend-new {
+          font-size: 11px;
+          font-weight: 900;
+          color: #fff;
+          background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+          padding: 2px 5px;
+          border-radius: 3px;
+        }
+        .trend-icon {
+          width: 14px;
+          height: 14px;
+        }
+        .trend-stable {
+          color: var(--text-muted);
+          opacity: 0.5;
+          width: 12px;
+          height: 12px;
+        }
+        .row-avatar-container {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          padding: 2px;
+          background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .row-avatar-inner {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          overflow: hidden;
+          border: 2px solid #fff;
+          background: var(--surface2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--text-muted);
+          font-weight: 700;
+          font-size: 15px;
+        }
+        .row-thumbnail {
+          width: 88px;
+          height: 132px;
+          border-radius: 12px;
+          background: #09090b;
+          overflow: hidden;
+          position: relative;
+          flex-shrink: 0;
+          border: 1px solid var(--border);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
         .row-thumbnail img {
           transition: transform 0.4s var(--spring);
+        }
+        .play-overlay {
+          position: absolute;
+          inset: 0;
+          background: rgba(0,0,0,0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+        .play-overlay-icon {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.95);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--accent);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .row-details-container {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .row-title {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 650;
+          color: var(--text);
+          line-height: 1.4;
+          word-break: break-word;
+          white-space: pre-wrap;
+        }
+        .row-creator-name {
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--accent);
+        }
+        .row-meta-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 12px;
+          color: var(--text-muted);
+          font-weight: 500;
+          flex-wrap: wrap;
+        }
+        .row-meta-followers {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .row-meta-subrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .row-meta-views {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .row-meta-dot {
+          opacity: 0.5;
+        }
+        .row-meta-time {
+          white-space: nowrap;
+        }
+        .row-watch-btn {
+          padding: 8px 14px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          border: 1px solid var(--border);
+          background: transparent;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+          transition: all 0.2s ease;
+          align-self: center;
         }
 
         @media (max-width: 580px) {
           .leaderboard-row {
-            padding: 14px 16px !important;
-            gap: 12px !important;
+            padding: 12px 10px !important;
+            gap: 8px !important;
+          }
+          .row-rank-container {
+            width: 28px !important;
+          }
+          .row-rank-num {
+            font-size: 16px !important;
+          }
+          .trend-up, .trend-down {
+            font-size: 12px !important;
+          }
+          .trend-icon {
+            width: 12px !important;
+            height: 12px !important;
+          }
+          .trend-new {
+            font-size: 9px !important;
+            padding: 1px 4px !important;
+          }
+          .trend-stable {
+            width: 10px !important;
+            height: 10px !important;
+          }
+          .row-avatar-container {
+            width: 36px !important;
+            height: 36px !important;
+          }
+          .row-avatar-inner {
+            font-size: 12px !important;
           }
           .row-thumbnail {
-            width: 72px !important;
-            height: 108px !important;
+            width: 68px !important;
+            height: 102px !important;
+            border-radius: 8px !important;
           }
           .row-title {
             font-size: 13px !important;
+            line-height: 1.3 !important;
+          }
+          .row-creator-name {
+            font-size: 12px !important;
+          }
+          .row-meta-container {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 4px !important;
+            font-size: 11px !important;
+          }
+          .row-meta-followers {
+            gap: 3px !important;
+          }
+          .desktop-only-dot {
+            display: none !important;
+          }
+          .row-meta-subrow {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            width: 100% !important;
+          }
+          .row-meta-views {
+            gap: 3px !important;
+          }
+          .row-meta-dot {
+            display: inline !important;
+            opacity: 0.5 !important;
+            margin: 0 2px !important;
           }
           .row-watch-btn {
-            padding: 6px 10px !important;
+            padding: 6px 8px !important;
             font-size: 11px !important;
+            gap: 4px !important;
           }
         }
       `}</style>
