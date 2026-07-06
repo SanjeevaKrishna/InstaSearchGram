@@ -23,14 +23,24 @@ export default async function handler(req, res) {
     }
 
     // Fetch live settings, 3 pages of most followed (supporting up to 3000 rows in parallel), viral reels, most viewed reels and celebrities concurrently
-    const [settingsResult, profilesResult1, profilesResult2, profilesResult3, reelsResult, mostViewedResult, celebritiesResult] = await Promise.all([
+    const [
+      settingsResult, 
+      profilesResult1, 
+      profilesResult2, 
+      profilesResult3, 
+      reelsResult, 
+      mostViewedResult, 
+      celebritiesResult,
+      indiaMostLikedResult
+    ] = await Promise.all([
       supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
       supabase.from('viral_reels').select('*'),
       supabase.from('most_viewed_reels').select('*'),
-      supabase.from('celebrities').select('name, slug, photo_url, followers_count')
+      supabase.from('celebrities').select('name, slug, photo_url, followers_count'),
+      supabase.from('most_liked_posts').select('*')
     ])
 
     if (settingsResult.error) throw settingsResult.error
@@ -40,6 +50,7 @@ export default async function handler(req, res) {
     if (reelsResult.error) throw reelsResult.error
     if (mostViewedResult.error) throw mostViewedResult.error
     if (celebritiesResult.error) throw celebritiesResult.error
+    if (indiaMostLikedResult.error) throw indiaMostLikedResult.error
 
     const settingsData = settingsResult.data
     const reelsData = reelsResult.data
@@ -103,6 +114,26 @@ export default async function handler(req, res) {
       }
     })
 
+    const sortedMostLiked = (indiaMostLikedResult.data || []).sort((a, b) => {
+      const rankA = a.order_index || 999999
+      const rankB = b.order_index || 999999
+      if (rankA !== rankB) {
+        return rankA - rankB
+      }
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedMostLiked = sortedMostLiked.map(post => {
+      const nameKey = (post.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...post,
+        creator_photo_url: post.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
+      }
+    })
+
     const currentDate = new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -114,7 +145,8 @@ export default async function handler(req, res) {
       live_date: settingsData?.live_date || currentDate,
       most_followed: profilesData || [],
       viral_reels: mappedReels,
-      most_viewed_reels: mappedMostViewed
+      most_viewed_reels: mappedMostViewed,
+      india_most_liked_posts: mappedMostLiked
     }
 
     // Save to server-side memory cache

@@ -50,6 +50,34 @@ export default function PostCard({ post }) {
         overflow: 'hidden',
       }}
     >
+      {post.celebrity && (
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            window.location.href = `/celebrity/${post.celebrity.slug}`;
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            marginBottom: 12,
+            borderBottom: '1px solid var(--border)',
+            paddingBottom: 10,
+            cursor: 'pointer'
+          }}
+        >
+          {post.celebrity.photo_url ? (
+            <img src={post.celebrity.photo_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>
+              {post.celebrity.name?.charAt(0)}
+            </div>
+          )}
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+            {post.celebrity.name}
+          </span>
+        </div>
+      )}
       {/* Type badge */}
       <div style={{
         position: 'absolute',

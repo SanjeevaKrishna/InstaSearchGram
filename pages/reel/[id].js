@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../../components/Navbar'
 import BottomNav from '../../components/BottomNav'
-import { ArrowLeft, Instagram, Calendar, Users, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Instagram, Calendar, Users, ExternalLink, Heart } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 export default function ReelDetailPage({ initialReel }) {
@@ -204,7 +204,7 @@ export default function ReelDetailPage({ initialReel }) {
                     <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                     <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
                   </svg>
-                  Watch Reel on Instagram
+                  Watch {reel.likes_text ? 'Post' : 'Reel'} on Instagram
                   <ExternalLink size={14} />
                 </button>
               </div>
@@ -222,6 +222,12 @@ export default function ReelDetailPage({ initialReel }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Users size={14} style={{ color: 'var(--accent)' }} />
                       <span>{followersDisplay} Followers</span>
+                    </div>
+                  )}
+                  {reel.likes_text && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Heart size={14} style={{ color: '#ff2a5f', fill: 'currentColor' }} />
+                      <span>{reel.likes_text} Likes</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -325,6 +331,17 @@ export async function getServerSideProps(context) {
 
       if (viralError) throw viralError
       reel = viralReel
+    }
+
+    if (!reel) {
+      const { data: likedPost, error: likedError } = await supabase
+        .from('most_liked_posts')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (likedError) throw likedError
+      reel = likedPost
     }
 
     if (!reel) {

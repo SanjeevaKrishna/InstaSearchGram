@@ -290,7 +290,7 @@ export default function AllCelebrities() {
             }}
             onClick={() => router.push(`/celebrity/${compare}?compare=${selectedCel.slug}`)}
           >
-            Enter
+            Compare
           </button>
         )}
       </main>

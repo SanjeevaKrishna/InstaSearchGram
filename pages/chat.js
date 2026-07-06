@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
 import { Send, MessageSquare, User, Clock, AlertCircle, Sparkles, Users, Globe, Hash, CornerUpLeft, Copy, Trash2, X, ShieldCheck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { safeStorage } from '../lib/storage'
 
 // Fun nickname generators to make anonymous chats readable
 const adjectives = ['Swift', 'Bright', 'Jolly', 'Clever', 'Wild', 'Silent', 'Cool', 'Epic', 'Fiery', 'Gentle', 'Happy', 'Mystic', 'Brave', 'Loyal', 'Quick']
@@ -76,10 +77,10 @@ export default function ChatPage() {
 
   // Initialize profile (nickname and ID) and check 24-hour expiration
   useEffect(() => {
-    let savedName = localStorage.getItem('spialr_chat_name')
-    let savedId = localStorage.getItem('spialr_chat_id')
-    let createdAt = localStorage.getItem('spialr_chat_name_created_at')
-    let isCustom = localStorage.getItem('spialr_chat_name_customized') === 'true'
+    let savedName = safeStorage.getItem('spialr_chat_name')
+    let savedId = safeStorage.getItem('spialr_chat_id')
+    let createdAt = safeStorage.getItem('spialr_chat_name_created_at')
+    let isCustom = safeStorage.getItem('spialr_chat_name_customized') === 'true'
 
     const now = Date.now()
     const twentyFourHoursMs = 24 * 60 * 60 * 1000
@@ -94,10 +95,10 @@ export default function ChatPage() {
 
     if (!savedName || !savedId || shouldReset) {
       const newProfile = generateAnonymousProfile()
-      localStorage.setItem('spialr_chat_name', newProfile.name)
-      localStorage.setItem('spialr_chat_id', newProfile.id)
-      localStorage.setItem('spialr_chat_name_created_at', new Date().toISOString())
-      localStorage.removeItem('spialr_chat_name_customized') // reset custom flag
+      safeStorage.setItem('spialr_chat_name', newProfile.name)
+      safeStorage.setItem('spialr_chat_id', newProfile.id)
+      safeStorage.setItem('spialr_chat_name_created_at', new Date().toISOString())
+      safeStorage.removeItem('spialr_chat_name_customized') // reset custom flag
       savedName = newProfile.name
       savedId = newProfile.id
       isCustom = false
@@ -127,10 +128,10 @@ export default function ChatPage() {
         const isValid = roomsList.some(r => r.id === queryRoom)
         if (isValid) {
           setRoom(queryRoom)
-          localStorage.setItem('spialr_last_language', queryRoom)
+          safeStorage.setItem('spialr_last_language', queryRoom)
         }
       } else {
-        const savedRoom = localStorage.getItem('spialr_last_language')
+        const savedRoom = safeStorage.getItem('spialr_last_language')
         if (savedRoom && roomsList.some(r => r.id === savedRoom)) {
           setRoom(savedRoom)
         }
@@ -365,9 +366,9 @@ export default function ChatPage() {
     if (!trimmed || trimmed === profile.name) return
 
     // Save in local storage
-    localStorage.setItem('spialr_chat_name', trimmed)
-    localStorage.setItem('spialr_chat_name_created_at', new Date().toISOString())
-    localStorage.setItem('spialr_chat_name_customized', 'true')
+    safeStorage.setItem('spialr_chat_name', trimmed)
+    safeStorage.setItem('spialr_chat_name_created_at', new Date().toISOString())
+    safeStorage.setItem('spialr_chat_name_customized', 'true')
 
     // Update state
     setProfile(prev => ({ ...prev, name: trimmed }))

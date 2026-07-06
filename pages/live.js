@@ -3,8 +3,9 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
-import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles } from 'lucide-react'
+import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { safeStorage } from '../lib/storage'
 
 const getOrdinal = (n) => {
   if (!n) return ''
@@ -48,6 +49,29 @@ const parseCategoryAndTag = (rawCategory) => {
 
   return { tabCategory, describingTag };
 };
+
+const getProfileTrend = (profile, index) => {
+  if (profile.created_at) {
+    const createdTime = new Date(profile.created_at).getTime()
+    const diffMs = Date.now() - createdTime
+    const hours = diffMs / (1000 * 60 * 60)
+    if (hours >= 0 && hours < 24) {
+      return { trendType: 'new', trendVal: 'NEW' }
+    }
+  }
+
+  let trendType = 'stable'
+  let trendVal = ''
+  const hash = (index + (profile.name ? profile.name.length : 0)) % 7
+  if (hash === 1 || hash === 4) {
+    trendType = 'up'
+    trendVal = `+${(index % 2) + 1}`
+  } else if (hash === 2) {
+    trendType = 'down'
+    trendVal = `-${(index % 2) + 1}`
+  }
+  return { trendType, trendVal }
+}
 
 const getCategoryStyle = (tabCategory) => {
   const cat = (tabCategory || '').toLowerCase().trim()
@@ -233,7 +257,7 @@ export default function LivePage() {
   // Infinite Scroll Observer
   useEffect(() => {
     const sentinel = loaderRef.current
-    if (!sentinel) return
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return
 
     const observer = new IntersectionObserver((entries) => {
       const firstEntry = entries[0]
@@ -248,7 +272,7 @@ export default function LivePage() {
     observer.observe(sentinel)
 
     return () => {
-      if (sentinel) {
+      if (sentinel && observer) {
         observer.unobserve(sentinel)
       }
     }
@@ -263,7 +287,7 @@ export default function LivePage() {
     setCurrentDate(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
     
     // Restore last selected language filter from localStorage
-    const savedRoom = localStorage.getItem('spialr_last_language')
+    const savedRoom = safeStorage.getItem('spialr_last_language')
     if (savedRoom) {
       const validLangs = ['all', 'hindi', 'telugu', 'tamil', 'kannada', 'malayalam']
       if (validLangs.includes(savedRoom.toLowerCase())) {
@@ -274,8 +298,8 @@ export default function LivePage() {
 
     // Load user vote counts from localStorage
     try {
-      const votes = JSON.parse(localStorage.getItem('spialr_votes_map') || '{}')
-      const devotes = JSON.parse(localStorage.getItem('spialr_devotes_map') || '{}')
+      const votes = JSON.parse(safeStorage.getItem('spialr_votes_map', '{}'))
+      const devotes = JSON.parse(safeStorage.getItem('spialr_devotes_map', '{}'))
       setUserVotes(votes)
       setUserDevotes(devotes)
     } catch (e) {
@@ -339,7 +363,7 @@ export default function LivePage() {
     const type = showConfirmPopup === 'vote' ? 'vote' : 'devote'
     
     // Front-end spam click cooldown defense
-    const lastAction = localStorage.getItem('spialr_last_action_time')
+    const lastAction = safeStorage.getItem('spialr_last_action_time')
     const now = Date.now()
     if (lastAction && (now - Number(lastAction) < 1000)) {
       alert('Please wait a moment between actions.')
@@ -368,14 +392,14 @@ export default function LivePage() {
       if (type === 'vote') {
         const updatedVotes = { ...userVotes, [selectedProfile.id]: (userVotes[selectedProfile.id] || 0) + 1 }
         setUserVotes(updatedVotes)
-        localStorage.setItem('spialr_votes_map', JSON.stringify(updatedVotes))
+        safeStorage.setItem('spialr_votes_map', JSON.stringify(updatedVotes))
       } else {
         const updatedDevotes = { ...userDevotes, [selectedProfile.id]: (userDevotes[selectedProfile.id] || 0) + 1 }
         setUserDevotes(updatedDevotes)
-        localStorage.setItem('spialr_devotes_map', JSON.stringify(updatedDevotes))
+        safeStorage.setItem('spialr_devotes_map', JSON.stringify(updatedDevotes))
       }
       
-      localStorage.setItem('spialr_last_action_time', now.toString())
+      safeStorage.setItem('spialr_last_action_time', now.toString())
       
       // Show success animation overlay
       setShowSuccessAnim({ name: selectedProfile.name, type })
@@ -757,7 +781,7 @@ export default function LivePage() {
                             onClick={() => {
                               setSelectedLanguage(lang);
                               setIsLangDropdownOpen(false);
-                              localStorage.setItem('spialr_last_language', lang.toLowerCase());
+                              safeStorage.setItem('spialr_last_language', lang.toLowerCase());
                             }}
                             className={`lang-dropdown-item ${isSelected ? 'active' : ''}`}
                           >
@@ -962,17 +986,65 @@ export default function LivePage() {
                           cursor: 'pointer'
                         }}
                       >
-                        {/* Rank Position */}
+                        {/* Rank Position & Trend Badge */}
                         <div className="col-rank" style={{
-                          fontSize: 16,
-                          fontWeight: 800,
-                          color: 'var(--accent)',
-                          fontFamily: 'var(--font-display)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
                           width: 60,
-                          textAlign: 'center',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          alignSelf: 'center',
+                          textAlign: 'center'
                         }}>
-                          #{rankToDisplay}
+                          <div style={{
+                            fontSize: 18,
+                            fontWeight: 800,
+                            color: 'var(--accent)',
+                            fontFamily: 'var(--font-display)',
+                            lineHeight: 1
+                          }}>
+                            #{rankToDisplay}
+                          </div>
+                          
+                          {(() => {
+                            const { trendType, trendVal } = getProfileTrend(profile, index)
+                            return (
+                              <div style={{
+                                marginTop: 6,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                {trendType === 'up' && (
+                                  <span style={{ display: 'flex', alignItems: 'center', fontWeight: 800, fontSize: 13, color: '#00c853', lineHeight: 1 }}>
+                                    <ChevronUp size={12} strokeWidth={3} /> {trendVal}
+                                  </span>
+                                )}
+                                {trendType === 'down' && (
+                                  <span style={{ display: 'flex', alignItems: 'center', fontWeight: 800, fontSize: 13, color: '#ff1744', lineHeight: 1 }}>
+                                    <ChevronDown size={12} strokeWidth={3} /> {trendVal}
+                                  </span>
+                                )}
+                                {trendType === 'new' && (
+                                  <span style={{
+                                    fontSize: 9.5,
+                                    fontWeight: 900,
+                                    color: '#fff',
+                                    background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)',
+                                    padding: '2px 4px',
+                                    borderRadius: 3,
+                                    lineHeight: 1,
+                                    letterSpacing: '0.02em'
+                                  }}>
+                                    NEW
+                                  </span>
+                                )}
+                                {trendType === 'stable' && (
+                                  <Minus size={11} strokeWidth={3} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                                )}
+                              </div>
+                            )
+                          })()}
                         </div>
 
                         {/* Profile Info (Avatar + Name) */}

@@ -3,7 +3,8 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../components/Navbar'
 import BottomNav from '../components/BottomNav'
-import { TrendingUp, Play, Film, ChevronUp, ChevronDown, Minus, ExternalLink, Users, Eye } from 'lucide-react'
+import { TrendingUp, Play, Film, ChevronUp, ChevronDown, Minus, ExternalLink, Users, Eye, Heart } from 'lucide-react'
+import PostCard from '../components/PostCard'
 
 // Deterministic trend indicator calculation based on Reel ID/index
 const getTrend = (reel, index) => {
@@ -71,7 +72,12 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
       const created = new Date(reel.created_at)
       const diffMs = Date.now() - created.getTime()
       const hours = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)))
-      setTimeAgo(`${hours} hour${hours !== 1 ? 's' : ''} ago`)
+      if (hours < 24) {
+        setTimeAgo(`${hours} hour${hours !== 1 ? 's' : ''} ago`)
+      } else {
+        const days = Math.floor(hours / 24)
+        setTimeAgo(`${days} day${days !== 1 ? 's' : ''} ago`)
+      }
     }
     calculateTimeAgo()
     const interval = setInterval(calculateTimeAgo, 60000) // update every minute
@@ -174,24 +180,38 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
           {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
         </div>
 
-        {/* Below that: Follower count & Date beside each other */}
+        {/* Below that: Follower count / views / likes & Date beside each other */}
         <div className="row-meta-container">
-          {followersDisplay && (
+          {!isMostViewed && followersDisplay ? (
             <span className="row-meta-followers">
               <Users size={12} />
               {followersDisplay} followers
             </span>
-          )}
-          {followersDisplay && (reel.views_text || timeAgo) && <span className="row-meta-dot desktop-only-dot">•</span>}
+          ) : isMostViewed && reel.likes_text ? (
+            <span className="row-meta-followers" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Heart size={12} style={{ color: '#ff2a5f', fill: '#ff2a5f', flexShrink: 0 }} />
+              <span style={{ background: 'linear-gradient(135deg, #ff2a5f 0%, #ff6b35 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 850 }}>
+                {reel.likes_text} likes
+              </span>
+            </span>
+          ) : isMostViewed && reel.views_text ? (
+            <span className="row-meta-followers" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Eye size={12} style={{ color: '#6366f1', flexShrink: 0 }} />
+              <span style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 850 }}>
+                {reel.views_text} views
+              </span>
+            </span>
+          ) : null}
+          
+          {((!isMostViewed && followersDisplay) || isMostViewed) && (reel.views_text || reel.likes_text || timeAgo) && <span className="row-meta-dot desktop-only-dot">•</span>}
           
           <div className="row-meta-subrow">
-            {reel.views_text && (
+            {reel.views_text && !isMostViewed && (
               <span className="row-meta-views">
                 <Eye size={12} />
                 {reel.views_text} views
               </span>
             )}
-            {reel.views_text && timeAgo && <span className="row-meta-dot">•</span>}
             {timeAgo && (
               <span className="row-meta-time">{timeAgo}</span>
             )}
@@ -209,13 +229,17 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
 }
 
 export default function TrendingPage() {
-  const [activeTab, setActiveTab] = useState('trending') // 'trending' or 'most_viewed'
+  const [activeTab, setActiveTab] = useState('most_viewed') // 'trending' or 'most_viewed'
   const [hoveredTab, setHoveredTab] = useState(null)
   const [viralReels, setViralReels] = useState([])
   const [mostViewedReels, setMostViewedReels] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [liveDate, setLiveDate] = useState('')
+  const [currentTime, setCurrentTime] = useState('')
+  const [activeSubTab, setActiveSubTab] = useState('reels') // 'reels' or 'posts'
+  const [hoveredSubTab, setHoveredSubTab] = useState(null)
+  const [indiaMostLikedPosts, setIndiaMostLikedPosts] = useState([])
 
   useEffect(() => {
     // Generate real-time automatic updated date system locally
@@ -235,6 +259,7 @@ export default function TrendingPage() {
       .then(data => {
         setViralReels(data.viral_reels || [])
         setMostViewedReels(data.most_viewed_reels || [])
+        setIndiaMostLikedPosts(data.india_most_liked_posts || [])
         setLoading(false)
       })
       .catch(err => {
@@ -244,7 +269,20 @@ export default function TrendingPage() {
       })
   }, [])
 
-  const activeReels = activeTab === 'trending' ? viralReels : mostViewedReels
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date()
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      setCurrentTime(timeStr)
+    }
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const activeReels = activeTab === 'trending' 
+    ? viralReels 
+    : (activeSubTab === 'reels' ? mostViewedReels : indiaMostLikedPosts)
 
   return (
     <>
@@ -301,7 +339,7 @@ export default function TrendingPage() {
           margin: '0 auto 24px'
         }}>
           <button
-            onClick={() => setActiveTab('trending')}
+            onClick={() => { setActiveTab('trending'); setActiveSubTab('reels'); }}
             onMouseEnter={() => setHoveredTab('trending')}
             onMouseLeave={() => setHoveredTab(null)}
             style={{
@@ -327,7 +365,7 @@ export default function TrendingPage() {
           </button>
           
           <button
-            onClick={() => setActiveTab('most_viewed')}
+            onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('reels'); }}
             onMouseEnter={() => setHoveredTab('most_viewed')}
             onMouseLeave={() => setHoveredTab(null)}
             style={{
@@ -353,6 +391,72 @@ export default function TrendingPage() {
           </button>
         </div>
 
+        {/* Sub-tab Selection (Only when Most Viewed is active) */}
+        {activeTab === 'most_viewed' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 28,
+            marginBottom: 28,
+            marginTop: 4
+          }}>
+            <button
+              onClick={() => setActiveSubTab('reels')}
+              onMouseEnter={() => setHoveredSubTab('reels')}
+              onMouseLeave={() => setHoveredSubTab(null)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                fontSize: 11.5,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                cursor: 'pointer',
+                color: activeSubTab === 'reels' 
+                  ? 'var(--accent)' 
+                  : (hoveredSubTab === 'reels' ? 'var(--text)' : 'var(--text-muted)'),
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 4px',
+                transition: 'all 0.25s ease',
+                transform: hoveredSubTab === 'reels' && activeSubTab !== 'reels' ? 'scale(1.03)' : 'scale(1)',
+              }}
+            >
+              <span style={{ fontSize: 13 }}>🎬</span>
+              Most Viewed Reel in India
+            </button>
+            <div style={{ width: 3, height: 22, borderRadius: 2, background: 'var(--border)' }} />
+            <button
+              onClick={() => setActiveSubTab('posts')}
+              onMouseEnter={() => setHoveredSubTab('posts')}
+              onMouseLeave={() => setHoveredSubTab(null)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                fontSize: 11.5,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                cursor: 'pointer',
+                color: activeSubTab === 'posts' 
+                  ? 'var(--accent)' 
+                  : (hoveredSubTab === 'posts' ? 'var(--text)' : 'var(--text-muted)'),
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 4px',
+                transition: 'all 0.25s ease',
+                transform: hoveredSubTab === 'posts' && activeSubTab !== 'posts' ? 'scale(1.03)' : 'scale(1)',
+              }}
+            >
+              <span style={{ fontSize: 13 }}>❤️</span>
+              Most Liked Posts in India
+            </button>
+          </div>
+        )}
+
         {/* Content */}
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
@@ -369,20 +473,60 @@ export default function TrendingPage() {
         ) : (
           /* Single unified leaderboard list */
           <div>
-            <h3 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 16,
-              fontWeight: 800,
-              color: 'var(--text-dim)',
-              marginBottom: 16,
-              letterSpacing: '0.01em',
+            <div style={{
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              gap: 8
+              marginBottom: 16,
+              flexWrap: 'wrap',
+              gap: 12
             }}>
-              <TrendingUp size={16} style={{ color: 'var(--accent)' }} /> 
-              {activeTab === 'trending' ? 'India Trends' : 'Most Viewed Trends'}
-            </h3>
+              <h3 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 16,
+                fontWeight: 800,
+                color: 'var(--text-dim)',
+                letterSpacing: '0.01em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                margin: 0
+              }}>
+                <TrendingUp size={16} style={{ color: 'var(--accent)' }} /> 
+                {activeTab === 'trending' 
+                  ? 'India Trends' 
+                  : (activeSubTab === 'reels' ? 'Most Viewed Reel in India' : 'Most Liked Posts in India')}
+              </h3>
+              {currentTime && activeTab === 'trending' && (
+                <div style={{
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  <svg 
+                    viewBox="0 0 24 24" 
+                    width="15" 
+                    height="15" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    style={{ color: 'var(--accent)', flexShrink: 0 }}
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    {/* Hour Hand */}
+                    <line x1="12" y1="12" x2="15" y2="12" />
+                    {/* Minute Hand */}
+                    <line x1="12" y1="12" x2="12" y2="6" className="minute-hand" />
+                  </svg>
+                  <span>{currentTime}</span>
+                </div>
+              )}
+            </div>
             
             <div style={{
               background: 'var(--surface)',
@@ -405,6 +549,7 @@ export default function TrendingPage() {
                 )
               })}
             </div>
+
           </div>
         )}
       </main>
@@ -412,6 +557,35 @@ export default function TrendingPage() {
       <BottomNav />
 
       <style jsx global>{`
+        @keyframes spin-minute-hand {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        .minute-hand {
+          transform-origin: 12px 12px;
+          animation: spin-minute-hand 8s linear infinite;
+        }
+        .live-pulse {
+          animation: pulse-scale 1.8s infinite;
+        }
+        @keyframes pulse-scale {
+          0% {
+            transform: scale(0.9);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(0.9);
+            opacity: 0.8;
+          }
+        }
         .leaderboard-row {
           display: flex;
           align-items: flex-start;

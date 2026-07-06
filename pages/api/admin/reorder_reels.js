@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Orders array is required' })
     }
 
-    const allowedTables = ['viral_reels', 'most_viewed_reels']
+    const allowedTables = ['viral_reels', 'most_viewed_reels', 'most_liked_posts']
     if (!allowedTables.includes(table)) {
       return res.status(400).json({ error: 'Invalid table specified' })
     }
