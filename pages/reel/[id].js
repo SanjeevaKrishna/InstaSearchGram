@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../../components/Navbar'
 import BottomNav from '../../components/BottomNav'
-import { ArrowLeft, Instagram, Calendar, Users, ExternalLink, Heart } from 'lucide-react'
+import { ArrowLeft, Calendar, Users, ExternalLink, Heart, Eye, Play } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 export default function ReelDetailPage({ initialReel }) {
@@ -118,66 +118,253 @@ export default function ReelDetailPage({ initialReel }) {
           </div>
         ) : (
           <div style={{
+            display: 'flex',
+            gap: 32,
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             borderRadius: 24,
-            boxShadow: '0 12px 40px rgba(0,0,0,0.03)',
-            padding: '24px 30px'
-          }}>
-            {/* 1. First Title: Creator Name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                overflow: 'hidden',
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                flexShrink: 0
-              }}>
-                {reel.creator_photo_url ? (
-                  <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>👤</div>
-                )}
-              </div>
-              <h1 style={{
-                fontSize: '22px',
-                fontWeight: 850,
-                color: 'var(--text)',
-                margin: 0,
-                letterSpacing: '-0.02em',
-                fontFamily: 'var(--font-display)'
-              }}>
-                {reel.creator_name || '@anonymous'}
-              </h1>
-            </div>
-
-            {/* 2. Reel Caption / Caption Text */}
+            boxShadow: '0 16px 48px rgba(0,0,0,0.04)',
+            padding: '32px',
+            position: 'relative',
+            overflow: 'hidden',
+          }} className="detail-card-container">
+            {/* Background Decorative Blur */}
             <div style={{
-              fontSize: '15px',
-              fontWeight: 500,
-              lineHeight: 1.5,
-              color: 'var(--text-dim)',
-              marginBottom: 28,
-              whiteSpace: 'pre-wrap',
-              background: 'var(--surface2)',
-              padding: '16px 20px',
-              borderRadius: 14,
-              border: '1px solid var(--border)',
-            }}>
-              {reel.title}
-            </div>
+              position: 'absolute',
+              top: '-10%',
+              right: '-10%',
+              width: '40%',
+              height: '40%',
+              background: 'radial-gradient(circle, var(--accent-light) 0%, transparent 80%)',
+              filter: 'blur(60px)',
+              opacity: 0.15,
+              pointerEvents: 'none',
+              zIndex: 0
+            }} />
 
-            {/* 3. Bottom Row: Video link & beside it followers count, date, image */}
-            <div className="bottom-split-container" style={{
+            {/* Left Column: Big Thumbnail Card */}
+            {reel.photo_url && (
+              <div 
+                onClick={() => window.open(reel.instagram_link, '_blank', 'noopener,noreferrer')}
+                style={{
+                  width: 240,
+                  height: 360,
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  boxShadow: '0 12px 36px rgba(0,0,0,0.12)',
+                  flexShrink: 0,
+                  border: '1px solid var(--border)',
+                  zIndex: 1
+                }}
+                className="big-thumbnail-card"
+              >
+                <img 
+                  src={reel.photo_url} 
+                  alt="" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }} 
+                  className="big-thumbnail-img"
+                />
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} className="big-play-overlay">
+                  <div style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--accent)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    transition: 'all 0.3s ease'
+                  }} className="big-play-btn">
+                    <Play size={18} fill="currentColor" style={{ marginLeft: 3 }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Right Column: Title, Creator, Metadata & CTA */}
+            <div style={{
+              flex: 1,
               display: 'flex',
-              gap: 24,
-              alignItems: 'center',
-              flexWrap: 'wrap'
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              zIndex: 1,
+              minWidth: 0
             }}>
-              {/* Left column: Video Link (CTA Button) */}
-              <div style={{ flex: 1, minWidth: 200 }}>
+              <div>
+                {/* Creator Profile Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+                  <div style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    background: 'var(--surface2)',
+                    border: '2px solid var(--border)',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+                  }}>
+                    {reel.creator_photo_url ? (
+                      <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--text-muted)' }}>
+                        {initials}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    {reel.creator_slug ? (
+                      <a href={'/celebrity/' + reel.creator_slug} style={{ textDecoration: 'none' }}>
+                        <h2 style={{
+                          fontSize: '18px',
+                          fontWeight: 800,
+                          color: 'var(--accent)',
+                          margin: 0,
+                          letterSpacing: '-0.01em',
+                          fontFamily: 'var(--font-display)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }} className="creator-link-hover">
+                          {reel.creator_name || '@anonymous'}
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 10, background: 'rgba(255, 42, 95, 0.08)', color: 'var(--accent)', marginLeft: 4 }}>Creator</span>
+                        </h2>
+                      </a>
+                    ) : (
+                      <h2 style={{
+                        fontSize: '18px',
+                        fontWeight: 800,
+                        color: 'var(--text)',
+                        margin: 0,
+                        letterSpacing: '-0.01em',
+                        fontFamily: 'var(--font-display)'
+                      }}>
+                        {reel.creator_name || '@anonymous'}
+                      </h2>
+                    )}
+                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Instagram Creator Profile</div>
+                  </div>
+                </div>
+
+                {/* Caption / Quote Section */}
+                <div style={{
+                  fontSize: '14.5px',
+                  fontWeight: 500,
+                  lineHeight: 1.6,
+                  color: 'var(--text-dim)',
+                  marginBottom: 24,
+                  whiteSpace: 'pre-wrap',
+                  background: 'var(--surface2)',
+                  padding: '16px 20px',
+                  borderRadius: 16,
+                  border: '1px solid var(--border)',
+                  position: 'relative',
+                  fontStyle: 'italic',
+                  fontFamily: 'var(--font-body)'
+                }}>
+                  <span style={{ position: 'absolute', top: 4, left: 6, fontSize: 32, opacity: 0.1, fontFamily: 'serif', lineHeight: 1 }}>“</span>
+                  <div style={{ paddingLeft: 6 }}>{reel.title}</div>
+                </div>
+
+                {/* Grid Metrics */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                  gap: 12,
+                  marginBottom: 28
+                }}>
+                  {followersDisplay && (
+                    <div style={{
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 14,
+                      padding: '12px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10
+                    }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(99, 102, 241, 0.08)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Users size={16} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{followersDisplay}</div>
+                        <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)' }}>Followers</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {reel.views_text && (
+                    <div style={{
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 14,
+                      padding: '12px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10
+                    }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(168, 85, 247, 0.08)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Eye size={16} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{reel.views_text}</div>
+                        <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)' }}>Total Views</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {reel.likes_text && (
+                    <div style={{
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 14,
+                      padding: '12px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10
+                    }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255, 42, 95, 0.08)', color: '#ff2a5f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Heart size={16} fill="currentColor" />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{reel.likes_text}</div>
+                        <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)' }}>Total Likes</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 14,
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10
+                  }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(16, 185, 129, 0.08)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Calendar size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{getFormattedDate(reel.created_at)}</div>
+                      <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)' }}>Published</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action watch reel button */}
+              <div>
                 <button
                   onClick={() => window.open(reel.instagram_link, '_blank', 'noopener,noreferrer')}
                   style={{
@@ -185,85 +372,33 @@ export default function ReelDetailPage({ initialReel }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 8,
+                    gap: 10,
                     background: 'var(--gradient)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: 14,
-                    padding: '14px 20px',
-                    fontSize: 15,
-                    fontWeight: 700,
+                    borderRadius: 16,
+                    padding: '16px 24px',
+                    fontSize: 15.5,
+                    fontWeight: 800,
                     cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(225, 48, 108, 0.2)',
-                    transition: 'all 0.2s ease',
+                    boxShadow: '0 8px 30px rgba(255, 42, 95, 0.25)',
+                    transition: 'all 0.3s ease',
                   }}
                   className="watch-reel-cta"
                 >
-                  <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                  </svg>
-                  Watch {reel.likes_text ? 'Post' : 'Reel'} on Instagram
-                  <ExternalLink size={14} />
+                  <svg viewBox="0 0 24 24" width={18} height={18} stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+                  <span>Watch {reel.likes_text && !reel.views_text ? 'Post' : 'Reel'} on Instagram</span>
+                  <ExternalLink size={14} style={{ opacity: 0.8 }} />
                 </button>
-              </div>
-
-              {/* Right column: Followers, Date, Image */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 16,
-                flexShrink: 0
-              }}>
-                {/* Text Metadata */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
-                  {followersDisplay && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Users size={14} style={{ color: 'var(--accent)' }} />
-                      <span>{followersDisplay} Followers</span>
-                    </div>
-                  )}
-                  {reel.likes_text && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Heart size={14} style={{ color: '#ff2a5f', fill: 'currentColor' }} />
-                      <span>{reel.likes_text} Likes</span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Calendar size={14} style={{ color: 'var(--accent)' }} />
-                    <span>{getFormattedDate(reel.created_at)}</span>
-                  </div>
-                </div>
-
-                {/* Cover Image Thumbnail */}
-                {reel.photo_url && (
-                  <div 
-                    onClick={() => window.open(reel.instagram_link, '_blank', 'noopener,noreferrer')}
-                    style={{
-                      width: 60,
-                      height: 90,
-                      borderRadius: 10,
-                      overflow: 'hidden',
-                      border: '1px solid var(--border)',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                      flexShrink: 0
-                    }}
-                    className="thumbnail-container"
-                  >
-                    <img 
-                      src={reel.photo_url} 
-                      alt="" 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s ease' }} 
-                      className="thumbnail-img"
-                    />
-                  </div>
-                )}
               </div>
             </div>
           </div>
-        )}
+        )
+      }
       </main>
 
       <BottomNav />
@@ -273,24 +408,48 @@ export default function ReelDetailPage({ initialReel }) {
           background: var(--surface2) !important;
           color: var(--text) !important;
         }
+        .detail-card-container {
+          flex-direction: row;
+        }
+        .big-thumbnail-card {
+          transition: all 0.3s var(--spring);
+        }
+        .big-thumbnail-card:hover {
+          transform: translateY(-4px) scale(1.01);
+          box-shadow: 0 20px 48px rgba(0,0,0,0.18) !important;
+        }
+        .big-thumbnail-card:hover .big-thumbnail-img {
+          transform: scale(1.04);
+        }
+        .big-thumbnail-card:hover .big-play-btn {
+          transform: scale(1.1);
+          background: #ffffff !important;
+          box-shadow: 0 8px 24px rgba(255, 42, 95, 0.3) !important;
+        }
+        .creator-link-hover:hover {
+          color: var(--accent-hover) !important;
+        }
         .watch-reel-cta {
           color: white !important;
         }
         .watch-reel-cta:hover {
           transform: translateY(-2px);
-          box-shadow: 0 12px 28px rgba(225, 48, 108, 0.3) !important;
+          box-shadow: 0 16px 36px rgba(255, 42, 95, 0.4) !important;
         }
         .watch-reel-cta:active {
           transform: translateY(0);
         }
-        .thumbnail-container:hover .thumbnail-img {
-          transform: scale(1.06);
-        }
-        @media (max-width: 580px) {
-          .bottom-split-container {
+        @media (max-width: 680px) {
+          .detail-card-container {
             flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 16px !important;
+            padding: 20px !important;
+            gap: 24px !important;
+          }
+          .big-thumbnail-card {
+            width: 100% !important;
+            height: 380px !important;
+            max-width: 320px;
+            margin: 0 auto;
           }
         }
       `}</style>

@@ -106,11 +106,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
     <div 
       className="leaderboard-row"
       onClick={() => {
-        if (isMostViewed) {
-          router.push(`/reel/${generateReelSlug(reel)}`)
-        } else {
-          window.open(reel.instagram_link, '_blank', 'noopener,noreferrer')
-        }
+        router.push(`/reel/${generateReelSlug(reel)}`)
       }}
     >
       {/* Rank & Trend badge */}
@@ -182,40 +178,37 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
 
         {/* Below that: Follower count / views / likes & Date beside each other */}
         <div className="row-meta-container">
-          {!isMostViewed && followersDisplay ? (
-            <span className="row-meta-followers">
+          {!isMostViewed && followersDisplay && (
+            <span className="row-meta-item">
               <Users size={12} />
               {followersDisplay} followers
             </span>
-          ) : isMostViewed && reel.likes_text ? (
-            <span className="row-meta-followers" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          )}
+          {isMostViewed && reel.likes_text && (
+            <span className="row-meta-item">
               <Heart size={12} style={{ color: '#ff2a5f', fill: '#ff2a5f', flexShrink: 0 }} />
               <span style={{ background: 'linear-gradient(135deg, #ff2a5f 0%, #ff6b35 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 850 }}>
                 {reel.likes_text} likes
               </span>
             </span>
-          ) : isMostViewed && reel.views_text ? (
-            <span className="row-meta-followers" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          )}
+          {isMostViewed && reel.views_text && (
+            <span className="row-meta-item">
               <Eye size={12} style={{ color: '#6366f1', flexShrink: 0 }} />
               <span style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 850 }}>
                 {reel.views_text} views
               </span>
             </span>
-          ) : null}
-          
-          {((!isMostViewed && followersDisplay) || isMostViewed) && (reel.views_text || reel.likes_text || timeAgo) && <span className="row-meta-dot desktop-only-dot">•</span>}
-          
-          <div className="row-meta-subrow">
-            {reel.views_text && !isMostViewed && (
-              <span className="row-meta-views">
-                <Eye size={12} />
-                {reel.views_text} views
-              </span>
-            )}
-            {timeAgo && (
-              <span className="row-meta-time">{timeAgo}</span>
-            )}
-          </div>
+          )}
+          {reel.views_text && !isMostViewed && (
+            <span className="row-meta-item">
+              <Eye size={12} />
+              {reel.views_text} views
+            </span>
+          )}
+          {timeAgo && (
+            <span className="row-meta-item">{timeAgo}</span>
+          )}
         </div>
       </div>
 
@@ -229,17 +222,29 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
 }
 
 export default function TrendingPage() {
-  const [activeTab, setActiveTab] = useState('most_viewed') // 'trending' or 'most_viewed'
+  const [activeTab, setActiveTab] = useState('trending') // 'trending' or 'most_viewed'
   const [hoveredTab, setHoveredTab] = useState(null)
   const [viralReels, setViralReels] = useState([])
+  const [mostLikedReels, setMostLikedReels] = useState([])
   const [mostViewedReels, setMostViewedReels] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [liveDate, setLiveDate] = useState('')
   const [currentTime, setCurrentTime] = useState('')
-  const [activeSubTab, setActiveSubTab] = useState('reels') // 'reels' or 'posts'
+  const [activeSubTab, setActiveSubTab] = useState('reels') // 'reels', 'liked_reels' or 'posts'
   const [hoveredSubTab, setHoveredSubTab] = useState(null)
   const [indiaMostLikedPosts, setIndiaMostLikedPosts] = useState([])
+
+  useEffect(() => {
+    const savedTab = localStorage.getItem('trending_active_tab')
+    if (savedTab === 'trending' || savedTab === 'most_viewed') {
+      setActiveTab(savedTab)
+    }
+    const savedSubTab = localStorage.getItem('trending_active_sub_tab')
+    if (savedSubTab === 'reels' || savedSubTab === 'liked_reels' || savedSubTab === 'posts') {
+      setActiveSubTab(savedSubTab)
+    }
+  }, [])
 
   useEffect(() => {
     // Generate real-time automatic updated date system locally
@@ -260,6 +265,7 @@ export default function TrendingPage() {
         setViralReels(data.viral_reels || [])
         setMostViewedReels(data.most_viewed_reels || [])
         setIndiaMostLikedPosts(data.india_most_liked_posts || [])
+        setMostLikedReels(data.most_liked_reels || [])
         setLoading(false)
       })
       .catch(err => {
@@ -282,7 +288,7 @@ export default function TrendingPage() {
 
   const activeReels = activeTab === 'trending' 
     ? viralReels 
-    : (activeSubTab === 'reels' ? mostViewedReels : indiaMostLikedPosts)
+    : (activeSubTab === 'reels' ? mostViewedReels : (activeSubTab === 'liked_reels' ? mostLikedReels : indiaMostLikedPosts))
 
   return (
     <>
@@ -339,7 +345,7 @@ export default function TrendingPage() {
           margin: '0 auto 24px'
         }}>
           <button
-            onClick={() => { setActiveTab('trending'); setActiveSubTab('reels'); }}
+            onClick={() => { setActiveTab('trending'); setActiveSubTab('reels'); localStorage.setItem('trending_active_tab', 'trending'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
             onMouseEnter={() => setHoveredTab('trending')}
             onMouseLeave={() => setHoveredTab(null)}
             style={{
@@ -365,7 +371,7 @@ export default function TrendingPage() {
           </button>
           
           <button
-            onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('reels'); }}
+            onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('reels'); localStorage.setItem('trending_active_tab', 'most_viewed'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
             onMouseEnter={() => setHoveredTab('most_viewed')}
             onMouseLeave={() => setHoveredTab(null)}
             style={{
@@ -393,68 +399,104 @@ export default function TrendingPage() {
 
         {/* Sub-tab Selection (Only when Most Viewed is active) */}
         {activeTab === 'most_viewed' && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 28,
-            marginBottom: 28,
-            marginTop: 4
-          }}>
-            <button
-              onClick={() => setActiveSubTab('reels')}
-              onMouseEnter={() => setHoveredSubTab('reels')}
-              onMouseLeave={() => setHoveredSubTab(null)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                fontSize: 11.5,
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                cursor: 'pointer',
-                color: activeSubTab === 'reels' 
-                  ? 'var(--accent)' 
-                  : (hoveredSubTab === 'reels' ? 'var(--text)' : 'var(--text-muted)'),
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 4px',
-                transition: 'all 0.25s ease',
-                transform: hoveredSubTab === 'reels' && activeSubTab !== 'reels' ? 'scale(1.03)' : 'scale(1)',
-              }}
-            >
-              <span style={{ fontSize: 13 }}>🎬</span>
-              Most Viewed Reel in India
-            </button>
-            <div style={{ width: 3, height: 22, borderRadius: 2, background: 'var(--border)' }} />
-            <button
-              onClick={() => setActiveSubTab('posts')}
-              onMouseEnter={() => setHoveredSubTab('posts')}
-              onMouseLeave={() => setHoveredSubTab(null)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                fontSize: 11.5,
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                cursor: 'pointer',
-                color: activeSubTab === 'posts' 
-                  ? 'var(--accent)' 
-                  : (hoveredSubTab === 'posts' ? 'var(--text)' : 'var(--text-muted)'),
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 4px',
-                transition: 'all 0.25s ease',
-                transform: hoveredSubTab === 'posts' && activeSubTab !== 'posts' ? 'scale(1.03)' : 'scale(1)',
-              }}
-            >
-              <span style={{ fontSize: 13 }}>❤️</span>
-              Most Liked Posts in India
-            </button>
-          </div>
+          <>
+            {/* Connector Line */}
+            <div style={{
+              width: '2px',
+              height: '14px',
+              background: 'linear-gradient(to bottom, var(--border) 0%, var(--accent) 100%)',
+              margin: '-12px auto 12px',
+              borderRadius: '2px',
+              opacity: 0.8
+            }} />
+            
+            <div className="subtabs-container" style={{
+              display: 'flex',
+              background: 'var(--surface2)',
+              borderRadius: '100px',
+              padding: 3,
+              marginBottom: 28,
+              gap: 4,
+              border: '1px solid var(--border)',
+              maxWidth: 420,
+              margin: '0 auto 28px'
+            }}>
+              <button
+                onClick={() => { setActiveSubTab('reels'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
+                onMouseEnter={() => setHoveredSubTab('reels')}
+                onMouseLeave={() => setHoveredSubTab(null)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 4px',
+                  borderRadius: '100px',
+                  border: 'none',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: activeSubTab === 'reels' ? 'var(--surface)' : 'transparent',
+                  color: activeSubTab === 'reels' ? 'var(--accent)' : 'var(--text-muted)',
+                  boxShadow: activeSubTab === 'reels' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span style={{ marginRight: 4, fontSize: 12 }}>🎬</span>
+                Views
+              </button>
+              
+              <button
+                onClick={() => { setActiveSubTab('liked_reels'); localStorage.setItem('trending_active_sub_tab', 'liked_reels'); }}
+                onMouseEnter={() => setHoveredSubTab('liked_reels')}
+                onMouseLeave={() => setHoveredSubTab(null)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 4px',
+                  borderRadius: '100px',
+                  border: 'none',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: activeSubTab === 'liked_reels' ? 'var(--surface)' : 'transparent',
+                  color: activeSubTab === 'liked_reels' ? 'var(--accent)' : 'var(--text-muted)',
+                  boxShadow: activeSubTab === 'liked_reels' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span style={{ marginRight: 4, fontSize: 12 }}>🎬</span>
+                Likes
+              </button>
+              
+              <button
+                onClick={() => { setActiveSubTab('posts'); localStorage.setItem('trending_active_sub_tab', 'posts'); }}
+                onMouseEnter={() => setHoveredSubTab('posts')}
+                onMouseLeave={() => setHoveredSubTab(null)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 4px',
+                  borderRadius: '100px',
+                  border: 'none',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: activeSubTab === 'posts' ? 'var(--surface)' : 'transparent',
+                  color: activeSubTab === 'posts' ? 'var(--accent)' : 'var(--text-muted)',
+                  boxShadow: activeSubTab === 'posts' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span style={{ marginRight: 4, fontSize: 12 }}>❤️</span>
+                Posts
+              </button>
+            </div>
+          </>
         )}
 
         {/* Content */}
@@ -495,7 +537,7 @@ export default function TrendingPage() {
                 <TrendingUp size={16} style={{ color: 'var(--accent)' }} /> 
                 {activeTab === 'trending' 
                   ? 'India Trends' 
-                  : (activeSubTab === 'reels' ? 'Most Viewed Reel in India' : 'Most Liked Posts in India')}
+                  : (activeSubTab === 'reels' ? 'Most Viewed Reel in India' : (activeSubTab === 'liked_reels' ? 'Most Liked Reels in India' : 'Most Liked Posts in India'))}
               </h3>
               {currentTime && activeTab === 'trending' && (
                 <div style={{
@@ -750,29 +792,16 @@ export default function TrendingPage() {
         .row-meta-container {
           display: flex;
           align-items: center;
-          gap: 12px;
-          font-size: 12px;
+          gap: 10px;
+          font-size: 11.5px;
           color: var(--text-muted);
           font-weight: 500;
           flex-wrap: wrap;
         }
-        .row-meta-followers {
+        .row-meta-item {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-        }
-        .row-meta-subrow {
-          display: inline-flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .row-meta-views {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-        }
-        .row-meta-dot {
-          opacity: 0.5;
         }
         .row-meta-time {
           white-space: nowrap;
@@ -838,30 +867,17 @@ export default function TrendingPage() {
             font-size: 12px !important;
           }
           .row-meta-container {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 4px !important;
-            font-size: 11px !important;
-          }
-          .row-meta-followers {
-            gap: 3px !important;
-          }
-          .desktop-only-dot {
-            display: none !important;
-          }
-          .row-meta-subrow {
             display: flex !important;
+            flex-direction: row !important;
             align-items: center !important;
-            gap: 6px !important;
-            width: 100% !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+            font-size: 10.5px !important;
           }
-          .row-meta-views {
+          .row-meta-item {
+            display: inline-flex !important;
+            align-items: center !important;
             gap: 3px !important;
-          }
-          .row-meta-dot {
-            display: inline !important;
-            opacity: 0.5 !important;
-            margin: 0 2px !important;
           }
           .row-watch-btn {
             padding: 6px 8px !important;
