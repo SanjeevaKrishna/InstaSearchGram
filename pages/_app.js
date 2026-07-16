@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import Link from 'next/link'
 import '../styles/globals.css'
 import Head from 'next/head'
 import Script from 'next/script'
@@ -73,6 +74,25 @@ export default function App({ Component, pageProps }) {
       </Head>
       <Component {...pageProps} />
       {!isAdmin && <BottomNav />}
+      {!isAdmin && router.pathname !== '/converter' && (
+        <Link href="/converter">
+          <button className="dotart-fab" title="Image to Dot Art Converter">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="4" />
+              <path d="M8 8 L12 12 L16 8 M8 16 L12 12 L16 16" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="8" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="8" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="8" cy="12" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="12" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="8" cy="16" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="16" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="16" r="1.2" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
+        </Link>
+      )}
     </>
   )
 }

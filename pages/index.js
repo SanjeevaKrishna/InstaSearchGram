@@ -110,7 +110,7 @@ export default function Home() {
             margin: '0 auto 40px',
             lineHeight: 1.6,
           }}>
-            Search for any celebrity or creator, search to find specific posts, or discover their most liked, most commented, or timeline-ordered posts.
+            Find any celebrity or creator dashboard, and discover their most liked, most commented, or timeline-ordered posts.
           </p>
 
           {/* Search Bar */}

@@ -572,3 +572,39 @@ input, textarea, select {
   color: var(--accent);
   font-weight: 700;
 }
+
+/* Floating Action Button for Dot Art Converter */
+.dotart-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--gradient);
+  color: white;
+  border: none;
+  box-shadow: 0 6px 20px rgba(225, 48, 108, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9999;
+  transition: all 0.25s var(--spring);
+}
+
+.dotart-fab:hover {
+  transform: translateY(-4px) scale(1.08) rotate(5deg);
+  box-shadow: 0 10px 30px rgba(225, 48, 108, 0.5);
+}
+
+.dotart-fab:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .dotart-fab {
+    bottom: 84px;
+    right: 16px;
+  }
+}
