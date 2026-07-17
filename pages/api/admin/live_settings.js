@@ -33,11 +33,16 @@ export default async function handler(req, res) {
 
     // POST/PUT - update settings (id = 1)
     if (req.method === 'POST' || req.method === 'PUT') {
-      const { live_date } = req.body
+      const { live_date, trending_enabled } = req.body
 
       const { data, error } = await supabase
         .from('live_settings')
-        .upsert({ id: 1, live_date, updated_at: new Date().toISOString() })
+        .upsert({ 
+          id: 1, 
+          live_date, 
+          trending_enabled: trending_enabled !== undefined ? trending_enabled : true,
+          updated_at: new Date().toISOString() 
+        })
         .select()
         .single()
 

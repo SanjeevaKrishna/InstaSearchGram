@@ -620,10 +620,12 @@ export default function ChatPage() {
                 }}>
                   Welcome to {currentRoomInfo.label} Community
                 </h2>
+                {/* 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#10b981', fontWeight: 700, marginTop: 3 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 6px #10b981' }} className="live-pulse" />
                   <span>{onlineCount} Online Now</span>
                 </div>
+                */}
                 <p 
                   style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, margin: 0, marginTop: 2, lineHeight: 1.3 }} 
                   className="welcome-subtitle"

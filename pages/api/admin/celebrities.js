@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
     // POST - add new celebrity
     if (req.method === 'POST') {
-      const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, order_index, total_reel_views, total_reel_likes, total_post_likes, total_comments, total_shares, total_reposts, hide_search, description, average_views, average_reel_likes, average_post_likes, followers_interaction, most_likes } = req.body
+      const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, order_index, total_reel_views, total_reel_likes, total_post_likes, total_comments, total_shares, total_reposts, hide_search, description, average_views, average_reel_likes, average_post_likes, followers_interaction, most_likes, account_created_year } = req.body
       if (!name) return res.status(400).json({ error: 'Name is required' })
 
       // Auto generate slug from name
@@ -70,7 +70,8 @@ export default async function handler(req, res) {
           average_post_likes: average_post_likes ? Number(average_post_likes) : 0,
           followers_interaction: followers_interaction ? Number(followers_interaction) : 0,
           hide_search: hide_search || false,
-          description: description || ''
+          description: description || '',
+          account_created_year: account_created_year ? Number(account_created_year) : null
         }])
         .select()
         .single()
@@ -81,7 +82,7 @@ export default async function handler(req, res) {
 
     // PUT - update celebrity
     if (req.method === 'PUT') {
-      const { id, name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, request_count, order_index, total_reel_views, total_reel_likes, total_post_likes, total_comments, total_shares, total_reposts, hide_search, description, average_views, average_reel_likes, average_post_likes, followers_interaction, most_likes } = req.body
+      const { id, name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, request_count, order_index, total_reel_views, total_reel_likes, total_post_likes, total_comments, total_shares, total_reposts, hide_search, description, average_views, average_reel_likes, average_post_likes, followers_interaction, most_likes, account_created_year } = req.body
       if (!id) return res.status(400).json({ error: 'ID required' })
 
       const { data, error } = await supabase
@@ -105,7 +106,8 @@ export default async function handler(req, res) {
           average_post_likes: average_post_likes !== undefined ? Number(average_post_likes) : 0,
           followers_interaction: followers_interaction !== undefined ? Number(followers_interaction) : 0,
           hide_search: hide_search || false,
-          description: description !== undefined ? description : ''
+          description: description !== undefined ? description : '',
+          account_created_year: account_created_year !== undefined ? (account_created_year ? Number(account_created_year) : null) : null
         })
         .eq('id', id)
         .select()

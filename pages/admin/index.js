@@ -199,6 +199,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         average_post_likes: initial.average_post_likes !== undefined && initial.average_post_likes !== null ? initial.average_post_likes.toString() : '',
         followers_interaction: initial.followers_interaction !== undefined && initial.followers_interaction !== null ? initial.followers_interaction.toString() : '',
         most_likes: initial.most_likes !== undefined && initial.most_likes !== null ? initial.most_likes.toString() : '',
+        account_created_year: initial.account_created_year !== undefined && initial.account_created_year !== null ? initial.account_created_year.toString() : '',
         hide_search: !!initial.hide_search,
         description: initial.description || ''
       }
@@ -210,6 +211,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
       total_comments: '', total_shares: '', total_reposts: '', hide_search: false,
       average_views: '', average_reel_likes: '', average_post_likes: '', followers_interaction: '',
       most_likes: '',
+      account_created_year: '',
       description: ''
     }
   })
@@ -243,6 +245,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           average_post_likes: form.average_post_likes ? Number(form.average_post_likes) : 0,
           followers_interaction: form.followers_interaction ? Number(form.followers_interaction) : 0,
           most_likes: form.most_likes ? Number(form.most_likes) : 0,
+          account_created_year: form.account_created_year ? Number(form.account_created_year) : null,
           hide_search: !!form.hide_search,
           description: form.description || ''
         },
@@ -268,7 +271,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         <label style={labelStyle}>Instagram Handle (without @)</label>
         <input className="input-field" value={form.instagram_handle} onChange={e => set('instagram_handle', e.target.value)} placeholder="e.g. virat.kohli" />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
           <label style={labelStyle}>Followers Count (number)</label>
           <input className="input-field" type="number" value={form.followers_count} onChange={e => set('followers_count', e.target.value)} placeholder="e.g. 17000000" />
@@ -276,6 +279,10 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         <div>
           <label style={labelStyle}>Total Posts on Instagram</label>
           <input className="input-field" type="number" value={form.posts_count} onChange={e => set('posts_count', e.target.value)} placeholder="e.g. 140" />
+        </div>
+        <div>
+          <label style={labelStyle}>Account Created Year</label>
+          <input className="input-field" type="number" value={form.account_created_year} onChange={e => set('account_created_year', e.target.value)} placeholder="e.g. 2012" />
         </div>
       </div>
       <div>
@@ -1455,6 +1462,8 @@ export default function AdminPanel() {
   const [uploadingBgRoom, setUploadingBgRoom] = useState(null)
 
   const [liveDate, setLiveDate] = useState('')
+  const [trendingEnabled, setTrendingEnabled] = useState(true)
+  const [savingSettings, setSavingSettings] = useState(false)
   const [savingLiveDate, setSavingLiveDate] = useState(false)
 
   const [loadingData, setLoadingData] = useState(false)
@@ -1638,6 +1647,7 @@ export default function AdminPanel() {
       const dateRes = await adminFetch('/api/admin/live_settings')
       const dateData = await dateRes.json()
       setLiveDate(dateData.settings?.live_date || '')
+      setTrendingEnabled(dateData.settings?.trending_enabled !== undefined ? dateData.settings.trending_enabled : true)
 
       if (tab === 'celebrities' || tab === 'posts') {
         const celRes = await adminFetch('/api/admin/celebrities')
@@ -1748,20 +1758,23 @@ export default function AdminPanel() {
     showToast('✅ Reel deleted')
   }
 
-  const saveLiveDate = async () => {
-    setSavingLiveDate(true)
+  const saveGlobalSettings = async () => {
+    setSavingSettings(true)
     try {
       const res = await adminFetch('/api/admin/live_settings', {
         method: 'PUT',
-        body: { live_date: liveDate }
+        body: { 
+          live_date: liveDate,
+          trending_enabled: trendingEnabled
+        }
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      showToast('✅ Live date updated!')
+      showToast('⚙️ Global settings updated!')
     } catch(e) {
       alert('Error: ' + e.message)
     } finally {
-      setSavingLiveDate(false)
+      setSavingSettings(false)
     }
   }
 
@@ -1955,6 +1968,7 @@ export default function AdminPanel() {
             { id: 'voting_management', label: '🏆 Voting Management' },
             { id: 'visitors', label: '👥 Visitors' },
             { id: 'chat_backgrounds', label: '💬 Chat Wallpaper' },
+            { id: 'settings', label: '⚙️ Settings' },
           ].map(t => (
             <button
               key={t.id}
@@ -3658,6 +3672,61 @@ export default function AdminPanel() {
                 })()}
               </div>
             )}
+          </div>
+        )}
+
+        {tab === 'settings' && (
+          <div className="card" style={{ padding: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16 }}>
+            <h2 style={{ marginBottom: 20, fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800 }}>⚙️ Global Settings</h2>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 500 }}>
+              {/* Trending Reels Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--surface2)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Enable Trending Reels Section</h4>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>If disabled, the "Trending Reels" tab will be hidden and the page will only show "Most Viewed".</p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={trendingEnabled}
+                  onChange={(e) => setTrendingEnabled(e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Live Date Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 700 }}>Leaderboard Live Date override</label>
+                <input 
+                  type="text" 
+                  value={liveDate}
+                  onChange={(e) => setLiveDate(e.target.value)}
+                  placeholder="Leave blank for auto-date"
+                  className="input-field"
+                  style={{
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 10,
+                    padding: '12px 16px',
+                    fontSize: 14,
+                    color: 'var(--text)',
+                    outline: 'none',
+                    width: '100%'
+                  }}
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Leave blank to automatically display today's current date.</span>
+              </div>
+
+              {/* Save Button */}
+              <button 
+                onClick={saveGlobalSettings}
+                className="btn btn-primary"
+                disabled={savingSettings}
+                style={{ padding: '12px 20px', borderRadius: 10, alignSelf: 'flex-start', marginTop: 10 }}
+              >
+                {savingSettings ? 'Saving Settings...' : 'Save Settings'}
+              </button>
+            </div>
           </div>
         )}
       </main>

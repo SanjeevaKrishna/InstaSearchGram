@@ -166,6 +166,7 @@ export default async function handler(req, res) {
 
     const responseData = {
       live_date: settingsData?.live_date || currentDate,
+      trending_enabled: settingsData?.trending_enabled !== undefined ? settingsData.trending_enabled : true,
       most_followed: profilesData || [],
       viral_reels: mappedReels,
       most_viewed_reels: mappedMostViewed,

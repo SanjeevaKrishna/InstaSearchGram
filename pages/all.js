@@ -4,6 +4,15 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
 
+const formatCount = (num) => {
+  if (!num) return '0'
+  const val = Number(num)
+  if (val >= 1000000000) return (val / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B'
+  if (val >= 1000000) return (val / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+  if (val >= 1000) return (val / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+  return val.toString()
+}
+
 export default function AllCelebrities() {
   const router = useRouter()
   const { compare } = router.query
@@ -49,9 +58,22 @@ export default function AllCelebrities() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [compare, selectedCel, router])
 
-  // Group by first letter, excluding comparing celebrity
+  // Group by first letter, excluding comparing celebrity and dot art converter
   const grouped = celebrities.reduce((acc, cel) => {
     if (compare && cel.slug === compare) return acc
+
+    // Do not show dot art converter in comparison selection list
+    const isDotConverter = 
+      cel.slug === 'dotart-converter' || 
+      cel.slug === 'dot-art-converter' || 
+      cel.slug === 'dot-converter' || 
+      cel.slug === 'converter' ||
+      cel.name?.toLowerCase().includes('dot') ||
+      cel.name?.toLowerCase().includes('converter') ||
+      cel.name?.toLowerCase().includes('convertor')
+
+    if (compare && isDotConverter) return acc
+
     const letter = (cel.name?.charAt(0) || '#').toUpperCase()
     if (!acc[letter]) acc[letter] = []
     acc[letter].push(cel)
@@ -143,15 +165,30 @@ export default function AllCelebrities() {
             )}
           </div>
           
-          {/* Name */}
+          {/* Name & Subtext */}
           <div style={{
             flex: 1,
-            fontSize: 16,
-            fontWeight: 500,
-            color: '#202124',
-            fontFamily: 'Roboto, "Segoe UI", sans-serif'
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2
           }}>
-            {cel.name}
+            <div style={{
+              fontSize: 16,
+              fontWeight: 500,
+              color: '#202124',
+              fontFamily: 'Roboto, "Segoe UI", sans-serif'
+            }}>
+              {cel.name}
+            </div>
+            <div style={{
+              fontSize: 12.5,
+              color: 'var(--text-muted)',
+              fontFamily: 'Roboto, "Segoe UI", sans-serif',
+              display: 'flex',
+              alignItems: 'center',
+            }}>
+              <span>{formatCount(cel.followers_count)} followers</span>
+            </div>
           </div>
 
           {/* Checkmark circle if in compare mode */}

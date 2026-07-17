@@ -22,6 +22,7 @@ create table if not exists celebrities (
   most_likes bigint default 0,
   hide_search boolean default false,
   description text,
+  account_created_year integer,
   created_at timestamptz default now()
 );
 
@@ -125,6 +126,7 @@ create policy "Public read viral_reels" on viral_reels for select using (true);
 create table if not exists live_settings (
   id integer primary key default 1,
   live_date text not null default '',
+  trending_enabled boolean default true,
   updated_at timestamptz default now()
 );
 

@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     if (featured === 'true') {
       let query = supabase
         .from('celebrities')
-        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
+        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
         .order('order_index', { ascending: true })
         .order('name')
         .eq('is_featured', true)
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       while (true) {
         let query = supabase
           .from('celebrities')
-          .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
+          .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
           .order('order_index', { ascending: true })
           .order('name')
           .range(from, to)
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
     } else {
       let query = supabase
         .from('celebrities')
-        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
+        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
         .order('order_index', { ascending: true })
         .order('name')
         .limit(20)

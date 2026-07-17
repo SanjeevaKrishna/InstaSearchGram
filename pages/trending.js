@@ -223,6 +223,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
 
 export default function TrendingPage() {
   const [activeTab, setActiveTab] = useState('trending') // 'trending' or 'most_viewed'
+  const [trendingEnabled, setTrendingEnabled] = useState(true)
   const [hoveredTab, setHoveredTab] = useState(null)
   const [viralReels, setViralReels] = useState([])
   const [mostLikedReels, setMostLikedReels] = useState([])
@@ -236,10 +237,6 @@ export default function TrendingPage() {
   const [indiaMostLikedPosts, setIndiaMostLikedPosts] = useState([])
 
   useEffect(() => {
-    const savedTab = localStorage.getItem('trending_active_tab')
-    if (savedTab === 'trending' || savedTab === 'most_viewed') {
-      setActiveTab(savedTab)
-    }
     const savedSubTab = localStorage.getItem('trending_active_sub_tab')
     if (savedSubTab === 'reels' || savedSubTab === 'liked_reels' || savedSubTab === 'posts') {
       setActiveSubTab(savedSubTab)
@@ -266,6 +263,11 @@ export default function TrendingPage() {
         setMostViewedReels(data.most_viewed_reels || [])
         setIndiaMostLikedPosts(data.india_most_liked_posts || [])
         setMostLikedReels(data.most_liked_reels || [])
+        const isTrendingEnabled = data.trending_enabled !== undefined ? data.trending_enabled : true
+        setTrendingEnabled(isTrendingEnabled)
+        if (!isTrendingEnabled) {
+          setActiveTab('most_viewed')
+        }
         setLoading(false)
       })
       .catch(err => {
@@ -333,69 +335,71 @@ export default function TrendingPage() {
         </div>
 
         {/* Tab Selection */}
-        <div className="subtabs-container" style={{
-          display: 'flex',
-          background: 'var(--surface2)',
-          borderRadius: '100px',
-          padding: 3,
-          marginBottom: 24,
-          gap: 4,
-          border: '1px solid var(--border)',
-          maxWidth: 340,
-          margin: '0 auto 24px'
-        }}>
-          <button
-            onClick={() => { setActiveTab('trending'); setActiveSubTab('reels'); localStorage.setItem('trending_active_tab', 'trending'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
-            onMouseEnter={() => setHoveredTab('trending')}
-            onMouseLeave={() => setHoveredTab(null)}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '8px 12px',
-              borderRadius: '100px',
-              border: 'none',
-              fontSize: 12.5,
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: activeTab === 'trending' ? 'var(--surface)' : 'transparent',
-              color: activeTab === 'trending' ? 'var(--text)' : 'var(--text-muted)',
-              boxShadow: activeTab === 'trending' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-              transform: hoveredTab === 'trending' && activeTab !== 'trending' ? 'scale(1.02)' : 'scale(1)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <span style={{ marginRight: 6, fontSize: 13 }}>🔥</span>
-            Trending Reels
-          </button>
-          
-          <button
-            onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('reels'); localStorage.setItem('trending_active_tab', 'most_viewed'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
-            onMouseEnter={() => setHoveredTab('most_viewed')}
-            onMouseLeave={() => setHoveredTab(null)}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '8px 12px',
-              borderRadius: '100px',
-              border: 'none',
-              fontSize: 12.5,
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: activeTab === 'most_viewed' ? 'var(--surface)' : 'transparent',
-              color: activeTab === 'most_viewed' ? 'var(--text)' : 'var(--text-muted)',
-              boxShadow: activeTab === 'most_viewed' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-              transform: hoveredTab === 'most_viewed' && activeTab !== 'most_viewed' ? 'scale(1.02)' : 'scale(1)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <span style={{ marginRight: 6, fontSize: 13 }}>👁️</span>
-            Most Viewed
-          </button>
-        </div>
+        {trendingEnabled && (
+          <div className="subtabs-container" style={{
+            display: 'flex',
+            background: 'var(--surface2)',
+            borderRadius: '100px',
+            padding: 3,
+            marginBottom: 24,
+            gap: 4,
+            border: '1px solid var(--border)',
+            maxWidth: 340,
+            margin: '0 auto 24px'
+          }}>
+            <button
+              onClick={() => { setActiveTab('trending'); setActiveSubTab('reels'); localStorage.setItem('trending_active_tab', 'trending'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
+              onMouseEnter={() => setHoveredTab('trending')}
+              onMouseLeave={() => setHoveredTab(null)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '8px 12px',
+                borderRadius: '100px',
+                border: 'none',
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: activeTab === 'trending' ? 'var(--surface)' : 'transparent',
+                color: activeTab === 'trending' ? 'var(--text)' : 'var(--text-muted)',
+                boxShadow: activeTab === 'trending' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                transform: hoveredTab === 'trending' && activeTab !== 'trending' ? 'scale(1.02)' : 'scale(1)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span style={{ marginRight: 6, fontSize: 13 }}>🔥</span>
+              Trending Reels
+            </button>
+            
+            <button
+              onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('reels'); localStorage.setItem('trending_active_tab', 'most_viewed'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
+              onMouseEnter={() => setHoveredTab('most_viewed')}
+              onMouseLeave={() => setHoveredTab(null)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '8px 12px',
+                borderRadius: '100px',
+                border: 'none',
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: activeTab === 'most_viewed' ? 'var(--surface)' : 'transparent',
+                color: activeTab === 'most_viewed' ? 'var(--text)' : 'var(--text-muted)',
+                boxShadow: activeTab === 'most_viewed' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                transform: hoveredTab === 'most_viewed' && activeTab !== 'most_viewed' ? 'scale(1.02)' : 'scale(1)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span style={{ marginRight: 6, fontSize: 13 }}>👁️</span>
+              Most Viewed
+            </button>
+          </div>
+        )}
 
         {/* Sub-tab Selection (Only when Most Viewed is active) */}
         {activeTab === 'most_viewed' && (

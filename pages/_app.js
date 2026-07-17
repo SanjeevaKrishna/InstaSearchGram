@@ -74,7 +74,7 @@ export default function App({ Component, pageProps }) {
       </Head>
       <Component {...pageProps} />
       {!isAdmin && <BottomNav />}
-      {!isAdmin && router.pathname !== '/converter' && (
+      {!isAdmin && ['/', '/all', '/trending', '/live'].includes(router.pathname) && !(router.pathname === '/all' && router.query.compare) && (
         <Link href="/converter">
           <button className="dotart-fab" title="Image to Dot Art Converter">
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

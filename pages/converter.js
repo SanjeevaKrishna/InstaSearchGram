@@ -23,33 +23,46 @@ export default function Converter() {
 
   const fileInputRef = useRef(null)
 
-  const runConversion = useCallback((img, format, currentInvert = invert, currentMinInk = minInk) => {
+  const runConversion = useCallback((img, format, customOpts = {}, shouldCopy = false) => {
     if (!img || !format) return
     setBusy(true)
     
-    // Instagram/YouTube: 27 cols (54 dots)
+    // Instagram: 24 cols (48 dots) - adjusted for small screen mobile comments
+    // YouTube: 27 cols (54 dots)
     // Instagram DM: 22 cols (44 dots)
     // WhatsApp: 21 cols (42 dots)
-    const cols = (format === 'instagram' || format === 'youtube')
-      ? 27
-      : format === 'instagram_dm'
-        ? 22
-        : 21
+    const cols = format === 'instagram'
+      ? 24
+      : format === 'youtube'
+        ? 27
+        : format === 'instagram_dm'
+          ? 22
+          : 21
+
+    const finalOpts = {
+      mode: 'braille',
+      outputCols: cols,
+      invert: customOpts.hasOwnProperty('invert') ? customOpts.invert : invert,
+      minInk: customOpts.hasOwnProperty('minInk') ? customOpts.minInk : minInk,
+      contrast: 30,
+      brightness: -10,
+      gamma: 1.2,
+      threshold: 120,
+      ditherAmount: 0.9,
+      ditherMode: 'atkinson',
+    }
 
     setTimeout(() => {
-      const result = convertImageToDotArt(img, {
-        mode: 'braille',
-        outputCols: cols,
-        invert: currentInvert,
-        minInk: currentMinInk,
-      })
+      const result = convertImageToDotArt(img, finalOpts)
       setLines(result.lines)
       setDims({ cols: result.cols, rows: result.rows })
       setBusy(false)
       
-      // Auto copy
-      const text = result.lines.join('\n')
-      copyToClipboard(text)
+      // Only copy when explicitly requested by a button click
+      if (shouldCopy) {
+        const text = result.lines.join('\n')
+        copyToClipboard(text)
+      }
     }, 50)
   }, [invert, minInk])
 
@@ -88,30 +101,27 @@ export default function Converter() {
     setImage(img)
     setPreviewUrl(img.src)
     if (selectedFormat) {
-      runConversion(img, selectedFormat)
+      runConversion(img, selectedFormat, {}, false) // Do not copy to clipboard on upload
     }
   }
 
   const handleFormatSelect = (format) => {
     setSelectedFormat(format)
     if (image) {
-      runConversion(image, format)
+      runConversion(image, format, {}, true) // Copy to clipboard on format button click!
     }
   }
 
-  const handleInvertChange = (e) => {
-    const val = e.target.checked
-    setInvert(val)
-    if (image && selectedFormat) {
-      runConversion(image, selectedFormat, val, minInk)
+  const updateSetting = (key, value) => {
+    const setters = {
+      invert: setInvert,
+      minInk: setMinInk,
     }
-  }
-
-  const handleMinInkChange = (e) => {
-    const val = e.target.checked
-    setMinInk(val)
+    if (setters[key]) {
+      setters[key](value)
+    }
     if (image && selectedFormat) {
-      runConversion(image, selectedFormat, invert, val)
+      runConversion(image, selectedFormat, { [key]: value }, false) // Do not copy on setting change
     }
   }
 
@@ -410,6 +420,8 @@ export default function Converter() {
               )}
             </div>
 
+
+
             {/* Quick settings below output */}
             <div style={{
               display: 'flex',
@@ -422,11 +434,11 @@ export default function Converter() {
               color: '#8a8f80',
             }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                <input type="checkbox" checked={invert} onChange={handleInvertChange} style={{ accentColor: '#49ffa3' }} />
+                <input type="checkbox" checked={invert} onChange={(e) => updateSetting('invert', e.target.checked)} style={{ accentColor: '#49ffa3' }} />
                 <span>Invert (light background)</span>
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                <input type="checkbox" checked={minInk} onChange={handleMinInkChange} style={{ accentColor: '#49ffa3' }} />
+                <input type="checkbox" checked={minInk} onChange={(e) => updateSetting('minInk', e.target.checked)} style={{ accentColor: '#49ffa3' }} />
                 <span>Fix alignment spacing</span>
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>

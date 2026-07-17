@@ -363,37 +363,32 @@ export default function ReelDetailPage({ initialReel }) {
                 </div>
               </div>
 
-              {/* Action watch reel button */}
+              {/* Action watch reel label */}
               <div>
-                <button
-                  onClick={() => window.open(reel.instagram_link, '_blank', 'noopener,noreferrer')}
+                <div
                   style={{
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 10,
-                    background: 'var(--gradient)',
-                    color: 'white',
-                    border: 'none',
+                    gap: 8,
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
                     borderRadius: 16,
                     padding: '16px 24px',
-                    fontSize: 15.5,
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 30px rgba(255, 42, 95, 0.25)',
-                    transition: 'all 0.3s ease',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: 'var(--text-dim)',
+                    textAlign: 'center'
                   }}
-                  className="watch-reel-cta"
                 >
-                  <svg viewBox="0 0 24 24" width={18} height={18} stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                </svg>
-                  <span>Watch {reel.likes_text && !reel.views_text ? 'Post' : 'Reel'} on Instagram</span>
-                  <ExternalLink size={14} style={{ opacity: 0.8 }} />
-                </button>
+                  <svg viewBox="0 0 24 24" width={16} height={16} stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--accent)' }}>
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                  </svg>
+                  <span>Click/Tap on the photo above to watch on Instagram</span>
+                </div>
               </div>
             </div>
           </div>
@@ -501,6 +496,17 @@ export async function getServerSideProps(context) {
 
       if (likedError) throw likedError
       reel = likedPost
+    }
+
+    if (!reel) {
+      const { data: likedReel, error: likedReelError } = await supabase
+        .from('most_liked_reels')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (likedReelError) throw likedReelError
+      reel = likedReel
     }
 
     if (!reel) {

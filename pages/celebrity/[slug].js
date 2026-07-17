@@ -298,6 +298,11 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
                   {formatCount(celebrity.posts_count || postsCount)} posts
                 </span>
+                {celebrity.account_created_year && (
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, marginTop: 2 }}>
+                    Joined: {celebrity.account_created_year}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -340,6 +345,11 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
                   {formatCount(compareCelebrity.posts_count)} posts
                 </span>
+                {compareCelebrity.account_created_year && (
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600, marginTop: 2 }}>
+                    Joined: {compareCelebrity.account_created_year}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -446,6 +456,14 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 <span style={{ fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
                   <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts
                 </span>
+                {celebrity.account_created_year && (
+                  <>
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--border-bright)' }} />
+                    <span style={{ fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
+                      Joined: <strong>{celebrity.account_created_year}</strong>
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 
