@@ -31,25 +31,30 @@ export default function Converter() {
     // YouTube: 27 cols (54 dots)
     // Instagram DM: 22 cols (44 dots)
     // WhatsApp: 21 cols (42 dots)
-    const cols = format === 'instagram'
-      ? 24
-      : format === 'youtube'
-        ? 27
-        : format === 'instagram_dm'
-          ? 22
-          : 21
+    // Clipboard: Full image width (no limitation)
+    const isClipboard = format === 'clipboard'
+    const cols = isClipboard
+      ? Math.max(1, Math.floor(img.width / 2))
+      : format === 'instagram'
+        ? 24
+        : format === 'youtube'
+          ? 27
+          : format === 'instagram_dm'
+            ? 22
+            : 21
 
     const finalOpts = {
       mode: 'braille',
       outputCols: cols,
       invert: customOpts.hasOwnProperty('invert') ? customOpts.invert : invert,
       minInk: customOpts.hasOwnProperty('minInk') ? customOpts.minInk : minInk,
-      contrast: 30,
-      brightness: -10,
-      gamma: 1.2,
-      threshold: 120,
-      ditherAmount: 0.9,
-      ditherMode: 'atkinson',
+      contrast: isClipboard ? 100 : 30,
+      brightness: isClipboard ? 100 : -10,
+      gamma: isClipboard ? 3.0 : 1.2,
+      threshold: isClipboard ? 100 : 120,
+      ditherAmount: isClipboard ? 0.75 : 0.9,
+      ditherMode: isClipboard ? 'floyd-steinberg' : 'atkinson',
+      unlimited: isClipboard,
     }
 
     setTimeout(() => {
@@ -340,6 +345,14 @@ export default function Converter() {
               >
                 Copy to Instagram DM
               </button>
+              <button 
+                className={`btn ${selectedFormat === 'clipboard' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => handleFormatSelect('clipboard')}
+                disabled={!image}
+                style={{ width: '100%', padding: '14px 20px', borderRadius: 12 }}
+              >
+                Copy to Clipboard
+              </button>
             </div>
             {!image && (
               <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 8, textAlign: 'center', fontWeight: 500 }}>
@@ -362,7 +375,15 @@ export default function Converter() {
             }}>
               <div style={{ textAlign: 'left' }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {selectedFormat === 'instagram' ? 'Instagram Format' : selectedFormat === 'youtube' ? 'YouTube Format' : selectedFormat === 'instagram_dm' ? 'Instagram DM Format' : 'WhatsApp Format'}
+                  {selectedFormat === 'instagram' 
+                    ? 'Instagram Format' 
+                    : selectedFormat === 'youtube' 
+                      ? 'YouTube Format' 
+                      : selectedFormat === 'instagram_dm' 
+                        ? 'Instagram DM Format' 
+                        : selectedFormat === 'clipboard'
+                          ? 'Clipboard (Full Resolution) Format'
+                          : 'WhatsApp Format'}
                 </span>
                 {dims && (
                   <div style={{ fontSize: 11, color: '#8a8f80', marginTop: 2 }}>
