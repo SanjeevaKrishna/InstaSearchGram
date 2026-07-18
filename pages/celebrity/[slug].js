@@ -862,7 +862,7 @@ export async function getServerSideProps(context) {
       .eq('slug', slug)
       .single()
 
-    if (celError || !celebrity) {
+    if (celError || !celebrity || celebrity.hide_search) {
       return {
         notFound: true
       }
@@ -883,7 +883,7 @@ export async function getServerSideProps(context) {
         .select('*')
         .eq('slug', compare)
         .single()
-      if (compData) {
+      if (compData && !compData.hide_search) {
         compareCelebrity = compData
       }
     }

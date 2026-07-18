@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
@@ -20,8 +20,33 @@ export default function Converter() {
   const [invert, setInvert] = useState(false)
   const [minInk, setMinInk] = useState(true)
   const [zoom, setZoom] = useState(6.4)
+  const [clipboardCols, setClipboardCols] = useState(60)
+  const [fitScreen, setFitScreen] = useState(true)
+  const [containerWidth, setContainerWidth] = useState(400)
 
   const fileInputRef = useRef(null)
+  const previewContainerRef = useRef(null)
+
+  useEffect(() => {
+    if (!previewContainerRef.current) return
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setContainerWidth(entry.contentRect.width)
+      }
+    })
+    resizeObserver.observe(previewContainerRef.current)
+    return () => resizeObserver.disconnect()
+  }, [])
+
+  // Braille character width is about 0.6 * font-size
+  const autoZoom = dims ? Math.max(0.5, Math.min(14, (containerWidth - 40) / (dims.cols * 0.6))) : 6.4
+
+  const handleClipboardColsChange = (val) => {
+    setClipboardCols(val)
+    if (image && selectedFormat === 'clipboard') {
+      runConversion(image, 'clipboard', { clipboardCols: val }, false)
+    }
+  }
 
   const runConversion = useCallback((img, format, customOpts = {}, shouldCopy = false) => {
     if (!img || !format) return
@@ -31,10 +56,11 @@ export default function Converter() {
     // YouTube: 27 cols (54 dots)
     // Instagram DM: 22 cols (44 dots)
     // WhatsApp: 21 cols (42 dots)
-    // Clipboard: Full image width (no limitation)
+    // Clipboard: Resolution adjusted by slider
     const isClipboard = format === 'clipboard'
+    const currentClipboardCols = customOpts.hasOwnProperty('clipboardCols') ? customOpts.clipboardCols : clipboardCols
     const cols = isClipboard
-      ? Math.max(1, Math.floor(img.width / 2))
+      ? currentClipboardCols
       : format === 'instagram'
         ? 24
         : format === 'youtube'
@@ -69,7 +95,7 @@ export default function Converter() {
         copyToClipboard(text)
       }
     }, 50)
-  }, [invert, minInk])
+  }, [invert, minInk, clipboardCols])
 
   const copyToClipboard = async (textToCopy) => {
     try {
@@ -105,8 +131,14 @@ export default function Converter() {
     const img = await loadImageFromFile(file)
     setImage(img)
     setPreviewUrl(img.src)
+
+    // Set a reasonable default clipboard column width based on image size
+    const maxCols = Math.floor(img.width / 2)
+    const defaultCols = Math.min(80, Math.max(30, maxCols))
+    setClipboardCols(defaultCols)
+
     if (selectedFormat) {
-      runConversion(img, selectedFormat, {}, false) // Do not copy to clipboard on upload
+      runConversion(img, selectedFormat, { clipboardCols: defaultCols }, false) // Do not copy to clipboard on upload
     }
   }
 
@@ -359,6 +391,34 @@ export default function Converter() {
                 * Upload an image first to enable format copying
               </div>
             )}
+            {selectedFormat === 'clipboard' && image && (
+              <div className="fade-in" style={{
+                marginTop: 20,
+                padding: 16,
+                borderRadius: 12,
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                textAlign: 'left'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                    📋 Clipboard Resolution (Columns)
+                  </span>
+                </div>
+                <input 
+                  type="range"
+                  min={16}
+                  max={Math.max(100, Math.floor(image.width / 2))}
+                  step={2}
+                  value={clipboardCols}
+                  onChange={(e) => handleClipboardColsChange(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                />
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Drag to scale the copied image size. More columns equal more detail but might wrap on smaller screens.
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -414,34 +474,37 @@ export default function Converter() {
             </div>
 
             {/* Braille Display Screen */}
-            <div style={{
-              position: 'relative',
-              overflow: 'auto',
-              background: '#eef0ea',
-              color: '#12140f',
-              padding: '16px 20px',
-              borderRadius: 8,
-              minHeight: 200,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
+            <div 
+              ref={previewContainerRef}
+              style={{
+                position: 'relative',
+                overflow: 'auto',
+                background: '#eef0ea',
+                color: '#12140f',
+                padding: '16px 20px',
+                borderRadius: 8,
+                minHeight: 200,
+                display: 'block',
+                textAlign: 'center',
+              }}
+            >
               {busy ? (
-                <div className="spinner" style={{ borderColor: 'rgba(0,0,0,0.1)', borderTopColor: '#12140f' }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 168 }}>
+                  <div className="spinner" style={{ borderColor: 'rgba(0,0,0,0.1)', borderTopColor: '#12140f' }} />
+                </div>
               ) : (
                 <pre style={{
                   fontFamily: 'monospace',
-                  fontSize: `${zoom}px`,
+                  fontSize: `${fitScreen ? autoZoom : zoom}px`,
                   lineHeight: 1,
                   letterSpacing: 0,
                   whiteSpace: 'pre',
-                  margin: 0,
-                  width: '100%',
+                  margin: '0 auto',
+                  display: 'inline-block',
+                  textAlign: 'left',
                 }}>{lines.join('\n')}</pre>
               )}
             </div>
-
-
 
             {/* Quick settings below output */}
             <div style={{
@@ -462,18 +525,23 @@ export default function Converter() {
                 <input type="checkbox" checked={minInk} onChange={(e) => updateSetting('minInk', e.target.checked)} style={{ accentColor: '#49ffa3' }} />
                 <span>Fix alignment spacing</span>
               </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={fitScreen} onChange={(e) => setFitScreen(e.target.checked)} style={{ accentColor: '#49ffa3' }} />
+                <span>Auto-fit to screen</span>
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', opacity: fitScreen ? 0.6 : 1 }}>
                 <span>Zoom:</span>
                 <input 
                   type="range" 
-                  min={3} 
-                  max={14} 
-                  step={0.2}
-                  value={zoom} 
+                  min={0.5} 
+                  max={20} 
+                  step={0.1}
+                  value={fitScreen ? autoZoom : zoom} 
+                  disabled={fitScreen}
                   onChange={(e) => setZoom(parseFloat(e.target.value))} 
-                  style={{ accentColor: '#49ffa3', width: 80 }} 
+                  style={{ accentColor: '#49ffa3', width: 80, cursor: fitScreen ? 'not-allowed' : 'pointer' }} 
                 />
-                <span>{zoom.toFixed(1)}px</span>
+                <span>{(fitScreen ? autoZoom : zoom).toFixed(1)}px</span>
               </div>
             </div>
           </div>

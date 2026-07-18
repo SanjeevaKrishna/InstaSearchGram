@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
       supabase.from('viral_reels').select('*'),
       supabase.from('most_viewed_reels').select('*'),
-      supabase.from('celebrities').select('name, slug, photo_url, followers_count'),
+      supabase.from('celebrities').select('name, slug, photo_url, followers_count').neq('hide_search', true),
       supabase.from('most_liked_posts').select('*'),
       supabase.from('most_liked_reels').select('*')
     ])

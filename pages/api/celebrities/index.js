@@ -32,6 +32,7 @@ export default async function handler(req, res) {
         .order('order_index', { ascending: true })
         .order('name')
         .eq('is_featured', true)
+        .neq('hide_search', true)
         .limit(10)
       if (q && q.trim()) {
         query = query.ilike('name', `%${q.trim()}%`)
@@ -56,6 +57,7 @@ export default async function handler(req, res) {
           .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
           .order('order_index', { ascending: true })
           .order('name')
+          .neq('hide_search', true)
           .range(from, to)
         if (q && q.trim()) {
           query = query.ilike('name', `%${q.trim()}%`)
@@ -76,6 +78,7 @@ export default async function handler(req, res) {
         .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
         .order('order_index', { ascending: true })
         .order('name')
+        .neq('hide_search', true)
         .limit(20)
       if (q && q.trim()) {
         query = query.ilike('name', `%${q.trim()}%`)

@@ -412,7 +412,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input type="checkbox" id="hide_search" checked={form.hide_search || false} onChange={e => set('hide_search', e.target.checked)} style={{ width: 16, height: 16 }} />
           <label htmlFor="hide_search" style={{ fontSize: 14, color: '#f44336', fontWeight: 600, cursor: 'pointer' }}>
-            🔴 Remove Search Bar & Timelines (Hide Search)
+            🔴 Temporary Disable Profile (Hide from search & website)
           </label>
         </div>
       </div>
@@ -2141,6 +2141,7 @@ export default function AdminPanel() {
                         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                           @{cel.instagram_handle || '—'} &nbsp;·&nbsp; {formatCount(cel.followers_count)} followers
                           {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
+                          {cel.hide_search && <span style={{ marginLeft: 8, color: '#f44336', fontWeight: 600 }}>🚫 Disabled</span>}
                           {cel.has_full_details ? (
                             <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Full Details</span>
                           ) : (
@@ -2189,7 +2190,7 @@ export default function AdminPanel() {
                             fontWeight: 600
                           }}
                         >
-                          {cel.hide_search ? '🟢 Add Search' : '🔴 Remove Search'}
+                          {cel.hide_search ? '🟢 Enable Profile' : '🔴 Disable Profile'}
                         </button>
                         <button
                           onClick={() => deleteCelebrity(cel.id)}
