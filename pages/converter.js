@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
-import { convertImageToDotArt, loadImageFromFile } from '../lib/dotArt'
+import { convertImageToDotArt, loadImageFromFile, detectSubjectBounds } from '../lib/dotArt'
 import { Sparkles, Copy, Check, Upload, Image as ImageIcon } from 'lucide-react'
 
 export default function Converter() {
@@ -23,7 +23,12 @@ export default function Converter() {
   const [clipboardCols, setClipboardCols] = useState(60)
   const [fitScreen, setFitScreen] = useState(true)
   const [containerWidth, setContainerWidth] = useState(400)
-  const [mode, setMode] = useState('normal')
+
+  // Crop states
+  const [cropLeft, setCropLeft] = useState(0)
+  const [cropRight, setCropRight] = useState(0)
+  const [cropTop, setCropTop] = useState(0)
+  const [cropBottom, setCropBottom] = useState(0)
 
   const fileInputRef = useRef(null)
   const previewContainerRef = useRef(null)
@@ -49,13 +54,6 @@ export default function Converter() {
     }
   }
 
-  const handleModeChange = (newMode) => {
-    setMode(newMode)
-    if (image && selectedFormat) {
-      runConversion(image, selectedFormat, { mode: newMode }, false)
-    }
-  }
-
   const runConversion = useCallback((img, format, customOpts = {}, shouldCopy = false) => {
     if (!img || !format) return
     setBusy(true)
@@ -65,7 +63,6 @@ export default function Converter() {
     // Instagram DM: 22 cols (44 dots)
     // WhatsApp: 21 cols (42 dots)
     // Clipboard: Resolution adjusted by slider
-    const currentMode = customOpts.hasOwnProperty('mode') ? customOpts.mode : mode
     const isClipboard = format === 'clipboard'
     const currentClipboardCols = customOpts.hasOwnProperty('clipboardCols') ? customOpts.clipboardCols : clipboardCols
     let cols = isClipboard
@@ -78,22 +75,23 @@ export default function Converter() {
             ? 22
             : 21
 
-    if (currentMode === 'hd') {
-      cols = cols * 2
-    }
-
     const finalOpts = {
       mode: 'braille',
       outputCols: cols,
       invert: customOpts.hasOwnProperty('invert') ? customOpts.invert : invert,
       minInk: customOpts.hasOwnProperty('minInk') ? customOpts.minInk : minInk,
-      contrast: isClipboard ? 100 : 30,
-      brightness: isClipboard ? 100 : -10,
-      gamma: isClipboard ? 3.0 : 1.2,
-      threshold: isClipboard ? 100 : 120,
-      ditherAmount: isClipboard ? 0.75 : 0.9,
-      ditherMode: isClipboard ? 'floyd-steinberg' : 'atkinson',
-      unlimited: isClipboard || currentMode === 'hd',
+      contrast: 100, // High-quality Braille HD settings as the default
+      brightness: 100,
+      gamma: 3.0,
+      threshold: 100,
+      ditherAmount: 0.75,
+      ditherMode: 'floyd-steinberg',
+      unlimited: true,
+      // Crop parameters
+      cropLeft: customOpts.hasOwnProperty('cropLeft') ? customOpts.cropLeft : cropLeft,
+      cropRight: customOpts.hasOwnProperty('cropRight') ? customOpts.cropRight : cropRight,
+      cropTop: customOpts.hasOwnProperty('cropTop') ? customOpts.cropTop : cropTop,
+      cropBottom: customOpts.hasOwnProperty('cropBottom') ? customOpts.cropBottom : cropBottom,
     }
 
     setTimeout(() => {
@@ -108,7 +106,54 @@ export default function Converter() {
         copyToClipboard(text)
       }
     }, 50)
-  }, [invert, minInk, clipboardCols, mode])
+  }, [invert, minInk, clipboardCols, cropLeft, cropRight, cropTop, cropBottom])
+
+  const updateCrop = (key, val) => {
+    const setters = {
+      cropLeft: setCropLeft,
+      cropRight: setCropRight,
+      cropTop: setCropTop,
+      cropBottom: setCropBottom,
+    }
+    if (setters[key]) {
+      setters[key](val)
+    }
+    if (image && selectedFormat) {
+      runConversion(image, selectedFormat, { [key]: val }, false)
+    }
+  }
+
+  const handleAutoCrop = () => {
+    if (!image) return
+    const bounds = detectSubjectBounds(image)
+    setCropLeft(bounds.cropLeft)
+    setCropRight(bounds.cropRight)
+    setCropTop(bounds.cropTop)
+    setCropBottom(bounds.cropBottom)
+    if (selectedFormat) {
+      runConversion(image, selectedFormat, {
+        cropLeft: bounds.cropLeft,
+        cropRight: bounds.cropRight,
+        cropTop: bounds.cropTop,
+        cropBottom: bounds.cropBottom,
+      }, false)
+    }
+  }
+
+  const handleResetCrop = () => {
+    setCropLeft(0)
+    setCropRight(0)
+    setCropTop(0)
+    setCropBottom(0)
+    if (image && selectedFormat) {
+      runConversion(image, selectedFormat, {
+        cropLeft: 0,
+        cropRight: 0,
+        cropTop: 0,
+        cropBottom: 0,
+      }, false)
+    }
+  }
 
   const copyToClipboard = async (textToCopy) => {
     try {
@@ -145,13 +190,25 @@ export default function Converter() {
     setImage(img)
     setPreviewUrl(img.src)
 
+    // Reset crop states on new image upload
+    setCropLeft(0)
+    setCropRight(0)
+    setCropTop(0)
+    setCropBottom(0)
+
     // Set a reasonable default clipboard column width based on image size
     const maxCols = Math.floor(img.width / 2)
     const defaultCols = Math.min(80, Math.max(30, maxCols))
     setClipboardCols(defaultCols)
 
     if (selectedFormat) {
-      runConversion(img, selectedFormat, { clipboardCols: defaultCols }, false) // Do not copy to clipboard on upload
+      runConversion(img, selectedFormat, { 
+        clipboardCols: defaultCols,
+        cropLeft: 0,
+        cropRight: 0,
+        cropTop: 0,
+        cropBottom: 0
+      }, false) // Do not copy to clipboard on upload
     }
   }
 
@@ -302,14 +359,60 @@ export default function Converter() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                 <div style={{
                   position: 'relative',
-                  width: 130,
-                  height: 130,
+                  width: 160,
+                  height: 160,
                   borderRadius: '16px',
                   overflow: 'hidden',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
                   border: '3px solid white',
+                  background: 'var(--surface2)',
                 }}>
                   <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  
+                  {/* Left crop boundary overlay */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    width: `${cropLeft * 100}%`,
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    pointerEvents: 'none',
+                    borderRight: '1px dashed var(--accent)',
+                  }} />
+                  {/* Right crop boundary overlay */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: `${cropRight * 100}%`,
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    pointerEvents: 'none',
+                    borderLeft: '1px dashed var(--accent)',
+                  }} />
+                  {/* Top crop boundary overlay */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: `${cropLeft * 100}%`,
+                    right: `${cropRight * 100}%`,
+                    height: `${cropTop * 100}%`,
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    pointerEvents: 'none',
+                    borderBottom: '1px dashed var(--accent)',
+                  }} />
+                  {/* Bottom crop boundary overlay */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: `${cropLeft * 100}%`,
+                    right: `${cropRight * 100}%`,
+                    height: `${cropBottom * 100}%`,
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    pointerEvents: 'none',
+                    borderTop: '1px dashed var(--accent)',
+                  }} />
                 </div>
                 <div style={{
                   padding: '6px 14px',
@@ -348,54 +451,73 @@ export default function Converter() {
             )}
           </div>
 
-          {/* Resolution Mode Switcher */}
-          <div style={{ marginTop: 24 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12 }}>
-              Resolution Mode
-            </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              background: 'var(--surface2)',
-              padding: 4,
+          {/* Crop & Focus Panel */}
+          {image && (
+            <div className="fade-in" style={{
+              marginTop: 24,
+              padding: 16,
               borderRadius: 12,
+              background: 'var(--surface2)',
               border: '1px solid var(--border)',
+              textAlign: 'left'
             }}>
-              <button
-                onClick={() => handleModeChange('normal')}
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 10,
-                  border: 'none',
-                  background: mode === 'normal' ? 'var(--surface)' : 'transparent',
-                  color: mode === 'normal' ? 'var(--text)' : 'var(--text-muted)',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  boxShadow: mode === 'normal' ? '0 2px 8px rgba(0,0,0,0.04)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                Normal Dot
-              </button>
-              <button
-                onClick={() => handleModeChange('hd')}
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 10,
-                  border: 'none',
-                  background: mode === 'hd' ? 'var(--gradient)' : 'transparent',
-                  boxShadow: mode === 'hd' ? '0 4px 12px rgba(220, 39, 67, 0.2)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <span style={{ color: mode === 'hd' ? '#fff' : 'var(--text-muted)', fontWeight: 600, fontSize: 14 }}>
-                  Braille HD (Double Detail)
-                </span>
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    ✂ Focus Subject
+                  </span>
+                  {(cropLeft > 0 || cropRight > 0 || cropTop > 0 || cropBottom > 0) ? (
+                    <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4, fontWeight: 500 }}>
+                      Focused (L: {Math.round(cropLeft * 100)}% | R: {Math.round(cropRight * 100)}% | T: {Math.round(cropTop * 100)}% | B: {Math.round(cropBottom * 100)}%)
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                      Full image bounds active
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleAutoCrop(); }}
+                    style={{
+                      background: 'var(--gradient)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(220, 39, 67, 0.15)',
+                    }}
+                  >
+                    ✨ Auto-Crop Background
+                  </button>
+                  {(cropLeft > 0 || cropRight > 0 || cropTop > 0 || cropBottom > 0) && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleResetCrop(); }}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid var(--border-bright)',
+                        color: 'var(--text-muted)',
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', opacity: 0.8, marginTop: 12, textAlign: 'center', borderTop: '1px dashed var(--border-bright)', paddingTop: 10 }}>
+                💡 Trims unwanted background edges to fit more details of the main object into the comment box width.
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Format Copy Buttons */}
           <div style={{ marginTop: 24 }}>
@@ -464,7 +586,7 @@ export default function Converter() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                    📋 Clipboard Resolution (Columns): {mode === 'hd' ? clipboardCols * 2 : clipboardCols} {mode === 'hd' ? '(HD Active)' : ''}
+                    📋 Clipboard Resolution (Columns): {clipboardCols}
                   </span>
                 </div>
                 <input 
