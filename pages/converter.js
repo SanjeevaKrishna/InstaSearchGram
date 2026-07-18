@@ -23,6 +23,7 @@ export default function Converter() {
   const [clipboardCols, setClipboardCols] = useState(60)
   const [fitScreen, setFitScreen] = useState(true)
   const [containerWidth, setContainerWidth] = useState(400)
+  const [mode, setMode] = useState('normal')
 
   const fileInputRef = useRef(null)
   const previewContainerRef = useRef(null)
@@ -48,6 +49,13 @@ export default function Converter() {
     }
   }
 
+  const handleModeChange = (newMode) => {
+    setMode(newMode)
+    if (image && selectedFormat) {
+      runConversion(image, selectedFormat, { mode: newMode }, false)
+    }
+  }
+
   const runConversion = useCallback((img, format, customOpts = {}, shouldCopy = false) => {
     if (!img || !format) return
     setBusy(true)
@@ -57,9 +65,10 @@ export default function Converter() {
     // Instagram DM: 22 cols (44 dots)
     // WhatsApp: 21 cols (42 dots)
     // Clipboard: Resolution adjusted by slider
+    const currentMode = customOpts.hasOwnProperty('mode') ? customOpts.mode : mode
     const isClipboard = format === 'clipboard'
     const currentClipboardCols = customOpts.hasOwnProperty('clipboardCols') ? customOpts.clipboardCols : clipboardCols
-    const cols = isClipboard
+    let cols = isClipboard
       ? currentClipboardCols
       : format === 'instagram'
         ? 24
@@ -68,6 +77,10 @@ export default function Converter() {
           : format === 'instagram_dm'
             ? 22
             : 21
+
+    if (currentMode === 'hd') {
+      cols = cols * 2
+    }
 
     const finalOpts = {
       mode: 'braille',
@@ -80,7 +93,7 @@ export default function Converter() {
       threshold: isClipboard ? 100 : 120,
       ditherAmount: isClipboard ? 0.75 : 0.9,
       ditherMode: isClipboard ? 'floyd-steinberg' : 'atkinson',
-      unlimited: isClipboard,
+      unlimited: isClipboard || currentMode === 'hd',
     }
 
     setTimeout(() => {
@@ -95,7 +108,7 @@ export default function Converter() {
         copyToClipboard(text)
       }
     }, 50)
-  }, [invert, minInk, clipboardCols])
+  }, [invert, minInk, clipboardCols, mode])
 
   const copyToClipboard = async (textToCopy) => {
     try {
@@ -335,6 +348,55 @@ export default function Converter() {
             )}
           </div>
 
+          {/* Resolution Mode Switcher */}
+          <div style={{ marginTop: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12 }}>
+              Resolution Mode
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              background: 'var(--surface2)',
+              padding: 4,
+              borderRadius: 12,
+              border: '1px solid var(--border)',
+            }}>
+              <button
+                onClick={() => handleModeChange('normal')}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: mode === 'normal' ? 'var(--surface)' : 'transparent',
+                  color: mode === 'normal' ? 'var(--text)' : 'var(--text-muted)',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  boxShadow: mode === 'normal' ? '0 2px 8px rgba(0,0,0,0.04)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Normal Dot
+              </button>
+              <button
+                onClick={() => handleModeChange('hd')}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: mode === 'hd' ? 'var(--gradient)' : 'transparent',
+                  boxShadow: mode === 'hd' ? '0 4px 12px rgba(220, 39, 67, 0.2)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span style={{ color: mode === 'hd' ? '#fff' : 'var(--text-muted)', fontWeight: 600, fontSize: 14 }}>
+                  Braille HD (Double Detail)
+                </span>
+              </button>
+            </div>
+          </div>
+
           {/* Format Copy Buttons */}
           <div style={{ marginTop: 24 }}>
             <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12 }}>
@@ -402,7 +464,7 @@ export default function Converter() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                    📋 Clipboard Resolution (Columns)
+                    📋 Clipboard Resolution (Columns): {mode === 'hd' ? clipboardCols * 2 : clipboardCols} {mode === 'hd' ? '(HD Active)' : ''}
                   </span>
                 </div>
                 <input 
