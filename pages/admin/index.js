@@ -406,7 +406,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input type="checkbox" id="full_details" checked={form.has_full_details || false} onChange={e => set('has_full_details', e.target.checked)} style={{ width: 16, height: 16 }} />
           <label htmlFor="full_details" style={{ fontSize: 14, color: 'var(--text-dim)', cursor: 'pointer' }}>
-            Has Full Instagram Details (All Posts & Playlists Entered)
+            Add search for this
           </label>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -2143,9 +2143,9 @@ export default function AdminPanel() {
                           {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
                           {cel.hide_search && <span style={{ marginLeft: 8, color: '#f44336', fontWeight: 600 }}>🚫 Disabled</span>}
                           {cel.has_full_details ? (
-                            <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Full Details</span>
+                            <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Add Search</span>
                           ) : (
-                            <span style={{ marginLeft: 8, color: '#ff9800', fontWeight: 600 }}>⚠️ Partial ({cel.request_count || 0} requests)</span>
+                            <span style={{ marginLeft: 8, color: '#ff9800', fontWeight: 600 }}>⚠️ No Search ({cel.request_count || 0} requests)</span>
                           )}
                         </div>
                       </div>

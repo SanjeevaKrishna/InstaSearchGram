@@ -404,7 +404,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
       <Navbar />
 
-      <main style={{ maxWidth: celebrity.hide_search ? 800 : 600, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }}>
+      <main style={{ maxWidth: !celebrity.has_full_details ? 800 : 600, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }}>
         {/* Back */}
         <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24, cursor: 'pointer', padding: 0 }}>
           ← Back to Search
@@ -571,7 +571,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
 
         {/* Tabs Navigation or Beautiful Divider */}
-        {celebrity.hide_search ? (
+        {!celebrity.has_full_details ? (
           <div style={{
             width: '100%',
             height: '2px',
@@ -610,7 +610,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
         {activeTab === 'posts' && (
           <div className="fade-in">
             {/* Search within posts */}
-            {!celebrity.hide_search && (
+            {celebrity.has_full_details && (
               <div style={{ marginBottom: 24 }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input
@@ -668,7 +668,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             </h3>
 
             {/* Filter Buttons Grid (2x2) */}
-            <div className="profile-filter-grid" style={{ marginBottom: celebrity.hide_search ? 0 : 32 }}>
+            <div className="profile-filter-grid" style={{ marginBottom: !celebrity.has_full_details ? 0 : 32 }}>
               <button className="profile-filter-btn" onClick={() => goResults({ filter: 'most_liked' })}>
                 <div className="profile-filter-icon-wrapper" style={{ background: 'linear-gradient(135deg, #ff416c, #ff4b2b)', boxShadow: '0 4px 10px rgba(255, 65, 108, 0.25)' }}>
                   ❤️
@@ -708,7 +708,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
             {/* Description removed from here, placed at the end below timeline */}
 
-            {!celebrity.hide_search && (
+            {celebrity.has_full_details && (
               <>
                 <div style={{ width: '100%', height: 1, background: 'var(--border)', marginBottom: 32 }} />
 
@@ -754,7 +754,13 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
             {celebrity.description && (
               <div style={{ marginBottom: 32, width: '100%' }}>
-                <div style={{ width: '100%', height: 1, background: 'var(--border)', margin: '32px 0 24px' }} />
+                <div style={{
+                  width: '100%',
+                  height: '2px',
+                  background: 'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)',
+                  margin: '32px 0 24px',
+                  opacity: 0.8
+                }} />
                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
                   About {celebrity.name}
                 </h3>
