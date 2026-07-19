@@ -19,6 +19,7 @@ export default function Converter() {
   // Settings
   const [invert, setInvert] = useState(false)
   const [minInk, setMinInk] = useState(true)
+  const [outline, setOutline] = useState(false)
   const [zoom, setZoom] = useState(6.4)
   const [clipboardCols, setClipboardCols] = useState(60)
   const [fitScreen, setFitScreen] = useState(true)
@@ -80,6 +81,7 @@ export default function Converter() {
       outputCols: cols,
       invert: customOpts.hasOwnProperty('invert') ? customOpts.invert : invert,
       minInk: customOpts.hasOwnProperty('minInk') ? customOpts.minInk : minInk,
+      outline: customOpts.hasOwnProperty('outline') ? customOpts.outline : outline,
       contrast: 100, // High-quality Braille HD settings as the default
       brightness: 100,
       gamma: 3.0,
@@ -106,54 +108,7 @@ export default function Converter() {
         copyToClipboard(text)
       }
     }, 50)
-  }, [invert, minInk, clipboardCols, cropLeft, cropRight, cropTop, cropBottom])
-
-  const updateCrop = (key, val) => {
-    const setters = {
-      cropLeft: setCropLeft,
-      cropRight: setCropRight,
-      cropTop: setCropTop,
-      cropBottom: setCropBottom,
-    }
-    if (setters[key]) {
-      setters[key](val)
-    }
-    if (image && selectedFormat) {
-      runConversion(image, selectedFormat, { [key]: val }, false)
-    }
-  }
-
-  const handleAutoCrop = () => {
-    if (!image) return
-    const bounds = detectSubjectBounds(image)
-    setCropLeft(bounds.cropLeft)
-    setCropRight(bounds.cropRight)
-    setCropTop(bounds.cropTop)
-    setCropBottom(bounds.cropBottom)
-    if (selectedFormat) {
-      runConversion(image, selectedFormat, {
-        cropLeft: bounds.cropLeft,
-        cropRight: bounds.cropRight,
-        cropTop: bounds.cropTop,
-        cropBottom: bounds.cropBottom,
-      }, false)
-    }
-  }
-
-  const handleResetCrop = () => {
-    setCropLeft(0)
-    setCropRight(0)
-    setCropTop(0)
-    setCropBottom(0)
-    if (image && selectedFormat) {
-      runConversion(image, selectedFormat, {
-        cropLeft: 0,
-        cropRight: 0,
-        cropTop: 0,
-        cropBottom: 0,
-      }, false)
-    }
-  }
+  }, [invert, minInk, outline, clipboardCols, cropLeft, cropRight, cropTop, cropBottom])
 
   const copyToClipboard = async (textToCopy) => {
     try {
@@ -190,11 +145,12 @@ export default function Converter() {
     setImage(img)
     setPreviewUrl(img.src)
 
-    // Reset crop states on new image upload
-    setCropLeft(0)
-    setCropRight(0)
-    setCropTop(0)
-    setCropBottom(0)
+    // Detect subject bounds automatically on upload
+    const bounds = detectSubjectBounds(img)
+    setCropLeft(bounds.cropLeft)
+    setCropRight(bounds.cropRight)
+    setCropTop(bounds.cropTop)
+    setCropBottom(bounds.cropBottom)
 
     // Set a reasonable default clipboard column width based on image size
     const maxCols = Math.floor(img.width / 2)
@@ -204,10 +160,10 @@ export default function Converter() {
     if (selectedFormat) {
       runConversion(img, selectedFormat, { 
         clipboardCols: defaultCols,
-        cropLeft: 0,
-        cropRight: 0,
-        cropTop: 0,
-        cropBottom: 0
+        cropLeft: bounds.cropLeft,
+        cropRight: bounds.cropRight,
+        cropTop: bounds.cropTop,
+        cropBottom: bounds.cropBottom
       }, false) // Do not copy to clipboard on upload
     }
   }
@@ -223,6 +179,7 @@ export default function Converter() {
     const setters = {
       invert: setInvert,
       minInk: setMinInk,
+      outline: setOutline,
     }
     if (setters[key]) {
       setters[key](value)
@@ -451,73 +408,7 @@ export default function Converter() {
             )}
           </div>
 
-          {/* Crop & Focus Panel */}
-          {image && (
-            <div className="fade-in" style={{
-              marginTop: 24,
-              padding: 16,
-              borderRadius: 12,
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              textAlign: 'left'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    ✂ Focus Subject
-                  </span>
-                  {(cropLeft > 0 || cropRight > 0 || cropTop > 0 || cropBottom > 0) ? (
-                    <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4, fontWeight: 500 }}>
-                      Focused (L: {Math.round(cropLeft * 100)}% | R: {Math.round(cropRight * 100)}% | T: {Math.round(cropTop * 100)}% | B: {Math.round(cropBottom * 100)}%)
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                      Full image bounds active
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleAutoCrop(); }}
-                    style={{
-                      background: 'var(--gradient)',
-                      border: 'none',
-                      color: 'white',
-                      padding: '6px 12px',
-                      borderRadius: 8,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(220, 39, 67, 0.15)',
-                    }}
-                  >
-                    ✨ Auto-Crop Background
-                  </button>
-                  {(cropLeft > 0 || cropRight > 0 || cropTop > 0 || cropBottom > 0) && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleResetCrop(); }}
-                      style={{
-                        background: 'transparent',
-                        border: '1px solid var(--border-bright)',
-                        color: 'var(--text-muted)',
-                        padding: '6px 12px',
-                        borderRadius: 8,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-              </div>
-              
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', opacity: 0.8, marginTop: 12, textAlign: 'center', borderTop: '1px dashed var(--border-bright)', paddingTop: 10 }}>
-                💡 Trims unwanted background edges to fit more details of the main object into the comment box width.
-              </div>
-            </div>
-          )}
+
 
           {/* Format Copy Buttons */}
           <div style={{ marginTop: 24 }}>
@@ -708,6 +599,10 @@ export default function Converter() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                 <input type="checkbox" checked={minInk} onChange={(e) => updateSetting('minInk', e.target.checked)} style={{ accentColor: '#49ffa3' }} />
                 <span>Fix alignment spacing</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={outline} onChange={(e) => updateSetting('outline', e.target.checked)} style={{ accentColor: '#49ffa3' }} />
+                <span>Outline Mode (Line Art)</span>
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                 <input type="checkbox" checked={fitScreen} onChange={(e) => setFitScreen(e.target.checked)} style={{ accentColor: '#49ffa3' }} />
