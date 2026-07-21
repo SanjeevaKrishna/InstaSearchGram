@@ -7,6 +7,32 @@ let liveCache = {
 }
 const CACHE_DURATION = 10 * 1000 // 10 seconds
 
+function parseCountText(text) {
+  if (!text) return 0;
+  const cleaned = text.toString().trim().toLowerCase();
+  const numMatch = cleaned.match(/^([0-9.]+)/);
+  if (!numMatch) return 0;
+  const num = parseFloat(numMatch[1]);
+  if (isNaN(num)) return 0;
+  
+  if (cleaned.includes('b') || cleaned.includes('billion')) {
+    return num * 1000000000;
+  }
+  if (cleaned.includes('m') || cleaned.includes('million')) {
+    return num * 1000000;
+  }
+  if (cleaned.includes('k') || cleaned.includes('thousand')) {
+    return num * 1000;
+  }
+  if (cleaned.includes('crore') || cleaned.includes('cr')) {
+    return num * 10000000;
+  }
+  if (cleaned.includes('lakh') || cleaned.includes('l')) {
+    return num * 100000;
+  }
+  return num;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET'])
@@ -98,10 +124,10 @@ export default async function handler(req, res) {
     })
 
     const sortedMostViewed = (mostViewedData || []).sort((a, b) => {
-      const rankA = a.order_index || 999999
-      const rankB = b.order_index || 999999
-      if (rankA !== rankB) {
-        return rankA - rankB
+      const countA = parseCountText(a.views_text)
+      const countB = parseCountText(b.views_text)
+      if (countA !== countB) {
+        return countB - countA
       }
       return new Date(b.created_at) - new Date(a.created_at)
     })
@@ -118,10 +144,10 @@ export default async function handler(req, res) {
     })
 
     const sortedMostLiked = (indiaMostLikedResult.data || []).sort((a, b) => {
-      const rankA = a.order_index || 999999
-      const rankB = b.order_index || 999999
-      if (rankA !== rankB) {
-        return rankA - rankB
+      const countA = parseCountText(a.likes_text)
+      const countB = parseCountText(b.likes_text)
+      if (countA !== countB) {
+        return countB - countA
       }
       return new Date(b.created_at) - new Date(a.created_at)
     })
@@ -138,10 +164,10 @@ export default async function handler(req, res) {
     })
 
     const sortedMostLikedReels = (mostLikedReelsResult.data || []).sort((a, b) => {
-      const rankA = a.order_index || 999999
-      const rankB = b.order_index || 999999
-      if (rankA !== rankB) {
-        return rankA - rankB
+      const countA = parseCountText(a.likes_text)
+      const countB = parseCountText(b.likes_text)
+      if (countA !== countB) {
+        return countB - countA
       }
       return new Date(b.created_at) - new Date(a.created_at)
     })

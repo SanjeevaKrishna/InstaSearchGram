@@ -214,7 +214,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
         <Navbar />
 
-        <main style={{ maxWidth: 600, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }} className="fade-in">
+        <main style={{ maxWidth: 850, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }} className="fade-in">
           {/* Back Button */}
           <button 
             onClick={() => router.push(`/celebrity/${slug}`)} 
@@ -291,19 +291,18 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
                   {formatCount(celebrity.followers_count)} followers
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
-                  <span>{formatCount(celebrity.posts_count || postsCount)} posts</span>
-                  {celebrity.account_created_year && (
-                    <>
-                      <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--border-bright)' }} />
-                      <span style={{ color: 'var(--text-dim)' }}>Joined: {celebrity.account_created_year}</span>
-                    </>
-                  )}
-                </div>
+                {celebrity.account_created_year && (
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
+                    Joined: {celebrity.account_created_year}
+                  </span>
+                )}
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {formatCount(celebrity.posts_count || postsCount)} posts
+                </span>
               </div>
             </div>
 
@@ -339,19 +338,18 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
                   {formatCount(compareCelebrity.followers_count)} followers
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
-                  <span>{formatCount(compareCelebrity.posts_count)} posts</span>
-                  {compareCelebrity.account_created_year && (
-                    <>
-                      <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--border-bright)' }} />
-                      <span style={{ color: 'var(--text-dim)' }}>Joined: {compareCelebrity.account_created_year}</span>
-                    </>
-                  )}
-                </div>
+                {compareCelebrity.account_created_year && (
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
+                    Joined: {compareCelebrity.account_created_year}
+                  </span>
+                )}
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {formatCount(compareCelebrity.posts_count)} posts
+                </span>
               </div>
             </div>
 
@@ -404,7 +402,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
       <Navbar />
 
-      <main style={{ maxWidth: !celebrity.has_full_details ? 800 : 600, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }}>
+      <main style={{ maxWidth: 850, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }}>
         {/* Back */}
         <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24, cursor: 'pointer', padding: 0 }}>
           ← Back to Search
@@ -449,21 +447,19 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   @{celebrity.instagram_handle}
                 </div>
               )}
-              {/* Inline Followers & Posts Metadata */}
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Vertical Stack Followers, Joined, Posts */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
                   <strong>{formatCount(celebrity.followers_count)}</strong> followers
                 </span>
-                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--border-bright)' }} />
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
-                  <span><strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts</span>
-                  {celebrity.account_created_year && (
-                    <>
-                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--border-bright)' }} />
-                      <span>Joined: <strong>{celebrity.account_created_year}</strong></span>
-                    </>
-                  )}
-                </div>
+                {celebrity.account_created_year && (
+                  <span style={{ fontSize: 13.5, color: 'var(--text-dim)', fontWeight: 600 }}>
+                    Joined: <strong>{celebrity.account_created_year}</strong>
+                  </span>
+                )}
+                <span style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts
+                </span>
               </div>
             </div>
 
@@ -490,6 +486,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             </button>
           </div>
         </div>
+
+
 
         {/* Account Insights (Premium Analytics Cards) */}
         {(celebrity.total_reel_views || celebrity.total_reel_likes || celebrity.total_post_likes || celebrity.total_comments || celebrity.total_shares || celebrity.total_reposts) ? (
@@ -752,23 +750,84 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               </>
             )}
 
-            {celebrity.description && (
-              <div style={{ marginBottom: 32, width: '100%' }}>
-                <div style={{
-                  width: '100%',
-                  height: '2px',
-                  background: 'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)',
-                  margin: '32px 0 24px',
-                  opacity: 0.8
-                }} />
-                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
-                  About {celebrity.name}
-                </h3>
-                <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0, wordBreak: 'break-word' }}>
-                  {celebrity.description}
-                </p>
+
+            {/* About & Social Media Insights (AdSense / SEO Compliance) */}
+            <div style={{ marginBottom: 32, width: '100%' }}>
+              <div style={{
+                width: '100%',
+                height: '2px',
+                background: 'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)',
+                margin: '32px 0 24px',
+                opacity: 0.8
+              }} />
+              
+              {celebrity.description && (
+                <>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
+                    About {celebrity.name}
+                  </h3>
+                  <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 20, wordBreak: 'break-word' }}>
+                    {celebrity.description}
+                  </p>
+                  
+                  {/* Pink-Red divider line */}
+                  <div style={{
+                    width: '100%',
+                    height: '1.5px',
+                    background: 'linear-gradient(90deg, var(--accent) 0%, transparent 100%)',
+                    margin: '24px 0 28px',
+                    opacity: 0.7
+                  }} />
+                </>
+              )}
+
+              {/* Dynamic Analytical Summary */}
+              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
+                Social Media Insights & Analytics
+              </h3>
+              <div style={{
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: '16px 20px',
+                lineHeight: 1.6,
+                fontSize: 14.5,
+                color: 'var(--text-dim)'
+              }}>
+                {(() => {
+                  const name = celebrity.name || 'This creator';
+                  const categoryStr = celebrity.category ? ` within the <strong>${celebrity.category}</strong> category` : '';
+                  const followersStr = celebrity.followers_count ? `, who has established a follower base of <strong>${formatCount(celebrity.followers_count)}</strong>${categoryStr}` : '';
+                  
+                  let interactionStr = '';
+                  if (celebrity.followers_interaction) {
+                    interactionStr = ` Analytical benchmarks indicate a strong audience interaction rate of <strong>${Number(celebrity.followers_interaction).toFixed(2)}%</strong> of total followers.`;
+                  }
+
+                  let metricsStr = '';
+                  const hasAvg = celebrity.average_post_likes || celebrity.average_views;
+                  if (hasAvg || celebrity.most_likes) {
+                    const avgLikes = celebrity.average_post_likes ? `<strong>${formatCount(celebrity.average_post_likes)}</strong> likes per post` : '';
+                    const avgViews = celebrity.average_views ? `<strong>${formatCount(celebrity.average_views)}</strong> average reel views` : '';
+                    const peakLikes = celebrity.most_likes ? `with peak engagement hitting <strong>${formatCount(celebrity.most_likes)}</strong> likes on their most popular post` : '';
+                    
+                    if (hasAvg) {
+                      const metricsList = [avgLikes, avgViews].filter(Boolean);
+                      const peakStr = peakLikes ? `, ${peakLikes}` : '';
+                      metricsStr = ` This engagement is driven by stellar audience response, averaging ${metricsList.join(' and ')}${peakStr} across recent content timelines.`;
+                    } else {
+                      metricsStr = ` This engagement is highlighted by stellar audience response, ${peakLikes} across recent content timelines.`;
+                    }
+                  }
+
+                  return (
+                    <p style={{ margin: 0 }} dangerouslySetInnerHTML={{
+                      __html: `Spialr provides comprehensive performance insights and profile statistics for <strong>${name}</strong>${followersStr}.${interactionStr}${metricsStr} This data outlines public engagement trends and audience metrics to help creators and Social Media users analyze content reach.`
+                    }} />
+                  );
+                })()}
               </div>
-            )}
+            </div>
           </div>
         )}
 

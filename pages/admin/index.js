@@ -21,6 +21,32 @@ function adminFetch(url, options = {}) {
   })
 }
 
+function parseCountText(text) {
+  if (!text) return 0;
+  const cleaned = text.toString().trim().toLowerCase();
+  const numMatch = cleaned.match(/^([0-9.]+)/);
+  if (!numMatch) return 0;
+  const num = parseFloat(numMatch[1]);
+  if (isNaN(num)) return 0;
+  
+  if (cleaned.includes('b') || cleaned.includes('billion')) {
+    return num * 1000000000;
+  }
+  if (cleaned.includes('m') || cleaned.includes('million')) {
+    return num * 1000000;
+  }
+  if (cleaned.includes('k') || cleaned.includes('thousand')) {
+    return num * 1000;
+  }
+  if (cleaned.includes('crore') || cleaned.includes('cr')) {
+    return num * 10000000;
+  }
+  if (cleaned.includes('lakh') || cleaned.includes('l')) {
+    return num * 100000;
+  }
+  return num;
+}
+
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
 function AdminModal({ isOpen, onClose, title, children }) {
@@ -869,6 +895,14 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
   const handleSave = async () => {
     if (!form.name.trim()) return setError('Name is required')
     
+    const followersVal = (form.followers_text || '').trim().toUpperCase();
+    if (!followersVal) {
+      return setError('Followers Count is required');
+    }
+    if (!/^[0-9]+(\.[0-9]+)?[KMB]$/.test(followersVal)) {
+      return setError('Followers Count must be a number followed by K, M, or B (e.g., 270M, 10K)');
+    }
+
     // Validate categories
     if (selectedCategories.length === 0) return setError('At least one category is required')
     for (let i = 0; i < selectedCategories.length; i++) {
@@ -893,7 +927,6 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
         body: {
           ...form,
           id: initial?.id || form.id,
-          followers_count: form.followers_count ? Number(form.followers_count) : 0,
           order_index: form.order_index ? Number(form.order_index) : 0,
           category: combinedCategory,
           language: combinedLanguage
@@ -932,14 +965,21 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           </div>
         )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Followers Count (Number for sorting)</label>
-          <input className="input-field" type="number" value={form.followers_count} onChange={e => set('followers_count', e.target.value)} placeholder="e.g. 270000000" />
-        </div>
-        <div>
-          <label style={labelStyle}>Followers Text (Custom display)</label>
-          <input className="input-field" value={form.followers_text} onChange={e => set('followers_text', e.target.value)} placeholder="e.g. 270M or 27 Cr" />
+          <label style={labelStyle}>Followers Count (e.g. 270M, 10K, 1.2B) *</label>
+          <input 
+            className="input-field" 
+            value={form.followers_text || ''} 
+            onChange={e => {
+              const val = e.target.value;
+              const cleaned = val.replace(/[^0-9.kmbKMB]/g, '');
+              if (/^[0-9]*\.?[0-9]*[kmbKMB]?$/.test(cleaned) || cleaned === '') {
+                set('followers_text', cleaned.toUpperCase());
+              }
+            }} 
+            placeholder="e.g. 270M" 
+          />
         </div>
       </div>
 
@@ -1141,7 +1181,7 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         ...initial,
         order_index: initial.order_index !== undefined && initial.order_index !== null ? initial.order_index.toString() : '0',
         followers_text: initial.followers_text || '',
-        views_text: initial.views_text || initial.likes_text || '',
+        views_text: initial.isCopy ? '' : (initial.views_text || initial.likes_text || ''),
         hours_ago: getInitialHoursAgo(initial.created_at),
         uploaded_date: initialDate
       }
@@ -1167,6 +1207,20 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
   const handleSave = async () => {
     if (!form.title.trim()) return setError('Title is required')
     if (!form.instagram_link.trim()) return setError('Instagram link is required')
+    if (isMostViewed || isMostLiked) {
+      const viewsVal = (form.views_text || '').trim().toUpperCase();
+      if (!viewsVal) {
+        return setError(`${isMostLiked ? 'Likes' : 'Views'} count is required`);
+      }
+      if (!/^[0-9]+(\.[0-9]+)?[KMB]$/.test(viewsVal)) {
+        return setError(`${isMostLiked ? 'Likes' : 'Views'} count must be a number followed by K, M, or B (e.g., 45M, 500K)`);
+      }
+      
+      const followersVal = (form.followers_text || '').trim().toUpperCase();
+      if (followersVal && !/^[0-9]+(\.[0-9]+)?[KMB]$/.test(followersVal)) {
+        return setError(`Followers count must be a number followed by K, M, or B (e.g., 10M, 500K)`);
+      }
+    }
     setSaving(true)
     setError('')
     try {
@@ -1179,10 +1233,10 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
           })()
 
       const res = await adminFetch(apiEndpoint, {
-        method: initial ? 'PUT' : 'POST',
+        method: (initial && !initial.isCopy) ? 'PUT' : 'POST',
         body: {
           ...form,
-          id: initial?.id,
+          id: (initial && !initial.isCopy) ? initial.id : undefined,
           order_index: form.order_index ? Number(form.order_index) : 0,
           creator_name: form.creator_name || '',
           creator_photo_url: form.creator_photo_url || '',
@@ -1201,6 +1255,46 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
     }
   }
 
+  if (initial && initial.isCopy) {
+    return (
+      <div style={{ display: 'grid', gap: 16 }}>
+        <div style={{ padding: '12px 16px', background: 'var(--surface2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Copying Reel details</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{form.title}</div>
+          <div style={{ fontSize: 12, color: 'var(--accent)' }}>by {form.creator_name || '@anonymous'}</div>
+        </div>
+        
+        <div>
+          <label style={labelStyle}>
+            {isMostLiked ? 'Likes Count (e.g. 1.2M, 500K) *' : 'Views Count (e.g. 1.2M, 500K) *'}
+          </label>
+          <input 
+            className="input-field" 
+            value={form.views_text || ''} 
+            onChange={e => {
+              const val = e.target.value;
+              const cleaned = val.replace(/[^0-9.kmbKMB]/g, '');
+              if (/^[0-9]*\.?[0-9]*[kmbKMB]?$/.test(cleaned) || cleaned === '') {
+                set('views_text', cleaned.toUpperCase());
+              }
+            }} 
+            placeholder={isMostLiked ? "e.g. 500K" : "e.g. 1.2M"} 
+            autoFocus
+          />
+        </div>
+        
+        {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
+        
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'Copying...' : (isMostLiked ? 'Confirm Copy to Most Liked' : 'Confirm Copy to Most Viewed')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <div>
@@ -1208,15 +1302,17 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         <input className="input-field" value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Virat Kohli historic knock..." />
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: (isMostViewed || isMostLiked) ? '1fr' : '1fr 1fr', gap: 12 }}>
         <div>
           <label style={labelStyle}>Creator Name</label>
           <input className="input-field" value={form.creator_name || ''} onChange={e => set('creator_name', e.target.value)} placeholder="e.g. Virat Kohli" />
         </div>
-        <div>
-          <label style={labelStyle}>Rank (e.g. 1 for 1st, 2 for 2nd)</label>
-          <input className="input-field" type="number" value={form.order_index || ''} onChange={e => set('order_index', e.target.value)} placeholder="e.g. 1 or 2" />
-        </div>
+        {!(isMostViewed || isMostLiked) && (
+          <div>
+            <label style={labelStyle}>Rank (e.g. 1 for 1st, 2 for 2nd)</label>
+            <input className="input-field" type="number" value={form.order_index || ''} onChange={e => set('order_index', e.target.value)} placeholder="e.g. 1 or 2" />
+          </div>
+        )}
       </div>
 
       <div>
@@ -1304,12 +1400,44 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
         <div>
-          <label style={labelStyle}>Followers Count (e.g. 270M, 10k, 5 Crore)</label>
-          <input className="input-field" value={form.followers_text || ''} onChange={e => set('followers_text', e.target.value)} placeholder="e.g. 270M" />
+          <label style={labelStyle}>Followers Count (e.g. 270M, 10K)</label>
+          <input 
+            className="input-field" 
+            value={form.followers_text || ''} 
+            onChange={e => {
+              const val = e.target.value;
+              if (isMostViewed || isMostLiked) {
+                const cleaned = val.replace(/[^0-9.kmbKMB]/g, '');
+                if (/^[0-9]*\.?[0-9]*[kmbKMB]?$/.test(cleaned) || cleaned === '') {
+                  set('followers_text', cleaned.toUpperCase());
+                }
+              } else {
+                set('followers_text', val);
+              }
+            }} 
+            placeholder="e.g. 270M" 
+          />
         </div>
         <div>
-          <label style={labelStyle}>{isMostLiked ? 'Likes Count (e.g. 1.2M, 500k)' : 'Views Count (e.g. 1.2M, 500k)'}</label>
-          <input className="input-field" value={form.views_text || ''} onChange={e => set('views_text', e.target.value)} placeholder={isMostLiked ? "e.g. 50k" : "e.g. 1.2M"} />
+          <label style={labelStyle}>
+            {isMostLiked ? 'Likes Count (e.g. 1.2M, 500K)' : 'Views Count (e.g. 1.2M, 500K)'}
+          </label>
+          <input 
+            className="input-field" 
+            value={form.views_text || ''} 
+            onChange={e => {
+              const val = e.target.value;
+              if (isMostViewed || isMostLiked) {
+                const cleaned = val.replace(/[^0-9.kmbKMB]/g, '');
+                if (/^[0-9]*\.?[0-9]*[kmbKMB]?$/.test(cleaned) || cleaned === '') {
+                  set('views_text', cleaned.toUpperCase());
+                }
+              } else {
+                set('views_text', val);
+              }
+            }} 
+            placeholder={isMostLiked ? "e.g. 500K" : "e.g. 1.2M"} 
+          />
         </div>
       </div>
 
@@ -1346,6 +1474,7 @@ export default function AdminPanel() {
   const [tab, setTab] = useState('celebrities')
   const [celebrities, setCelebrities] = useState([])
   const [posts, setPosts] = useState([])
+  const [expandedCels, setExpandedCels] = useState({})
   const [news, setNews] = useState([])
 
   const [mostFollowed, setMostFollowed] = useState([])
@@ -2418,60 +2547,109 @@ export default function AdminPanel() {
                       </div>
                     )
                   }
-                  return filtered.map(post => {
-                    const cel = celebrities.find(c => c.id === post.celebrity_id)
+                  const groupedByCel = {}
+                  filtered.forEach(post => {
+                    const celId = post.celebrity_id || 'unassigned'
+                    if (!groupedByCel[celId]) groupedByCel[celId] = []
+                    groupedByCel[celId].push(post)
+                  })
+
+                  return Object.keys(groupedByCel).map(celId => {
+                    const cel = celebrities.find(c => c.id === celId)
+                    const celName = cel ? cel.name : 'General / Unassigned Posts'
+                    const celPosts = groupedByCel[celId]
+                    const isExpanded = expandedCels[celId]
+
                     return (
-                      <div key={post.id} style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', padding: 16 }}>
-                        {cel && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
-                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Celebrity:</span>
-                            <strong style={{ fontSize: 13, color: 'var(--text)' }}>{cel.name}</strong>
+                      <div key={celId} className="card" style={{ marginBottom: 12, padding: 0, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                        {/* Folder Header */}
+                        <div 
+                          onClick={() => setExpandedCels(prev => ({ ...prev, [celId]: !prev[celId] }))}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '16px 20px',
+                            background: 'var(--surface2)',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            borderBottom: isExpanded ? '1px solid var(--border)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-bright)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--surface2)'}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700 }}>
+                            <span style={{ fontSize: 20 }}>📁</span>
+                            <span style={{ color: 'var(--text)' }}>{celName}</span>
+                            <span style={{
+                              fontSize: 12,
+                              background: 'var(--accent)',
+                              color: '#fff',
+                              padding: '2px 8px',
+                              borderRadius: 100,
+                              fontWeight: 600
+                            }}>
+                              {celPosts.length} {celPosts.length === 1 ? 'post' : 'posts'}
+                            </span>
                           </div>
-                        )}
-                        
-                        <PostCard post={post} />
-
-                        {post.playlist_name && (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface2)', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', marginTop: 4 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                              <span>📺 Playlist:</span>
-                              <strong>{post.playlist_name}</strong>
-                            </div>
-                            <button
-                              onClick={() => handleRemovePostFromPlaylist(post)}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#ff5252',
-                                fontSize: 16,
-                                cursor: 'pointer',
-                                padding: '2px 6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                              title="Remove from Playlist"
-                            >
-                              ✕
-                            </button>
+                          <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
+                            {isExpanded ? '▼ Collapse' : '▶ Expand'}
                           </div>
-                        )}
-
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                          <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
-                            onClick={() => { setEditingPost(post); setShowPostForm(false) }}>
-                            ✏️ Edit Post
-                          </button>
-                          <button
-                            onClick={() => deletePost(post.id)}
-                            style={{
-                              background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                              color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
-                            }}
-                          >
-                            🗑 Delete Post
-                          </button>
                         </div>
+
+                        {/* Folder Contents (only visible when expanded) */}
+                        {isExpanded && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, background: 'var(--surface)' }}>
+                            {celPosts.map(post => (
+                              <div key={post.id} style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface2)', padding: 16 }}>
+                                <PostCard post={post} />
+
+                                {post.playlist_name && (
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface)', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', marginTop: 4 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                                      <span>📺 Playlist:</span>
+                                      <strong>{post.playlist_name}</strong>
+                                    </div>
+                                    <button
+                                      onClick={() => handleRemovePostFromPlaylist(post)}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#ff5252',
+                                        fontSize: 16,
+                                        cursor: 'pointer',
+                                        padding: '2px 6px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                      }}
+                                      title="Remove from Playlist"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                )}
+
+                                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                                  <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
+                                    onClick={() => { setEditingPost(post); setShowPostForm(false) }}>
+                                    ✏️ Edit Post
+                                  </button>
+                                  <button
+                                    onClick={() => deletePost(post.id)}
+                                    style={{
+                                      background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                                      color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
+                                    }}
+                                  >
+                                    🗑 Delete Post
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )
                   })
@@ -3087,19 +3265,6 @@ export default function AdminPanel() {
                 Most Viewed Reels ({mostViewedReels.length})
               </h2>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  className={`btn ${reorderMode ? 'btn-success' : 'btn-ghost'}`}
-                  onClick={() => setReorderMode(!reorderMode)}
-                  style={{
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    border: reorderMode ? '1px solid #28a745' : '1px solid var(--border)',
-                    background: reorderMode ? 'rgba(40, 167, 69, 0.1)' : 'transparent',
-                    color: reorderMode ? '#28a745' : 'var(--text)'
-                  }}
-                >
-                  {reorderMode ? '🔒 Done Reordering' : '🔧 Reorder Positions'}
-                </button>
                 {!showMostViewedReelsForm && !editingMostViewedReels && (
                   <button className="btn btn-primary" onClick={() => setShowMostViewedReelsForm(true)}>
                     + Add Reel
@@ -3119,9 +3284,25 @@ export default function AdminPanel() {
                   initial={editingMostViewedReels}
                   onSave={(reel) => {
                     if (editingMostViewedReels) {
-                      setMostViewedReels(r => r.map(x => x.id === reel.id ? reel : x))
+                      setMostViewedReels(r => {
+                        const updated = r.map(x => x.id === reel.id ? reel : x)
+                        return updated.sort((a, b) => {
+                          const countA = parseCountText(a.views_text)
+                          const countB = parseCountText(b.views_text)
+                          if (countA !== countB) return countB - countA
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        })
+                      })
                     } else {
-                      setMostViewedReels(r => [reel, ...r])
+                      setMostViewedReels(r => {
+                        const updated = [reel, ...r]
+                        return updated.sort((a, b) => {
+                          const countA = parseCountText(a.views_text)
+                          const countB = parseCountText(b.views_text)
+                          if (countA !== countB) return countB - countA
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        })
+                      })
                     }
                     setShowMostViewedReelsForm(false)
                     setEditingMostViewedReels(null)
@@ -3252,6 +3433,10 @@ export default function AdminPanel() {
                             <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View Link</button>
                           </a>
                           <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                            onClick={() => { setTab('most_liked_reels'); setEditingMostLikedReels({ ...item, isCopy: true }); setShowMostLikedReelsForm(false); }}>
+                            Copy to Likes
+                          </button>
+                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
                             onClick={() => { setEditingMostViewedReels(item); setShowMostViewedReelsForm(false) }}>
                             Edit
                           </button>
@@ -3282,19 +3467,6 @@ export default function AdminPanel() {
                 Most Liked Posts ({mostLikedPosts.length})
               </h2>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  className={`btn ${reorderMode ? 'btn-success' : 'btn-ghost'}`}
-                  onClick={() => setReorderMode(!reorderMode)}
-                  style={{
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    border: reorderMode ? '1px solid #28a745' : '1px solid var(--border)',
-                    background: reorderMode ? 'rgba(40, 167, 69, 0.1)' : 'transparent',
-                    color: reorderMode ? '#28a745' : 'var(--text)'
-                  }}
-                >
-                  {reorderMode ? '🔒 Done Reordering' : '🔧 Reorder Positions'}
-                </button>
                 {!showMostLikedPostsForm && !editingMostLikedPosts && (
                   <button className="btn btn-primary" onClick={() => setShowMostLikedPostsForm(true)}>
                     + Add Post
@@ -3314,9 +3486,25 @@ export default function AdminPanel() {
                   initial={editingMostLikedPosts}
                   onSave={(post) => {
                     if (editingMostLikedPosts) {
-                      setMostLikedPosts(r => r.map(x => x.id === post.id ? post : x))
+                      setMostLikedPosts(r => {
+                        const updated = r.map(x => x.id === post.id ? post : x)
+                        return updated.sort((a, b) => {
+                          const countA = parseCountText(a.likes_text)
+                          const countB = parseCountText(b.likes_text)
+                          if (countA !== countB) return countB - countA
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        })
+                      })
                     } else {
-                      setMostLikedPosts(r => [post, ...r])
+                      setMostLikedPosts(r => {
+                        const updated = [post, ...r]
+                        return updated.sort((a, b) => {
+                          const countA = parseCountText(a.likes_text)
+                          const countB = parseCountText(b.likes_text)
+                          if (countA !== countB) return countB - countA
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        })
+                      })
                     }
                     setShowMostLikedPostsForm(false)
                     setEditingMostLikedPosts(null)
@@ -3483,19 +3671,6 @@ export default function AdminPanel() {
                 Most Liked Reels ({mostLikedReels.length})
               </h2>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  className={`btn ${reorderMode ? 'btn-success' : 'btn-ghost'}`}
-                  onClick={() => setReorderMode(!reorderMode)}
-                  style={{
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    border: reorderMode ? '1px solid #28a745' : '1px solid var(--border)',
-                    background: reorderMode ? 'rgba(40, 167, 69, 0.1)' : 'transparent',
-                    color: reorderMode ? '#28a745' : 'var(--text)'
-                  }}
-                >
-                  {reorderMode ? '🔒 Done Reordering' : '🔧 Reorder Positions'}
-                </button>
                 {!showMostLikedReelsForm && !editingMostLikedReels && (
                   <button className="btn btn-primary" onClick={() => setShowMostLikedReelsForm(true)}>
                     + Add Reel
@@ -3515,9 +3690,25 @@ export default function AdminPanel() {
                   initial={editingMostLikedReels}
                   onSave={(reel) => {
                     if (editingMostLikedReels) {
-                      setMostLikedReels(r => r.map(x => x.id === reel.id ? reel : x))
+                      setMostLikedReels(r => {
+                        const updated = r.map(x => x.id === reel.id ? reel : x)
+                        return updated.sort((a, b) => {
+                          const countA = parseCountText(a.likes_text)
+                          const countB = parseCountText(b.likes_text)
+                          if (countA !== countB) return countB - countA
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        })
+                      })
                     } else {
-                      setMostLikedReels(r => [reel, ...r])
+                      setMostLikedReels(r => {
+                        const updated = [reel, ...r]
+                        return updated.sort((a, b) => {
+                          const countA = parseCountText(a.likes_text)
+                          const countB = parseCountText(b.likes_text)
+                          if (countA !== countB) return countB - countA
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        })
+                      })
                     }
                     setShowMostLikedReelsForm(false)
                     setEditingMostLikedReels(null)
@@ -3653,6 +3844,10 @@ export default function AdminPanel() {
                           <a href={item.instagram_link} target="_blank" rel="noopener noreferrer">
                             <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View Link</button>
                           </a>
+                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                            onClick={() => { setTab('most_viewed_reels'); setEditingMostViewedReels({ ...item, isCopy: true }); setShowMostViewedReelsForm(false); }}>
+                            Copy to Views
+                          </button>
                           <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
                             onClick={() => { setEditingMostLikedReels(item); setShowMostLikedReelsForm(false) }}>
                             Edit

@@ -12,6 +12,32 @@ function verifyAdmin(req) {
   }
 }
 
+function parseCountText(text) {
+  if (!text) return 0;
+  const cleaned = text.toString().trim().toLowerCase();
+  const numMatch = cleaned.match(/^([0-9.]+)/);
+  if (!numMatch) return 0;
+  const num = parseFloat(numMatch[1]);
+  if (isNaN(num)) return 0;
+  
+  if (cleaned.includes('b') || cleaned.includes('billion')) {
+    return num * 1000000000;
+  }
+  if (cleaned.includes('m') || cleaned.includes('million')) {
+    return num * 1000000;
+  }
+  if (cleaned.includes('k') || cleaned.includes('thousand')) {
+    return num * 1000;
+  }
+  if (cleaned.includes('crore') || cleaned.includes('cr')) {
+    return num * 10000000;
+  }
+  if (cleaned.includes('lakh') || cleaned.includes('l')) {
+    return num * 100000;
+  }
+  return num;
+}
+
 export default async function handler(req, res) {
   try {
     if (!verifyAdmin(req)) {
@@ -43,13 +69,15 @@ export default async function handler(req, res) {
 
     // POST - add a new profile
     if (req.method === 'POST') {
-      const { name, photo_url, followers_count, followers_text, order_index, category, language } = req.body
+      const { name, photo_url, followers_text, order_index, category, language } = req.body
       if (!name) return res.status(400).json({ error: 'Name is required' })
+
+      const calculatedFollowersCount = parseCountText(followers_text)
 
       const payload = {
         name,
         photo_url,
-        followers_count: followers_count ? Number(followers_count) : 0,
+        followers_count: calculatedFollowersCount,
         followers_text: followers_text || '',
         order_index: order_index ? Number(order_index) : 0,
         category: category || '',
@@ -152,10 +180,12 @@ export default async function handler(req, res) {
       // Normal single record update
       if (!id) return res.status(400).json({ error: 'ID is required' })
 
+      const calculatedFollowersCount = parseCountText(followers_text)
+
       const payload = {
         name,
         photo_url,
-        followers_count: followers_count ? Number(followers_count) : 0,
+        followers_count: calculatedFollowersCount,
         followers_text: followers_text || '',
         order_index: order_index ? Number(order_index) : 0,
         category: category || '',

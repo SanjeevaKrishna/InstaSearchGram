@@ -132,7 +132,7 @@ export default function Navbar() {
                     <AlertTriangle size={14} style={{ marginRight: 8 }} /> Disclaimer
                   </Link>
                   <Link href="/dmca" className="dropdown-item" onClick={closeDropdown}>
-                    <Scale size={14} style={{ marginRight: 8 }} /> DMCA (optional but good)
+                    <Scale size={14} style={{ marginRight: 8 }} /> DMCA Policy
                   </Link>
                   <Link href="/request" className="dropdown-item" onClick={closeDropdown}>
                     <PlusCircle size={14} style={{ marginRight: 8 }} /> Request Creator / Suggest Profile

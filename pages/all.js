@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
+import { Search } from 'lucide-react'
 
 const formatCount = (num) => {
   if (!num) return '0'
@@ -21,6 +22,7 @@ export default function AllCelebrities() {
   const [loading, setLoading] = useState(true)
   const [originalCelebrity, setOriginalCelebrity] = useState(null)
   const [selectedCel, setSelectedCel] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetch('/api/celebrities?limit=all')
@@ -73,6 +75,14 @@ export default function AllCelebrities() {
       cel.name?.toLowerCase().includes('convertor')
 
     if (compare && isDotConverter) return acc
+
+    // Filter by search query (case-insensitive name check)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      if (!cel.name?.toLowerCase().includes(q)) {
+        return acc
+      }
+    }
 
     const letter = (cel.name?.charAt(0) || '#').toUpperCase()
     if (!acc[letter]) acc[letter] = []
@@ -232,10 +242,82 @@ export default function AllCelebrities() {
           fontFamily: 'var(--font-display)',
           fontSize: 28,
           fontWeight: 800,
-          marginBottom: 24,
+          marginBottom: compare ? 12 : 24,
         }}>
-          All Available Profiles:
+          {compare ? 'Select Profile to Compare:' : 'All Available Profiles:'}
         </h1>
+
+        {originalCelebrity && (
+          <div style={{ fontSize: 15, color: 'var(--text-muted)', marginBottom: 24 }}>
+            Comparing with: <strong>{originalCelebrity.name}</strong>
+          </div>
+        )}
+
+        {/* Small Search Bar */}
+        <div style={{ position: 'relative', marginBottom: 24, maxWidth: 500 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            background: 'var(--surface)',
+            border: '1px solid var(--border-bright)',
+            borderRadius: 12,
+            padding: '4px 4px 4px 14px',
+            gap: 8,
+            transition: 'all 0.2s ease-in-out',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
+          onFocusCapture={(e) => {
+            const container = e.currentTarget;
+            container.style.borderColor = 'var(--accent)';
+            container.style.boxShadow = '0 0 0 3px rgba(225, 48, 108, 0.15)';
+          }}
+          onBlurCapture={(e) => {
+            const container = e.currentTarget;
+            container.style.borderColor = 'var(--border-bright)';
+            container.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)';
+          }}
+          >
+            <Search size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search profiles..."
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                fontSize: 15,
+                flex: 1,
+                padding: '8px 0',
+                outline: 'none',
+                color: 'var(--text)',
+                fontFamily: 'Roboto, "Segoe UI", sans-serif'
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  background: 'var(--surface2)',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  width: 26,
+                  height: 26,
+                  borderRadius: 6,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 2
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
 
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
@@ -257,8 +339,23 @@ export default function AllCelebrities() {
                 </div>
               ))
             })()}
+
+            {celebrities.length > 0 && sortedLetters.length > 0 && (
+              <div style={{
+                textAlign: 'center',
+                padding: '24px 20px',
+                color: 'var(--accent)',
+                fontWeight: 600,
+                fontSize: 14,
+                letterSpacing: '0.02em',
+                fontFamily: 'Roboto, "Segoe UI", sans-serif',
+                marginTop: 20
+              }}>
+                ✨ More profiles will be added soon!
+              </div>
+            )}
             
-            {celebrities.length === 0 && (
+            {(celebrities.length === 0 || sortedLetters.length === 0) && (
               <div style={{ textAlign: 'center', color: '#757575', padding: 40 }}>
                 No profiles found.
               </div>

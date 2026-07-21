@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
+import Link from 'next/link'
 import CelebrityCard from '../components/CelebrityCard'
 import Navbar from '../components/Navbar'
 import { Sparkles, Search, Flame, Inbox } from 'lucide-react'
@@ -280,6 +281,7 @@ export default function Home() {
             </div>
           </div>
         )}
+
 
         {/* Empty state - no featured */}
         {!loadingFeatured && featured.length === 0 && !query && (

@@ -103,6 +103,13 @@ export default function About() {
           </div>
 
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>
+            Our Curation & Quality Standard
+          </h2>
+          <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.8, marginBottom: 32 }}>
+            Unlike automated aggregators or crawlers that scrap the web, <strong>every profile standings, ranking index, and playlist featured on Spialr is compiled, researched, and entered manually</strong> by our dedicated curation team. We analyze public benchmarks directly from official creator feeds, ensuring complete accuracy of data and respect for intellectual property rights.
+          </p>
+
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>
             Get in Touch
           </h2>
           <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.8, marginBottom: 24 }}>
