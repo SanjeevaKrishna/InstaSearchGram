@@ -36,11 +36,32 @@ Finally, we have integrated Adsterra advertisement units across key pages in a h
 
 ### 5. Live (Most Followed) Section Spacing Optimization
 * **[pages/live.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/live.js):**
-  - Moved **Most Followed** and **Voting** tabs to the left.
-  - Moved the **Language Filter Dropdown** to the right side of the exact same row.
-  - Reduced page margins and padding offsets to bring the leaderboard table directly to the top of the screen.
+  - **getServerSideProps Enhancements**:
+    - Configured automatic sorting algorithms (via views, likes, or order indices) matching `/api/live` to calculate the absolute rank of the current reel on SSR load.
+    - Fetched all celebrity data to map corresponding slugs and avatar photos for enriched layouts.
 
-### 6. Search Engine Optimization & Redirects
+### 5. Manual Reel Descriptions (Most Viewed Section only) & Safeguards
+- **[pages/reel/[id].js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/reel/[id].js):**
+  - **About this Reel Section**: Added a new dynamic card below the main details layout that presents a unique 2–4 sentence manual description of the specific reel. If no description is entered, the entire card is hidden cleanly.
+  - **Why Notable Context**: Embedded an optional "Why Notable" highlight inside the description section for displaying facts or context (e.g. record achievements).
+  - **Non-Clickable Thumbnail**: Removed the cursor pointer, hover zoom, and play button icon overlay from the big thumbnail image. Users now click the brand-gradient watch CTA button to view the reel on Instagram, preventing redirect loops.
+  - **Zero-Value Metric Hiding**: Configured followers, views, and likes cards to hide completely if their values are zero (`"0"`) or undefined. The natural language Insights summary dynamically adapts its phrasing depending on which metrics are available to avoid rendering misleading `"0"` placeholders.
+- **Database Schema & Migrations:**
+  - Created [add-reel-description-and-notable.sql](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/add-reel-description-and-notable.sql) database script adding `description` and `why_notable` columns to `most_viewed_reels`, `most_liked_reels`, and `most_liked_posts` tables.
+- **Admin panel API routes:**
+  - Updated API handlers (`most_viewed_reels.js`, `most_liked_reels.js`, `most_liked_posts.js`) to support saving of the `description` and `why_notable` fields to the database. Reverted support from viral endpoint to align with target table schema.
+- **Admin Panel UI Form:**
+  - Updated `ViralReelsForm` inside `pages/admin/index.js` to render the `description` and `why_notable` fields ONLY when adding, editing, or copying to Most Viewed Reels, Most Liked Reels, or Most Liked Posts (i.e. the Most Viewed section tables).
+
+### 6. Template Variations & Rankings Methodology Page
+- **[pages/celebrity/[slug].js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/celebrity/[slug].js):**
+  - **Insights Template Variations**: Configured 4 completely different paragraph formats and sentences for the dynamic "Social Media Insights & Analytics" summary card. The format is selected deterministically for each creator profile based on a hash of their database ID and name, preventing index duplication/boilerplate issues on Google AdSense.
+- **[pages/methodology.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/methodology.js):**
+  - **How Spialr Data & Rankings Work Page**: Created a dedicated public informational page outlining Spialr's benchmarking role, manual curation standards, metric sorting rules, and the dynamic nature of recorded count snapshots.
+- **[pages/_app.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/_app.js) & [components/Footer.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/components/Footer.js):**
+  - Added footer link for the methodology route and added `/methodology` to Next.js layout wrappers to render the navigation links cleanly.
+
+### 7. Search Engine Optimization & Redirects
 * **[vercel.json](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/vercel.json):**
   - Flipped hosting-level redirects to canonicalize all `www.spialr.com` requests directly to `https://spialr.com` with a 301 Permanent Redirect.
 * **[pages/_app.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/_app.js):**

@@ -74,7 +74,7 @@ export default function App({ Component, pageProps }) {
         />
       </Head>
       <Component {...pageProps} />
-      {!isAdmin && ['/about', '/contact', '/privacy', '/terms', '/disclaimer', '/dmca', '/request'].includes(router.pathname) && <Footer />}
+      {!isAdmin && ['/about', '/contact', '/privacy', '/terms', '/disclaimer', '/dmca', '/request', '/methodology'].includes(router.pathname) && <Footer />}
       {!isAdmin && <BottomNav />}
       {!isAdmin && ['/', '/all', '/trending', '/live'].includes(router.pathname) && !(router.pathname === '/all' && router.query.compare) && (
         <Link href="/converter">

@@ -59,6 +59,7 @@ export default function Footer() {
             <h4 style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 16, fontSize: 14 }}>Support</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <Link href="/about" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>About Us</Link>
+              <Link href="/methodology" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Ranking Methodology</Link>
               <Link href="/contact" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Contact Us</Link>
               <Link href="/request" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Request Profile</Link>
               <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Sitemap</a>

@@ -100,7 +100,7 @@ export default async function handler(req, res) {
 
     // POST - add a new most liked post
     if (req.method === 'POST') {
-      const { title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, likes_text, created_at } = req.body
+      const { title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, likes_text, created_at, description, why_notable } = req.body
       if (!title) return res.status(400).json({ error: 'Title is required' })
       if (!instagram_link) return res.status(400).json({ error: 'Instagram link is required' })
 
@@ -113,6 +113,8 @@ export default async function handler(req, res) {
         creator_photo_url: creator_photo_url || '',
         followers_text: followers_text || '',
         likes_text: likes_text || '',
+        description: description || '',
+        why_notable: why_notable || '',
         ...(created_at ? { created_at } : {})
       }
 
@@ -128,7 +130,7 @@ export default async function handler(req, res) {
 
     // PUT - update a most liked post
     if (req.method === 'PUT') {
-      const { id, title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, likes_text, created_at } = req.body
+      const { id, title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, likes_text, created_at, description, why_notable } = req.body
       if (!id) return res.status(400).json({ error: 'ID is required' })
       if (!title) return res.status(400).json({ error: 'Title is required' })
       if (!instagram_link) return res.status(400).json({ error: 'Instagram link is required' })
@@ -142,6 +144,8 @@ export default async function handler(req, res) {
         creator_photo_url: creator_photo_url || '',
         followers_text: followers_text || '',
         likes_text: likes_text || '',
+        description: description || '',
+        why_notable: why_notable || '',
         ...(created_at ? { created_at } : {})
       }
 

@@ -796,34 +796,103 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               }}>
                 {(() => {
                   const name = celebrity.name || 'This creator';
-                  const categoryStr = celebrity.category ? ` within the <strong>${celebrity.category}</strong> category` : '';
-                  const followersStr = celebrity.followers_count ? `, who has established a follower base of <strong>${formatCount(celebrity.followers_count)}</strong>${categoryStr}` : '';
-                  
-                  let interactionStr = '';
-                  if (celebrity.followers_interaction) {
-                    interactionStr = ` Analytical benchmarks indicate a strong audience interaction rate of <strong>${Number(celebrity.followers_interaction).toFixed(2)}%</strong> of total followers.`;
-                  }
+                  const category = celebrity.category || '';
+                  const followersVal = celebrity.followers_count ? formatCount(celebrity.followers_count) : '';
+                  const interactionVal = celebrity.followers_interaction ? Number(celebrity.followers_interaction).toFixed(2) + '%' : '';
+                  const avgLikesVal = celebrity.average_post_likes ? formatCount(celebrity.average_post_likes) : '';
+                  const avgViewsVal = celebrity.average_views ? formatCount(celebrity.average_views) : '';
+                  const peakLikesVal = celebrity.most_likes ? formatCount(celebrity.most_likes) : '';
 
-                  let metricsStr = '';
-                  const hasAvg = celebrity.average_post_likes || celebrity.average_views;
-                  if (hasAvg || celebrity.most_likes) {
-                    const avgLikes = celebrity.average_post_likes ? `<strong>${formatCount(celebrity.average_post_likes)}</strong> likes per post` : '';
-                    const avgViews = celebrity.average_views ? `<strong>${formatCount(celebrity.average_views)}</strong> average reel views` : '';
-                    const peakLikes = celebrity.most_likes ? `with peak engagement hitting <strong>${formatCount(celebrity.most_likes)}</strong> likes on their most popular post` : '';
-                    
-                    if (hasAvg) {
-                      const metricsList = [avgLikes, avgViews].filter(Boolean);
-                      const peakStr = peakLikes ? `, ${peakLikes}` : '';
-                      metricsStr = ` This engagement is driven by stellar audience response, averaging ${metricsList.join(' and ')}${peakStr} across recent content timelines.`;
-                    } else {
-                      metricsStr = ` This engagement is highlighted by stellar audience response, ${peakLikes} across recent content timelines.`;
+                  const metricsList = [];
+                  if (avgLikesVal) metricsList.push(`<strong>${avgLikesVal}</strong> likes per post`);
+                  if (avgViewsVal) metricsList.push(`<strong>${avgViewsVal}</strong> average reel views`);
+                  const metricsListJoined = metricsList.join(' and ');
+
+                  // Choose template index deterministically based on celebrity name/ID hash
+                  const templateIndex = ((celebrity.id || '').charCodeAt(0) + name.length) % 4;
+
+                  let outputHtml = '';
+
+                  if (templateIndex === 0) {
+                    // Standard / Comprehensive Style
+                    outputHtml = `Spialr provides comprehensive performance insights and profile statistics for <strong>${name}</strong>`;
+                    if (followersVal) {
+                      outputHtml += `, who has established a follower base of <strong>${followersVal}</strong>${category ? ` within the <strong>${category}</strong> category` : ''}`;
                     }
+                    outputHtml += `.`;
+                    if (interactionVal) {
+                      outputHtml += ` Analytical benchmarks indicate a strong audience interaction rate of <strong>${interactionVal}</strong> of total followers.`;
+                    }
+                    if (metricsListJoined || peakLikesVal) {
+                      outputHtml += ` This engagement is driven by stellar audience response`;
+                      if (metricsListJoined) {
+                        outputHtml += `, averaging ${metricsListJoined}`;
+                      }
+                      if (peakLikesVal) {
+                        outputHtml += `, with peak engagement hitting <strong>${peakLikesVal}</strong> likes on their most popular post`;
+                      }
+                      outputHtml += ` across recent content timelines.`;
+                    }
+                    outputHtml += ` This data outlines public engagement trends and audience metrics to help creators and Social Media users analyze content reach.`;
+                  } else if (templateIndex === 1) {
+                    // Interaction & Growth Benchmark Style
+                    if (interactionVal) {
+                      outputHtml += `Benchmarks for <strong>${name}</strong> indicate a strong audience interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                    } else {
+                      outputHtml += `Spialr monitors public performance metrics and profile statistics for <strong>${name}</strong>. `;
+                    }
+                    if (followersVal) {
+                      outputHtml += `With a total follower base of <strong>${followersVal}</strong>${category ? ` in the <strong>${category}</strong> category` : ''}, this profile showcases steady growth. `;
+                    }
+                    if (metricsListJoined || peakLikesVal) {
+                      outputHtml += `Recent content analysis reveals stellar audience response`;
+                      if (metricsListJoined) {
+                        outputHtml += `, including ${metricsListJoined}`;
+                      }
+                      if (peakLikesVal) {
+                        outputHtml += `, highlighted by peak engagement of <strong>${peakLikesVal}</strong> likes`;
+                      }
+                      outputHtml += `. `;
+                    }
+                    outputHtml += `These analytical insights help content creators and Social Media users assess public reach and engagement velocity.`;
+                  } else if (templateIndex === 2) {
+                    // Performance Consistency Style
+                    outputHtml += `For <strong>${name}</strong>, Spialr tracks audience metrics and public engagement trends across several content formats. `;
+                    if (followersVal) {
+                      outputHtml += `Currently, the profile holds a benchmark position with <strong>${followersVal}</strong> followers${category ? ` in the <strong>${category}</strong> sector` : ''}. `;
+                    }
+                    if (interactionVal) {
+                      outputHtml += `This audience exhibits high interest, resulting in an interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                    }
+                    if (metricsListJoined || peakLikesVal) {
+                      outputHtml += `The engagement metrics indicate strong consistency, averaging ${metricsListJoined || 'stellar numbers'}`;
+                      if (peakLikesVal) {
+                        outputHtml += `, with the most popular post gathering up to <strong>${peakLikesVal}</strong> likes`;
+                      }
+                      outputHtml += `. `;
+                    }
+                    outputHtml += `Marketing professionals and Social Media users utilize these stats to analyze public benchmark trends.`;
+                  } else {
+                    // Reach & Audience Benchmark Style
+                    outputHtml += `Public performance benchmarks for <strong>${name}</strong> showcase notable metrics across various digital timelines. `;
+                    if (followersVal) {
+                      outputHtml += `Spialr's current data lists a follower base of <strong>${followersVal}</strong>${category ? ` in the <strong>${category}</strong> category` : ''}. `;
+                    }
+                    if (metricsListJoined || peakLikesVal) {
+                      outputHtml += `Timelines show consistent views and likes, specifically averaging ${metricsListJoined || 'stellar responses'}`;
+                      if (peakLikesVal) {
+                        outputHtml += `, alongside a peak post performance of <strong>${peakLikesVal}</strong> likes`;
+                      }
+                      outputHtml += `. `;
+                    }
+                    if (interactionVal) {
+                      outputHtml += `This yields an overall audience interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                    }
+                    outputHtml += `Creators and Social Media users can leverage these structured metrics to evaluate overall digital reach.`;
                   }
 
                   return (
-                    <p style={{ margin: 0 }} dangerouslySetInnerHTML={{
-                      __html: `Spialr provides comprehensive performance insights and profile statistics for <strong>${name}</strong>${followersStr}.${interactionStr}${metricsStr} This data outlines public engagement trends and audience metrics to help creators and Social Media users analyze content reach.`
-                    }} />
+                    <p style={{ margin: 0 }} dangerouslySetInnerHTML={{ __html: outputHtml }} />
                   );
                 })()}
               </div>

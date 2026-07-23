@@ -1183,7 +1183,9 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         followers_text: initial.followers_text || '',
         views_text: initial.isCopy ? '' : (initial.views_text || initial.likes_text || ''),
         hours_ago: getInitialHoursAgo(initial.created_at),
-        uploaded_date: initialDate
+        uploaded_date: initialDate,
+        description: initial.description || '',
+        why_notable: initial.why_notable || ''
       }
     }
     return {
@@ -1196,7 +1198,9 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
       followers_text: '',
       views_text: '',
       hours_ago: '0 hours ago',
-      uploaded_date: initialDate
+      uploaded_date: initialDate,
+      description: '',
+      why_notable: ''
     }
   })
   const [saving, setSaving] = useState(false)
@@ -1241,6 +1245,8 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
           creator_name: form.creator_name || '',
           creator_photo_url: form.creator_photo_url || '',
           followers_text: form.followers_text || '',
+          description: form.description || '',
+          why_notable: form.why_notable || '',
           ...(isMostLiked ? { likes_text: form.views_text || '' } : { views_text: form.views_text || '' }),
           created_at: calculatedCreatedAt
         },
@@ -1282,6 +1288,32 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
             autoFocus
           />
         </div>
+
+        {(isMostViewed || isMostLiked) && (
+          <>
+            <div>
+              <label style={labelStyle}>Reel Description (2–4 sentences)</label>
+              <textarea 
+                className="input-field" 
+                rows={3}
+                value={form.description || ''} 
+                onChange={e => set('description', e.target.value)} 
+                placeholder="Enter a unique 2–4 sentence description for this reel..." 
+                style={{ height: 'auto', resize: 'vertical' }}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Why Notable (Optional context)</label>
+              <input 
+                className="input-field" 
+                value={form.why_notable || ''} 
+                onChange={e => set('why_notable', e.target.value)} 
+                placeholder="e.g. Fastest reel to reach 10M views in 24 hours" 
+              />
+            </div>
+          </>
+        )}
         
         {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
         
@@ -1456,6 +1488,32 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
           )}
         </div>
       </div>
+
+      {(isMostViewed || isMostLiked) && (
+        <>
+          <div>
+            <label style={labelStyle}>Reel Description (2–4 sentences)</label>
+            <textarea 
+              className="input-field" 
+              rows={3}
+              value={form.description || ''} 
+              onChange={e => set('description', e.target.value)} 
+              placeholder="Enter a unique 2–4 sentence description for this reel..." 
+              style={{ height: 'auto', resize: 'vertical' }}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Why Notable (Optional context)</label>
+            <input 
+              className="input-field" 
+              value={form.why_notable || ''} 
+              onChange={e => set('why_notable', e.target.value)} 
+              placeholder="e.g. Fastest reel to reach 10M views in 24 hours" 
+            />
+          </div>
+        </>
+      )}
 
       {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
