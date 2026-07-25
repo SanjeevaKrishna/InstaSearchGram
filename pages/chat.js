@@ -517,7 +517,7 @@ export default function ChatPage() {
                     key={r.id}
                     onClick={() => {
                       setRoom(r.id)
-                      localStorage.setItem('spialr_last_language', r.id)
+                      safeStorage.setItem('spialr_last_language', r.id)
                       router.push({ pathname: '/chat', query: { room: r.id } }, undefined, { shallow: true })
                     }}
                     style={{

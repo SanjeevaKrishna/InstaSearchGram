@@ -6,7 +6,7 @@ import PostCard from '../../components/PostCard'
 import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
-export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity }) {
+export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [] }) {
   const router = useRouter()
   const { slug, compare } = router.query
 
@@ -668,39 +668,23 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             {/* Filter Buttons Grid (2x2) */}
             <div className="profile-filter-grid" style={{ marginBottom: !celebrity.has_full_details ? 0 : 32 }}>
               <button className="profile-filter-btn" onClick={() => goResults({ filter: 'most_liked' })}>
-                <div className="profile-filter-icon-wrapper" style={{ background: 'linear-gradient(135deg, #ff416c, #ff4b2b)', boxShadow: '0 4px 10px rgba(255, 65, 108, 0.25)' }}>
-                  ❤️
-                </div>
-                <div className="profile-filter-info">
-                  <span className="profile-filter-title">Most Liked</span>
-                </div>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>❤️</span>
+                <span className="profile-filter-title">Most Liked</span>
               </button>
 
               <button className="profile-filter-btn" onClick={() => goResults({ filter: 'most_commented' })}>
-                <div className="profile-filter-icon-wrapper" style={{ background: 'linear-gradient(135deg, #00b4db, #0083b0)', boxShadow: '0 4px 10px rgba(0, 180, 219, 0.25)' }}>
-                  💬
-                </div>
-                <div className="profile-filter-info">
-                  <span className="profile-filter-title">Most Commented</span>
-                </div>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>💬</span>
+                <span className="profile-filter-title">Most Commented</span>
               </button>
 
               <button className="profile-filter-btn" onClick={() => goResults({ filter: 'most_viewed' })}>
-                <div className="profile-filter-icon-wrapper" style={{ background: 'linear-gradient(135deg, #e040fb, #651fff)', boxShadow: '0 4px 10px rgba(224, 64, 251, 0.25)' }}>
-                  👁️
-                </div>
-                <div className="profile-filter-info">
-                  <span className="profile-filter-title">Most Viewed</span>
-                </div>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>👁️</span>
+                <span className="profile-filter-title">Most Viewed</span>
               </button>
 
               <button className="profile-filter-btn" onClick={() => goResults({ filter: 'first_post' })}>
-                <div className="profile-filter-icon-wrapper" style={{ background: 'linear-gradient(135deg, #ffe259, #ffa751)', boxShadow: '0 4px 10px rgba(255, 167, 81, 0.25)' }}>
-                  ⭐
-                </div>
-                <div className="profile-filter-info">
-                  <span className="profile-filter-title">First Post</span>
-                </div>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>⭐</span>
+                <span className="profile-filter-title">First Post</span>
               </button>
             </div>
 
@@ -977,6 +961,77 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 ))}
               </div>
             )}
+            {/* OTHER FEATURED CREATORS SECTION */}
+            {otherCelebrities && otherCelebrities.length > 0 && (
+              <div style={{
+                marginTop: 48,
+                borderTop: '1px solid var(--border)',
+                paddingTop: 32,
+              }}>
+                <h3 style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--text)',
+                  marginBottom: 18,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  ✨ View Other Creator Profiles
+                </h3>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                  gap: 16
+                }}>
+                  {otherCelebrities.map((cel) => (
+                    <a 
+                      key={cel.id} 
+                      href={`/celebrity/${cel.slug}`} 
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <div style={{
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 16,
+                        padding: 16,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.borderColor = 'var(--border-bright)';
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.02)';
+                      }}
+                      >
+                        {cel.photo_url ? (
+                          <img 
+                            src={cel.photo_url} 
+                            alt={cel.name} 
+                            style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', marginBottom: 12, border: '2px solid var(--border)', display: 'block', margin: '0 auto 12px auto' }} 
+                          />
+                        ) : (
+                          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, margin: '0 auto 12px auto' }}>
+                            {cel.name?.charAt(0)}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {cel.name}
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -1022,11 +1077,20 @@ export async function getServerSideProps(context) {
       }
     }
 
+    // Fetch 4 other celebrities for internal linking and Adsense thin page prevention
+    const { data: otherCelebrities } = await supabase
+      .from('celebrities')
+      .select('id, name, slug, photo_url')
+      .eq('hide_search', false)
+      .neq('id', celebrity.id)
+      .limit(4)
+
     return {
       props: {
         initialCelebrity: celebrity,
         initialPosts: posts || [],
         initialCompareCelebrity: compareCelebrity,
+        otherCelebrities: otherCelebrities || []
       }
     }
   } catch (err) {

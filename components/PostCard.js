@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Calendar, Heart, MessageSquare, Eye, Star, ExternalLink, Bookmark } from 'lucide-react'
+import { safeStorage } from '../lib/storage'
+
 
 export default function PostCard({ post }) {
   const [isSaved, setIsSaved] = useState(false)
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('saved_posts') || '[]')
+      const saved = JSON.parse(safeStorage.getItem('saved_posts', '[]'))
       if (saved.some(p => p.id === post.id)) {
         setIsSaved(true)
       }
@@ -16,15 +18,15 @@ export default function PostCard({ post }) {
   const toggleSave = (e) => {
     e.stopPropagation()
     try {
-      const saved = JSON.parse(localStorage.getItem('saved_posts') || '[]')
+      const saved = JSON.parse(safeStorage.getItem('saved_posts', '[]'))
       if (isSaved) {
         const newSaved = saved.filter(p => p.id !== post.id)
-        localStorage.setItem('saved_posts', JSON.stringify(newSaved))
+        safeStorage.setItem('saved_posts', JSON.stringify(newSaved))
         setIsSaved(false)
         window.dispatchEvent(new Event('saved_posts_updated'))
       } else {
         saved.push(post)
-        localStorage.setItem('saved_posts', JSON.stringify(saved))
+        safeStorage.setItem('saved_posts', JSON.stringify(saved))
         setIsSaved(true)
       }
     } catch {}
@@ -43,9 +45,7 @@ export default function PostCard({ post }) {
   return (
     <div
       className="card"
-      onClick={handleClick}
       style={{
-        cursor: 'pointer',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -150,19 +150,33 @@ export default function PostCard({ post }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: 4,
+        marginTop: 12,
+        paddingTop: 12,
+        borderTop: '1px solid var(--border)',
       }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          fontSize: 13,
-          color: 'var(--accent)',
-          fontWeight: 600,
-        }}>
+        <button 
+          onClick={handleClick}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12.5,
+            color: '#fff',
+            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+            padding: '8px 16px',
+            borderRadius: '10px',
+            fontWeight: 700,
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(220, 39, 67, 0.15)',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.08)'}
+          onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+        >
           <span>Open on Instagram</span>
-          <ExternalLink size={13} />
-        </div>
+          <ExternalLink size={12} />
+        </button>
         
         <button 
           onClick={toggleSave}
@@ -174,7 +188,7 @@ export default function PostCard({ post }) {
             justifyContent: 'center',
             color: isSaved ? 'var(--accent)' : 'var(--text-muted)',
             cursor: 'pointer',
-            padding: '4px',
+            padding: '6px',
             transition: 'color 0.2s',
           }}
           title={isSaved ? "Remove from Saved" : "Save Post"}

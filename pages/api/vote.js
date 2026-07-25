@@ -18,6 +18,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid vote type. Must be "vote" or "devote".' })
     }
 
+    // Check cookie for existing vote state
+    const cookieName = `voted_${profileId}`
+    const cookies = req.headers.cookie || ''
+    const cookieValMatch = cookies.match(new RegExp(`(?:^|; )${cookieName}=([^;]*)`))
+    const currentVoteState = cookieValMatch ? cookieValMatch[1] : null // 'upvoted', 'downvoted', or null
+
+    if (type === 'vote') {
+      if (currentVoteState === 'upvoted') {
+        return res.status(403).json({ error: 'You have already upvoted this profile.' })
+      }
+    } else if (type === 'devote') {
+      if (currentVoteState === 'downvoted') {
+        return res.status(403).json({ error: 'You have already downvoted this profile.' })
+      }
+    }
+
     // Basic rate limit / Cooldown protection
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown'
     const now = Date.now()
@@ -59,6 +75,25 @@ export default async function handler(req, res) {
       .eq('id', profileId)
 
     if (updateErr) throw updateErr
+
+    // Update Set-Cookie header based on currentVoteState and type
+    if (type === 'vote') {
+      if (currentVoteState === 'downvoted') {
+        // Undo downvote
+        res.setHeader('Set-Cookie', `${cookieName}=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly`)
+      } else {
+        // Set new upvote
+        res.setHeader('Set-Cookie', `${cookieName}=upvoted; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly`)
+      }
+    } else if (type === 'devote') {
+      if (currentVoteState === 'upvoted') {
+        // Undo upvote
+        res.setHeader('Set-Cookie', `${cookieName}=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly`)
+      } else {
+        // Set new downvote
+        res.setHeader('Set-Cookie', `${cookieName}=downvoted; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly`)
+      }
+    }
 
     // 3. Recalculate all rankings instantly
     await recalculateVotingRanks()

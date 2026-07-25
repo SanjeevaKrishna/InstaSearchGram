@@ -415,55 +415,53 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               </div>
             </div>
 
-            {/* ABOUT THIS REEL SECTION (Hides completely if no manual description exists) */}
-            {reel.description && (
-              <div style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 24,
-                padding: '28px 32px',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
+            {/* ABOUT THIS REEL SECTION */}
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 24,
+              padding: '28px 32px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
+            }}>
+              <h3 style={{
+                fontSize: 17,
+                fontWeight: 800,
+                fontFamily: 'var(--font-display)',
+                color: 'var(--text)',
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
               }}>
-                <h3 style={{
-                  fontSize: 17,
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-display)',
-                  color: 'var(--text)',
-                  marginBottom: 12,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8
-                }}>
-                  📖 About this Reel
-                </h3>
-                <p style={{
-                  fontSize: '14.5px',
-                  lineHeight: 1.7,
-                  color: 'var(--text-dim)',
-                  margin: 0
-                }}>
-                  {reel.description}
-                </p>
+                📖 About this Reel
+              </h3>
+              <p style={{
+                fontSize: '14.5px',
+                lineHeight: 1.7,
+                color: 'var(--text-dim)',
+                margin: 0
+              }}>
+                {reel.description || `This viral reel is created by the popular digital content creator ${reel.creator_name || '@anonymous'}. It is benchmarked inside the ${reel.category_name || 'Instagram'} category on Spialr, which tracks and charts top-performing creators in this niche based on views and engagement levels. Marketers and other creators can analyze this performance to understand successful video hooks, layout pacing, and formatting setups.`}
+              </p>
 
-                {reel.why_notable && (
-                  <div style={{ 
-                    marginTop: 18, 
-                    paddingTop: 16, 
-                    borderTop: '1px dashed var(--border)', 
-                    display: 'flex', 
-                    alignItems: 'flex-start', 
-                    gap: 8, 
-                    fontSize: '13.5px', 
-                    color: 'var(--text-dim)' 
-                  }}>
-                    <span style={{ fontSize: 16, lineHeight: 1 }}>⭐</span>
-                    <div>
-                      <strong>Why Notable:</strong> {reel.why_notable}
-                    </div>
+              {reel.why_notable && (
+                <div style={{ 
+                  marginTop: 18, 
+                  paddingTop: 16, 
+                  borderTop: '1px dashed var(--border)', 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: 8, 
+                  fontSize: '13.5px', 
+                  color: 'var(--text-dim)' 
+                }}>
+                  <span style={{ fontSize: 16, lineHeight: 1 }}>⭐</span>
+                  <div>
+                    <strong>Why Notable:</strong> {reel.why_notable}
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
             {/* REEL INSIGHTS SECTION */}
             <div style={{
@@ -493,6 +491,46 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               }} dangerouslySetInnerHTML={{
                 __html: `This reel by <strong>${reel.creator_name || '@anonymous'}</strong> currently ranks <strong>#${reel.rank}</strong> in Spialr’s <strong>${reel.category_name}</strong>${statsPart} based on the latest recorded public metrics.`
               }} />
+            </div>
+
+            {/* FREQUENTLY ASKED QUESTIONS */}
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 24,
+              padding: '28px 32px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
+            }}>
+              <h3 style={{
+                fontSize: 17,
+                fontWeight: 800,
+                fontFamily: 'var(--font-display)',
+                color: 'var(--text)',
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}>
+                ❓ Frequently Asked Questions
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+                  <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
+                    What category does this reel belong to?
+                  </h4>
+                  <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+                    This reel is benchmarked inside the <strong>{reel.category_name}</strong> category on Spialr, which tracks and charts top-performing creators in this niche.
+                  </p>
+                </div>
+                <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+                  <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
+                    How can I view the actual reel on Instagram?
+                  </h4>
+                  <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+                    You can click the <strong>"Watch Reel on Instagram"</strong> button on this page, which will open a secure link directly to the official post on the Instagram platform.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* RANKING CONTEXT METHODOLOGY */}

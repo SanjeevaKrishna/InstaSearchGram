@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Navbar from '../components/Navbar'
 import PostCard from '../components/PostCard'
+import { safeStorage } from '../lib/storage'
+
 
 export default function SavedLinks() {
   const [savedPosts, setSavedPosts] = useState([])
 
   const loadSaved = () => {
     try {
-      const saved = JSON.parse(localStorage.getItem('saved_posts') || '[]')
+      const saved = JSON.parse(safeStorage.getItem('saved_posts', '[]'))
       setSavedPosts(saved)
     } catch {
       setSavedPosts([])

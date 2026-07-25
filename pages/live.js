@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
-import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus } from 'lucide-react'
+import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus, CornerUpLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { safeStorage } from '../lib/storage'
 
@@ -361,6 +361,21 @@ export default function LivePage() {
     if (!selectedProfile || !showConfirmPopup) return
     setIsSubmittingVote(true)
     const type = showConfirmPopup === 'vote' ? 'vote' : 'devote'
+
+    // Enforce vote-once restriction client-side (allow undos)
+    const hasVoted = userVotes[selectedProfile.id] > 0
+    const hasDevoted = userDevotes[selectedProfile.id] > 0
+    
+    if (type === 'vote' && hasVoted) {
+      alert('You have already upvoted this profile.')
+      setIsSubmittingVote(false)
+      return
+    }
+    if (type === 'devote' && hasDevoted) {
+      alert('You have already downvoted this profile.')
+      setIsSubmittingVote(false)
+      return
+    }
     
     // Front-end spam click cooldown defense
     const lastAction = safeStorage.getItem('spialr_last_action_time')
@@ -388,15 +403,33 @@ export default function LivePage() {
         throw new Error(data.error || 'Failed to submit vote')
       }
       
-      // Update local storage tracking counts
+      // Update local storage tracking counts (handling vote registers & undos)
       if (type === 'vote') {
-        const updatedVotes = { ...userVotes, [selectedProfile.id]: (userVotes[selectedProfile.id] || 0) + 1 }
-        setUserVotes(updatedVotes)
-        safeStorage.setItem('spialr_votes_map', JSON.stringify(updatedVotes))
+        if (hasDevoted) {
+          // Undo downvote
+          const updatedDevotes = { ...userDevotes }
+          delete updatedDevotes[selectedProfile.id]
+          setUserDevotes(updatedDevotes)
+          safeStorage.setItem('spialr_devotes_map', JSON.stringify(updatedDevotes))
+        } else {
+          // Register upvote
+          const updatedVotes = { ...userVotes, [selectedProfile.id]: 1 }
+          setUserVotes(updatedVotes)
+          safeStorage.setItem('spialr_votes_map', JSON.stringify(updatedVotes))
+        }
       } else {
-        const updatedDevotes = { ...userDevotes, [selectedProfile.id]: (userDevotes[selectedProfile.id] || 0) + 1 }
-        setUserDevotes(updatedDevotes)
-        safeStorage.setItem('spialr_devotes_map', JSON.stringify(updatedDevotes))
+        if (hasVoted) {
+          // Undo upvote
+          const updatedVotes = { ...userVotes }
+          delete updatedVotes[selectedProfile.id]
+          setUserVotes(updatedVotes)
+          safeStorage.setItem('spialr_votes_map', JSON.stringify(updatedVotes))
+        } else {
+          // Register downvote
+          const updatedDevotes = { ...userDevotes, [selectedProfile.id]: 1 }
+          setUserDevotes(updatedDevotes)
+          safeStorage.setItem('spialr_devotes_map', JSON.stringify(updatedDevotes))
+        }
       }
       
       safeStorage.setItem('spialr_last_action_time', now.toString())
@@ -545,6 +578,8 @@ export default function LivePage() {
           flexDirection: 'column',
           gap: 8,
           marginBottom: 16,
+          alignItems: 'center',
+          textAlign: 'center',
         }}>
           {/* Live Status + Date Row */}
           <div className="header-status-row" style={{
@@ -552,6 +587,7 @@ export default function LivePage() {
             alignItems: 'center',
             gap: 12,
             flexWrap: 'wrap',
+            justifyContent: 'center',
           }}>
             {/* Live Refresh Button */}
             <button 
@@ -611,6 +647,7 @@ export default function LivePage() {
              letterSpacing: '-0.02em',
              lineHeight: 1.15,
              margin: 0,
+             textAlign: 'center',
            }}>
              {activeTab === 'most_followed' ? (
                <>Most Followed <span className="gradient-text">Instagram Accounts</span></>
@@ -627,20 +664,21 @@ export default function LivePage() {
                fontWeight: 500,
                lineHeight: 1.4,
                letterSpacing: '0.01em',
+               textAlign: 'center',
              }}>
                Compare, upvote to support, or downvote to drag. Let the fan wars begin!
              </p>
            )}
           </div>
-
+ 
           {/* Unified Navigation Row: Tabs (Left) & Language Dropdown (Right) */}
           <div style={{
             display: 'flex',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
             alignItems: 'center',
             marginBottom: 20,
             flexWrap: 'wrap',
-            gap: 12,
+            gap: 16,
             position: 'relative',
             zIndex: 10
           }}>
@@ -1397,18 +1435,44 @@ export default function LivePage() {
                 </button>
               </div>
 
-              <div className="vote-dialog-buttons">
-                {/* Vote button */}
-                <button className="vote-dialog-btn btn-vote" onClick={() => handleOpenConfirm('vote')}>
-                  <ThumbsUp size={18} strokeWidth={2.5} />
-                  <span>Vote</span>
-                </button>
+               <div className="vote-dialog-buttons">
+                {userVotes[selectedProfile.id] > 0 ? (
+                  <>
+                    <button className="vote-dialog-btn btn-vote" style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', color: '#2e7d32', cursor: 'default' }} disabled>
+                      <ThumbsUp size={18} fill="#2e7d32" strokeWidth={2.5} />
+                      <span>Upvoted</span>
+                    </button>
+                    <button className="vote-dialog-btn btn-devote" onClick={() => handleOpenConfirm('devote')}>
+                      <CornerUpLeft size={18} strokeWidth={2.5} />
+                      <span>Undo Vote</span>
+                    </button>
+                  </>
+                ) : userDevotes[selectedProfile.id] > 0 ? (
+                  <>
+                    <button className="vote-dialog-btn btn-vote" onClick={() => handleOpenConfirm('vote')}>
+                      <CornerUpLeft size={18} strokeWidth={2.5} />
+                      <span>Undo Vote</span>
+                    </button>
+                    <button className="vote-dialog-btn btn-devote" style={{ background: '#ffebee', border: '1px solid #ef9a9a', color: '#c62828', cursor: 'default' }} disabled>
+                      <ThumbsDown size={18} fill="#c62828" strokeWidth={2.5} />
+                      <span>Downvoted</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Vote button */}
+                    <button className="vote-dialog-btn btn-vote" onClick={() => handleOpenConfirm('vote')}>
+                      <ThumbsUp size={18} strokeWidth={2.5} />
+                      <span>Vote</span>
+                    </button>
 
-                {/* De-vote button */}
-                <button className="vote-dialog-btn btn-devote" onClick={() => handleOpenConfirm('devote')}>
-                  <ThumbsDown size={18} strokeWidth={2.5} />
-                  <span>De-vote</span>
-                </button>
+                    {/* De-vote button */}
+                    <button className="vote-dialog-btn btn-devote" onClick={() => handleOpenConfirm('devote')}>
+                      <ThumbsDown size={18} strokeWidth={2.5} />
+                      <span>De-vote</span>
+                    </button>
+                  </>
+                )}
 
                 {/* View Profile button */}
                 {activeTab === 'voting' && (
@@ -1563,9 +1627,9 @@ export default function LivePage() {
               </h3>
               <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 24, lineHeight: 1.5 }}>
                 {showConfirmPopup === 'vote' ? (
-                  <>This will become your <strong>{getOrdinal((userVotes[selectedProfile.id] || 0) + 1)}</strong> vote for this profile, bringing the total from <strong>{selectedProfile.votes || 0}</strong> to <strong>{(selectedProfile.votes || 0) + 1}</strong> {Math.abs((selectedProfile.votes || 0) + 1) === 1 ? 'vote' : 'votes'}.</>
+                  <>This will register your vote for this profile, bringing the total from <strong>{selectedProfile.votes || 0}</strong> to <strong>{(selectedProfile.votes || 0) + 1}</strong> {Math.abs((selectedProfile.votes || 0) + 1) === 1 ? 'vote' : 'votes'}.</>
                 ) : (
-                  <>This will become your <strong>{getOrdinal((userDevotes[selectedProfile.id] || 0) + 1)}</strong> de-vote for this profile, bringing the total from <strong>{selectedProfile.votes || 0}</strong> to <strong>{(selectedProfile.votes || 0) - 1}</strong> {Math.abs((selectedProfile.votes || 0) - 1) === 1 ? 'vote' : 'votes'}.</>
+                  <>This will register your de-vote for this profile, bringing the total from <strong>{selectedProfile.votes || 0}</strong> to <strong>{(selectedProfile.votes || 0) - 1}</strong> {Math.abs((selectedProfile.votes || 0) - 1) === 1 ? 'vote' : 'votes'}.</>
                 )}
               </p>
               

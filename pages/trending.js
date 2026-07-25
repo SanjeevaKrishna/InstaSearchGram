@@ -5,6 +5,8 @@ import Navbar from '../components/Navbar'
 import BottomNav from '../components/BottomNav'
 import { TrendingUp, Play, Film, ChevronUp, ChevronDown, Minus, ExternalLink, Users, Eye, Heart } from 'lucide-react'
 import PostCard from '../components/PostCard'
+import { safeStorage } from '../lib/storage'
+
 
 // Deterministic trend indicator calculation based on Reel ID/index
 const getTrend = (reel, index) => {
@@ -237,7 +239,7 @@ export default function TrendingPage() {
   const [indiaMostLikedPosts, setIndiaMostLikedPosts] = useState([])
 
   useEffect(() => {
-    const savedSubTab = localStorage.getItem('trending_active_sub_tab')
+    const savedSubTab = safeStorage.getItem('trending_active_sub_tab')
     if (savedSubTab === 'reels' || savedSubTab === 'liked_reels' || savedSubTab === 'posts') {
       setActiveSubTab(savedSubTab)
     }
@@ -348,7 +350,7 @@ export default function TrendingPage() {
             margin: '0 auto 24px'
           }}>
             <button
-              onClick={() => { setActiveTab('trending'); setActiveSubTab('reels'); localStorage.setItem('trending_active_tab', 'trending'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
+              onClick={() => { setActiveTab('trending'); setActiveSubTab('reels'); safeStorage.setItem('trending_active_tab', 'trending'); safeStorage.setItem('trending_active_sub_tab', 'reels'); }}
               onMouseEnter={() => setHoveredTab('trending')}
               onMouseLeave={() => setHoveredTab(null)}
               style={{
@@ -374,7 +376,7 @@ export default function TrendingPage() {
             </button>
             
             <button
-              onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('reels'); localStorage.setItem('trending_active_tab', 'most_viewed'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
+              onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('reels'); safeStorage.setItem('trending_active_tab', 'most_viewed'); safeStorage.setItem('trending_active_sub_tab', 'reels'); }}
               onMouseEnter={() => setHoveredTab('most_viewed')}
               onMouseLeave={() => setHoveredTab(null)}
               style={{
@@ -426,7 +428,7 @@ export default function TrendingPage() {
               margin: '0 auto 28px'
             }}>
               <button
-                onClick={() => { setActiveSubTab('reels'); localStorage.setItem('trending_active_sub_tab', 'reels'); }}
+                onClick={() => { setActiveSubTab('reels'); safeStorage.setItem('trending_active_sub_tab', 'reels'); }}
                 onMouseEnter={() => setHoveredSubTab('reels')}
                 onMouseLeave={() => setHoveredSubTab(null)}
                 style={{
@@ -451,7 +453,7 @@ export default function TrendingPage() {
               </button>
               
               <button
-                onClick={() => { setActiveSubTab('liked_reels'); localStorage.setItem('trending_active_sub_tab', 'liked_reels'); }}
+                onClick={() => { setActiveSubTab('liked_reels'); safeStorage.setItem('trending_active_sub_tab', 'liked_reels'); }}
                 onMouseEnter={() => setHoveredSubTab('liked_reels')}
                 onMouseLeave={() => setHoveredSubTab(null)}
                 style={{
@@ -476,7 +478,7 @@ export default function TrendingPage() {
               </button>
               
               <button
-                onClick={() => { setActiveSubTab('posts'); localStorage.setItem('trending_active_sub_tab', 'posts'); }}
+                onClick={() => { setActiveSubTab('posts'); safeStorage.setItem('trending_active_sub_tab', 'posts'); }}
                 onMouseEnter={() => setHoveredSubTab('posts')}
                 onMouseLeave={() => setHoveredSubTab(null)}
                 style={{
