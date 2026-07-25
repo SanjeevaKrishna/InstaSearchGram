@@ -6,6 +6,7 @@ export default function Terms() {
     <>
       <Head>
         <title>Terms of Service — Spialr</title>
+        <meta name="description" content="Review the official Terms of Service of Spialr, detailing website guidelines, disclaimer of warranties, and legal limitations." />
       </Head>
       <Navbar />
       <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>

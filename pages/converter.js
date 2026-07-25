@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Navbar from '../components/Navbar'
-import { convertImageToDotArt, loadImageFromFile, detectSubjectBounds } from '../lib/dotArt'
+import { convertImageToDotArt, loadImageFromFile } from '../lib/dotArt'
 import { Sparkles, Copy, Check, Upload, Image as ImageIcon } from 'lucide-react'
 
 export default function Converter() {
@@ -24,12 +24,6 @@ export default function Converter() {
   const [clipboardCols, setClipboardCols] = useState(60)
   const [fitScreen, setFitScreen] = useState(true)
   const [containerWidth, setContainerWidth] = useState(400)
-
-  // Crop states
-  const [cropLeft, setCropLeft] = useState(0)
-  const [cropRight, setCropRight] = useState(0)
-  const [cropTop, setCropTop] = useState(0)
-  const [cropBottom, setCropBottom] = useState(0)
 
   const fileInputRef = useRef(null)
   const previewContainerRef = useRef(null)
@@ -89,17 +83,16 @@ export default function Converter() {
       ditherAmount: 0.75,
       ditherMode: 'floyd-steinberg',
       unlimited: true,
-      // Crop parameters
-      cropLeft: customOpts.hasOwnProperty('cropLeft') ? customOpts.cropLeft : cropLeft,
-      cropRight: customOpts.hasOwnProperty('cropRight') ? customOpts.cropRight : cropRight,
-      cropTop: customOpts.hasOwnProperty('cropTop') ? customOpts.cropTop : cropTop,
-      cropBottom: customOpts.hasOwnProperty('cropBottom') ? customOpts.cropBottom : cropBottom,
+      cropLeft: 0,
+      cropRight: 0,
+      cropTop: 0,
+      cropBottom: 0,
     }
 
     setTimeout(() => {
       const result = convertImageToDotArt(img, finalOpts)
       setLines(result.lines)
-      setDims({ cols: result.cols, rows: result.rows })
+      setDims(result.dims)
       setBusy(false)
       
       // Only copy when explicitly requested by a button click
@@ -108,7 +101,7 @@ export default function Converter() {
         copyToClipboard(text)
       }
     }, 50)
-  }, [invert, minInk, outline, clipboardCols, cropLeft, cropRight, cropTop, cropBottom])
+  }, [invert, minInk, outline, clipboardCols])
 
   const copyToClipboard = async (textToCopy) => {
     try {
@@ -145,13 +138,6 @@ export default function Converter() {
     setImage(img)
     setPreviewUrl(img.src)
 
-    // Detect subject bounds automatically on upload
-    const bounds = detectSubjectBounds(img)
-    setCropLeft(bounds.cropLeft)
-    setCropRight(bounds.cropRight)
-    setCropTop(bounds.cropTop)
-    setCropBottom(bounds.cropBottom)
-
     // Set a reasonable default clipboard column width based on image size
     const maxCols = Math.floor(img.width / 2)
     const defaultCols = Math.min(80, Math.max(30, maxCols))
@@ -159,11 +145,7 @@ export default function Converter() {
 
     if (selectedFormat) {
       runConversion(img, selectedFormat, { 
-        clipboardCols: defaultCols,
-        cropLeft: bounds.cropLeft,
-        cropRight: bounds.cropRight,
-        cropTop: bounds.cropTop,
-        cropBottom: bounds.cropBottom
+        clipboardCols: defaultCols
       }, false) // Do not copy to clipboard on upload
     }
   }
@@ -325,51 +307,6 @@ export default function Converter() {
                   background: 'var(--surface2)',
                 }}>
                   <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  
-                  {/* Left crop boundary overlay */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    bottom: 0,
-                    width: `${cropLeft * 100}%`,
-                    background: 'rgba(0, 0, 0, 0.55)',
-                    pointerEvents: 'none',
-                    borderRight: '1px dashed var(--accent)',
-                  }} />
-                  {/* Right crop boundary overlay */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    width: `${cropRight * 100}%`,
-                    background: 'rgba(0, 0, 0, 0.55)',
-                    pointerEvents: 'none',
-                    borderLeft: '1px dashed var(--accent)',
-                  }} />
-                  {/* Top crop boundary overlay */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: `${cropLeft * 100}%`,
-                    right: `${cropRight * 100}%`,
-                    height: `${cropTop * 100}%`,
-                    background: 'rgba(0, 0, 0, 0.55)',
-                    pointerEvents: 'none',
-                    borderBottom: '1px dashed var(--accent)',
-                  }} />
-                  {/* Bottom crop boundary overlay */}
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: `${cropLeft * 100}%`,
-                    right: `${cropRight * 100}%`,
-                    height: `${cropBottom * 100}%`,
-                    background: 'rgba(0, 0, 0, 0.55)',
-                    pointerEvents: 'none',
-                    borderTop: '1px dashed var(--accent)',
-                  }} />
                 </div>
                 <div style={{
                   padding: '6px 14px',
@@ -415,11 +352,20 @@ export default function Converter() {
             <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12 }}>
               Choose Format & Copy
             </div>
+            
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: 12,
             }}>
+              <button 
+                className={`btn ${selectedFormat === 'clipboard' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => handleFormatSelect('clipboard')}
+                disabled={!image}
+                style={{ width: '100%', padding: '14px 20px', borderRadius: 12 }}
+              >
+                Copy to Clipboard
+              </button>
               <button 
                 className={`btn ${selectedFormat === 'instagram' ? 'btn-primary' : 'btn-ghost'}`}
                 onClick={() => handleFormatSelect('instagram')}
@@ -452,46 +398,10 @@ export default function Converter() {
               >
                 Copy to Instagram DM
               </button>
-              <button 
-                className={`btn ${selectedFormat === 'clipboard' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => handleFormatSelect('clipboard')}
-                disabled={!image}
-                style={{ width: '100%', padding: '14px 20px', borderRadius: 12 }}
-              >
-                Copy to Clipboard
-              </button>
             </div>
             {!image && (
-              <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 8, textAlign: 'center', fontWeight: 500 }}>
+              <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 12, textAlign: 'center', fontWeight: 500 }}>
                 * Upload an image first to enable format copying
-              </div>
-            )}
-            {selectedFormat === 'clipboard' && image && (
-              <div className="fade-in" style={{
-                marginTop: 20,
-                padding: 16,
-                borderRadius: 12,
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                textAlign: 'left'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                    📋 Clipboard Resolution (Columns): {clipboardCols}
-                  </span>
-                </div>
-                <input 
-                  type="range"
-                  min={16}
-                  max={Math.max(100, Math.floor(image.width / 2))}
-                  step={2}
-                  value={clipboardCols}
-                  onChange={(e) => handleClipboardColsChange(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }}
-                />
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                  Drag to scale the copied image size. More columns equal more detail but might wrap on smaller screens.
-                </div>
               </div>
             )}
           </div>
@@ -625,6 +535,101 @@ export default function Converter() {
             </div>
           </div>
         )}
+
+        {/* Educational Guide & FAQ Section for Google AdSense compliance */}
+        <div style={{
+          marginTop: 60,
+          borderTop: '1px solid var(--border)',
+          paddingTop: 40,
+          color: 'var(--text-dim)',
+          lineHeight: 1.8,
+          fontSize: '14.5px'
+        }}>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 22,
+            fontWeight: 800,
+            color: 'var(--text)',
+            marginBottom: 20,
+            letterSpacing: '-0.02em'
+          }}>
+            Complete Guide to Image to Braille & Dot Art Conversion
+          </h2>
+          <p style={{ marginBottom: 20 }}>
+            Welcome to the <strong>Spialr Dot Art Converter</strong>—the ultimate utility designed to translate any image, logo, profile picture, or photo into high-definition Braille text art. Braille art (commonly referred to as dot art or text art) is a technique that leverages unicode Braille patterns to represent visual details using character spacing, contrasts, and outline density.
+          </p>
+
+          <h3 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 16,
+            fontWeight: 700,
+            color: 'var(--text)',
+            marginTop: 30,
+            marginBottom: 10
+          }}>
+            Why Use Braille Art on Instagram, YouTube & WhatsApp?
+          </h3>
+          <p style={{ marginBottom: 16 }}>
+            Normal ASCII art relies on monospaced letters and characters like <code>@, #, *, .</code> which look extremely distorted when shared in web comments or chat messages. Because social networks adjust character widths dynamically, traditional text art breaks easily. 
+          </p>
+          <p style={{ marginBottom: 20 }}>
+            <strong>Braille symbols</strong> solve this limitation. Every Braille character (from <code>⠁</code> to <code>⣿</code>) has an identical, standard bounding box containing a grid of up to 8 dots. Because the box width remains 100% constant, Braille art maintains its formatting and layout alignment across multiple browsers, device dimensions, and platforms.
+          </p>
+
+          <h3 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 16,
+            fontWeight: 700,
+            color: 'var(--text)',
+            marginTop: 30,
+            marginBottom: 10
+          }}>
+            How to Convert Your Image (Step-by-Step)
+          </h3>
+          <ol style={{ paddingLeft: 20, marginBottom: 24, display: 'grid', gap: 8 }}>
+            <li><strong>Select Format Mode:</strong> Choose your target platform above. For instance, select <em>Instagram Comments</em> (which locks output to a safe 24-character width) or <em>WhatsApp</em> (21-character width) to prevent lines from wrapping and breaking.</li>
+            <li><strong>Upload Photo:</strong> Click the upload box or drag-and-drop your image. PNG, JPG, WebP, and SVG files are fully supported.</li>
+            <li><strong>Optimize Contrast/Crop:</strong> Adjust outline settings and use our Braille contrast parameters to highlight essential details. Use "Invert" if pasting into light-themed app comments.</li>
+            <li><strong>Copy and Paste:</strong> Click the "Copy Art" button. Paste directly into your chat box or comment section.</li>
+          </ol>
+
+          <h3 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 16,
+            fontWeight: 700,
+            color: 'var(--text)',
+            marginTop: 30,
+            marginBottom: 16
+          }}>
+            ❓ Frequently Asked Questions (FAQ)
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
+            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+              <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
+                Why does my text art look broken or misaligned?
+              </h4>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>
+                This usually happens because the output column count exceeds the character width of the comment box. Always use our predefined formatting selectors (e.g. <em>Instagram Format</em>) to ensure the column width is auto-restricted. Make sure the target application supports unicode characters.
+              </p>
+            </div>
+            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+              <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
+                What does the "Fix alignment spacing" setting do?
+              </h4>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>
+                Many platforms treat completely blank Braille characters (no dots) as normal spaces, causing them to collapse and break the graphic. Our "Fix alignment spacing" setting ensures empty spaces are replaced with spacing dots (<code>⠁</code>), maintaining horizontal alignments perfectly.
+              </p>
+            </div>
+            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+              <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
+                Can I convert colored images?
+              </h4>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>
+                Yes! Our dot art engine automatically converts color channels into threshold values based on brightness, making it easy to create beautiful graphics from any color portrait or logo.
+              </p>
+            </div>
+          </div>
+        </div>
       </main>
     </>
   )

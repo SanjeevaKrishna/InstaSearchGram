@@ -6,6 +6,7 @@ export default function DMCA() {
     <>
       <Head>
         <title>DMCA Policy — Spialr</title>
+        <meta name="description" content="Read the Digital Millennium Copyright Act (DMCA) policy of Spialr, including how to submit infringement claims to our designated copyright agent." />
       </Head>
       <Navbar />
       <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>

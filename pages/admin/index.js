@@ -227,7 +227,10 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         most_likes: initial.most_likes !== undefined && initial.most_likes !== null ? initial.most_likes.toString() : '',
         account_created_year: initial.account_created_year !== undefined && initial.account_created_year !== null ? initial.account_created_year.toString() : '',
         hide_search: !!initial.hide_search,
-        description: initial.description || ''
+        description: initial.description || '',
+        most_liked_count: initial.most_liked_count || '',
+        most_commented_count: initial.most_commented_count || '',
+        most_viewed_count: initial.most_viewed_count || ''
       }
     }
     return {
@@ -238,7 +241,10 @@ function CelebrityForm({ initial, onSave, onCancel }) {
       average_views: '', average_reel_likes: '', average_post_likes: '', followers_interaction: '',
       most_likes: '',
       account_created_year: '',
-      description: ''
+      description: '',
+      most_liked_count: '',
+      most_commented_count: '',
+      most_viewed_count: ''
     }
   })
   const [saving, setSaving] = useState(false)
@@ -273,7 +279,10 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           most_likes: form.most_likes ? Number(form.most_likes) : 0,
           account_created_year: form.account_created_year ? Number(form.account_created_year) : null,
           hide_search: !!form.hide_search,
-          description: form.description || ''
+          description: form.description || '',
+          most_liked_count: form.most_liked_count || null,
+          most_commented_count: form.most_commented_count || null,
+          most_viewed_count: form.most_viewed_count || null
         },
       })
 
@@ -417,6 +426,20 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           <input className="input-field" type="number" value={form.most_likes || ''} onChange={e => set('most_likes', e.target.value)} placeholder="e.g. 85000" />
         </div>
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Most Liked Post Likes</label>
+          <input className="input-field" type="text" value={form.most_liked_count || ''} onChange={e => set('most_liked_count', e.target.value)} placeholder="e.g. 1.2m or 500k" />
+        </div>
+        <div>
+          <label style={labelStyle}>Most Commented Post Comments</label>
+          <input className="input-field" type="text" value={form.most_commented_count || ''} onChange={e => set('most_commented_count', e.target.value)} placeholder="e.g. 85k" />
+        </div>
+        <div>
+          <label style={labelStyle}>Most Viewed Reel Views</label>
+          <input className="input-field" type="text" value={form.most_viewed_count || ''} onChange={e => set('most_viewed_count', e.target.value)} placeholder="e.g. 15m" />
+        </div>
+      </div>
       <div>
         <label style={labelStyle}>Homepage Display Order (Popular Section Order Index)</label>
         <input className="input-field" type="number" value={form.order_index} onChange={e => set('order_index', e.target.value)} placeholder="e.g. 1 for first, 2 for second (0 = default alphabetical)" />
@@ -454,24 +477,35 @@ function CelebrityForm({ initial, onSave, onCancel }) {
   )
 }
 
-function PostForm({ celebrities, initial, onSave, onCancel }) {
+function PostForm({ celebrities, initial, onSave, onCancel, presetValues }) {
   const [form, setForm] = useState(() => {
-    if (initial) return initial
+    if (initial) {
+      return {
+        ...initial,
+        tags: Array.isArray(initial.tags) ? initial.tags.join(', ') : (initial.tags || ''),
+        like_count: initial.like_count !== undefined && initial.like_count !== null ? initial.like_count.toString() : '',
+        comment_count: initial.comment_count !== undefined && initial.comment_count !== null ? initial.comment_count.toString() : '',
+        view_count: initial.view_count !== undefined && initial.view_count !== null ? initial.view_count.toString() : '',
+      }
+    }
     const lastId = typeof window !== 'undefined' ? localStorage.getItem('last_selected_celebrity_id') : ''
     const idExists = lastId && celebrities.some(c => c.id === lastId)
     return {
-      celebrity_id: idExists ? lastId : '',
-      post_url: '',
-      post_type: 'reel',
-      caption: '',
-      post_date: '',
-      tags: '',
-      is_most_liked: false,
-      is_most_commented: false,
-      is_most_viewed: false,
-      is_first_post: false,
-      playlist_name: '',
-      playlist_cover_url: ''
+      celebrity_id: presetValues?.celebrity_id || (idExists ? lastId : ''),
+      post_url: presetValues?.post_url || '',
+      post_type: presetValues?.post_type || 'reel',
+      caption: presetValues?.caption || '',
+      post_date: presetValues?.post_date || '',
+      tags: presetValues?.tags || '',
+      is_most_liked: presetValues?.is_most_liked || false,
+      is_most_commented: presetValues?.is_most_commented || false,
+      is_most_viewed: presetValues?.is_most_viewed || false,
+      is_first_post: presetValues?.is_first_post || false,
+      playlist_name: presetValues?.playlist_name || '',
+      playlist_cover_url: presetValues?.playlist_cover_url || '',
+      like_count: presetValues?.like_count || '',
+      comment_count: presetValues?.comment_count || '',
+      view_count: presetValues?.view_count || ''
     }
   })
   const [saving, setSaving] = useState(false)
@@ -520,7 +554,14 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
         : []
       const res = await adminFetch('/api/admin/posts', {
         method: initial ? 'PUT' : 'POST',
-        body: { ...form, id: initial?.id, tags },
+        body: { 
+          ...form, 
+          id: initial?.id, 
+          tags,
+          like_count: form.like_count ? Number(form.like_count) : null,
+          comment_count: form.comment_count ? Number(form.comment_count) : null,
+          view_count: form.view_count ? Number(form.view_count) : null
+        },
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -631,6 +672,20 @@ function PostForm({ celebrities, initial, onSave, onCancel }) {
         />
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
           These are searchable keywords users can filter by
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Likes Count (optional)</label>
+          <input className="input-field" type="number" value={form.like_count} onChange={e => set('like_count', e.target.value)} placeholder="e.g. 2400000" />
+        </div>
+        <div>
+          <label style={labelStyle}>Comments Count (optional)</label>
+          <input className="input-field" type="number" value={form.comment_count} onChange={e => set('comment_count', e.target.value)} placeholder="e.g. 85000" />
+        </div>
+        <div>
+          <label style={labelStyle}>Views Count (optional)</label>
+          <input className="input-field" type="number" value={form.view_count} onChange={e => set('view_count', e.target.value)} placeholder="e.g. 15000000" />
         </div>
       </div>
       {/* Checkboxes */}
@@ -1662,6 +1717,40 @@ export default function AdminPanel() {
   const [editingNews, setEditingNews] = useState(null)
   const [filterCelId, setFilterCelId] = useState('')
   const [toast, setToast] = useState('')
+  const [presetPostValues, setPresetPostValues] = useState(null)
+
+  const openPostFormForHighlight = async (cel, highlightKey) => {
+    setTab('posts')
+    setFilterCelId(cel.id)
+    setLoadingData(true)
+    try {
+      const res = await adminFetch(`/api/admin/posts?celebrity_id=${cel.id}`)
+      const data = await res.json()
+      if (data.posts) {
+        setPosts(data.posts)
+        const existing = data.posts.find(p => p[highlightKey] === true)
+        if (existing) {
+          setPresetPostValues(null)
+          setEditingPost(existing)
+        } else {
+          setEditingPost(null)
+          setPresetPostValues({
+            celebrity_id: cel.id,
+            post_type: highlightKey === 'is_most_viewed' ? 'reel' : 'post',
+            is_most_liked: highlightKey === 'is_most_liked',
+            is_most_commented: highlightKey === 'is_most_commented',
+            is_most_viewed: highlightKey === 'is_most_viewed',
+            is_first_post: highlightKey === 'is_first_post'
+          })
+          setShowPostForm(true)
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingData(false)
+    }
+  }
 
   const [searchCel, setSearchCel] = useState('')
   const [searchPost, setSearchPost] = useState('')
@@ -2314,81 +2403,141 @@ export default function AdminPanel() {
                     )
                   }
                   return filtered.map(cel => (
-                    <div key={cel.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <div style={{
-                        width: 48, height: 48, borderRadius: '50%',
-                        background: 'var(--gradient)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 800, fontSize: 18, flexShrink: 0,
-                      }}>
-                        {cel.name?.charAt(0)}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{cel.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          @{cel.instagram_handle || '—'} &nbsp;·&nbsp; {formatCount(cel.followers_count)} followers
-                          {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
-                          {cel.hide_search && <span style={{ marginLeft: 8, color: '#f44336', fontWeight: 600 }}>🚫 Disabled</span>}
-                          {cel.has_full_details ? (
-                            <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Add Search</span>
-                          ) : (
-                            <span style={{ marginLeft: 8, color: '#ff9800', fontWeight: 600 }}>⚠️ No Search ({cel.request_count || 0} requests)</span>
-                          )}
+                    <div key={cel.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', padding: '16px 20px', borderRadius: 16, background: 'var(--surface)' }}>
+                      {/* Row 1: Profile & Actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, width: '100%' }}>
+                        <div style={{
+                          width: 48, height: 48, borderRadius: '50%',
+                          background: 'var(--gradient)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 800, fontSize: 18, flexShrink: 0,
+                        }}>
+                          {cel.name?.charAt(0)}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{cel.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            @{cel.instagram_handle || '—'} &nbsp;·&nbsp; {formatCount(cel.followers_count)} followers
+                            {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
+                            {cel.hide_search && <span style={{ marginLeft: 8, color: '#f44336', fontWeight: 600 }}>🚫 Disabled</span>}
+                            {cel.has_full_details ? (
+                              <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Add Search</span>
+                            ) : (
+                              <span style={{ marginLeft: 8, color: '#ff9800', fontWeight: 600 }}>⚠️ No Search ({cel.request_count || 0} requests)</span>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                          <a href={`/celebrity/${cel.slug}`} target="_blank">
+                            <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
+                          </a>
+                          <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
+                            onClick={() => {
+                              setEditingCel({
+                                ...cel,
+                                followers_count: cel.followers_count?.toString() || '',
+                                posts_count: cel.posts_count?.toString() || '',
+                                order_index: cel.order_index?.toString() || '0',
+                                total_reel_views: cel.total_reel_views?.toString() || '',
+                                total_reel_likes: cel.total_reel_likes?.toString() || '',
+                                total_post_likes: cel.total_post_likes?.toString() || '',
+                                total_comments: cel.total_comments?.toString() || '',
+                                total_shares: cel.total_shares?.toString() || '',
+                                total_reposts: cel.total_reposts?.toString() || '',
+                                average_views: cel.average_views?.toString() || '',
+                                average_reel_likes: cel.average_reel_likes?.toString() || '',
+                                average_post_likes: cel.average_post_likes?.toString() || '',
+                                followers_interaction: cel.followers_interaction?.toString() || '',
+                                hide_search: !!cel.hide_search,
+                                tags: '',
+                                most_liked_count: cel.most_liked_count || '',
+                                most_commented_count: cel.most_commented_count || '',
+                                most_viewed_count: cel.most_viewed_count || ''
+                              });
+                              setShowCelForm(false);
+                            }}>
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => toggleHideSearch(cel)}
+                            style={{
+                              background: cel.hide_search ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
+                              border: cel.hide_search ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(244,67,54,0.3)',
+                              color: cel.hide_search ? '#4caf50' : '#f44336',
+                              borderRadius: 8,
+                              padding: '6px 12px',
+                              fontSize: 12,
+                              cursor: 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            {cel.hide_search ? '🟢 Enable Profile' : '🔴 Disable Profile'}
+                          </button>
+                          <button
+                            onClick={() => deleteCelebrity(cel.id)}
+                            style={{
+                              background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                              color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                        <a href={`/celebrity/${cel.slug}`} target="_blank">
-                          <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
-                        </a>
-                        <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
-                          onClick={() => {
-                            setEditingCel({
-                              ...cel,
-                              followers_count: cel.followers_count?.toString() || '',
-                              posts_count: cel.posts_count?.toString() || '',
-                              order_index: cel.order_index?.toString() || '0',
-                              total_reel_views: cel.total_reel_views?.toString() || '',
-                              total_reel_likes: cel.total_reel_likes?.toString() || '',
-                              total_post_likes: cel.total_post_likes?.toString() || '',
-                              total_comments: cel.total_comments?.toString() || '',
-                              total_shares: cel.total_shares?.toString() || '',
-                              total_reposts: cel.total_reposts?.toString() || '',
-                              average_views: cel.average_views?.toString() || '',
-                              average_reel_likes: cel.average_reel_likes?.toString() || '',
-                              average_post_likes: cel.average_post_likes?.toString() || '',
-                              followers_interaction: cel.followers_interaction?.toString() || '',
-                              hide_search: !!cel.hide_search,
-                              tags: ''
-                            });
-                            setShowCelForm(false);
-                          }}>
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => toggleHideSearch(cel)}
-                          style={{
-                            background: cel.hide_search ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
-                            border: cel.hide_search ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(244,67,54,0.3)',
-                            color: cel.hide_search ? '#4caf50' : '#f44336',
-                            borderRadius: 8,
-                            padding: '6px 12px',
-                            fontSize: 12,
-                            cursor: 'pointer',
-                            fontWeight: 600
-                          }}
-                        >
-                          {cel.hide_search ? '🟢 Enable Profile' : '🔴 Disable Profile'}
-                        </button>
-                        <button
-                          onClick={() => deleteCelebrity(cel.id)}
-                          style={{
-                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                            color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
-                          }}
-                        >
-                          Delete
-                        </button>
 
+                      {/* Row 2: Highlights Shortcuts */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                        paddingTop: 10,
+                        borderTop: '1px dashed var(--border)',
+                        marginTop: 4
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: 4 }}>
+                          ⚡ Highlights Manager:
+                        </span>
+                        <button
+                          onClick={() => openPostFormForHighlight(cel, 'is_most_liked')}
+                          style={{
+                            background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
+                            padding: '5px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text)', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 4
+                          }}
+                        >
+                          ❤️ Most Liked
+                        </button>
+                        <button
+                          onClick={() => openPostFormForHighlight(cel, 'is_most_commented')}
+                          style={{
+                            background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
+                            padding: '5px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text)', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 4
+                          }}
+                        >
+                          💬 Most Commented
+                        </button>
+                        <button
+                          onClick={() => openPostFormForHighlight(cel, 'is_most_viewed')}
+                          style={{
+                            background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
+                            padding: '5px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text)', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 4
+                          }}
+                        >
+                          👁 Most Viewed
+                        </button>
+                        <button
+                          onClick={() => openPostFormForHighlight(cel, 'is_first_post')}
+                          style={{
+                            background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8,
+                            padding: '5px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text)', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 4
+                          }}
+                        >
+                          ⭐ First Post
+                        </button>
                       </div>
                     </div>
                   ))
@@ -2426,7 +2575,7 @@ export default function AdminPanel() {
             {(showPostForm || editingPost) && (
               <AdminModal
                 isOpen={showPostForm || !!editingPost}
-                onClose={() => { setShowPostForm(false); setEditingPost(null); }}
+                onClose={() => { setShowPostForm(false); setEditingPost(null); setPresetPostValues(null); }}
                 title={editingPost ? '✏️ Edit Post' : '➕ Add New Post'}
               >
                 <PostForm
@@ -2435,6 +2584,7 @@ export default function AdminPanel() {
                     ...editingPost,
                     tags: (editingPost.tags || []).join(', ')
                   } : null}
+                  presetValues={presetPostValues}
                   onSave={(post) => {
                     if (editingPost) {
                       setPosts(p => p.map(x => x.id === post.id ? post : x))

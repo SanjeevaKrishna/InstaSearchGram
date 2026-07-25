@@ -6,6 +6,7 @@ export default function Disclaimer() {
     <>
       <Head>
         <title>Disclaimer — Spialr</title>
+        <meta name="description" content="View the external links and information accuracy disclaimer of Spialr. We are an independent search directory not affiliated with Instagram." />
       </Head>
       <Navbar />
       <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>

@@ -255,7 +255,7 @@ export default function TrendingPage() {
     })
     setLiveDate(today)
 
-    fetch('/api/live')
+    fetch('/api/live?fresh=true')
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch trending data')
         return res.json()
@@ -304,8 +304,18 @@ export default function TrendingPage() {
       <Navbar />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '16px 20px 100px' }}>
-        {/* Compact Header */}
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '120px 0' }}>
+            <div className="spinner" />
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', color: '#ff5252', padding: 40, background: '#fff', borderRadius: 16, border: '1px solid var(--border)' }}>
+            Error loading reels: {error}
+          </div>
+        ) : (
+          <>
+            {/* Compact Header */}
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <h1 style={{
             fontFamily: 'var(--font-display)',
             fontSize: '24px',
@@ -505,22 +515,14 @@ export default function TrendingPage() {
           </>
         )}
 
-        {/* Content */}
-        {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
-            <div className="spinner" />
-          </div>
-        ) : error ? (
-          <div style={{ textAlign: 'center', color: '#ff5252', padding: 40, background: '#fff', borderRadius: 16, border: '1px solid var(--border)' }}>
-            Error loading reels: {error}
-          </div>
-        ) : activeReels.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 60, background: '#fff', borderRadius: 16, border: '1px solid var(--border)' }}>
-            No reels listed in this section today. Check back later!
-          </div>
-        ) : (
-          /* Single unified leaderboard list */
-          <div>
+            {/* Content */}
+            {activeReels.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 60, background: '#fff', borderRadius: 16, border: '1px solid var(--border)' }}>
+                No reels listed in this section today. Check back later!
+              </div>
+            ) : (
+              /* Single unified leaderboard list */
+              <div>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -598,7 +600,9 @@ export default function TrendingPage() {
               })}
             </div>
 
-          </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 

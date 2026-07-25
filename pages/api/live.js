@@ -207,7 +207,11 @@ export default async function handler(req, res) {
     }
 
     // Set Edge CDN and Browser caching headers
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
+    if (isFresh) {
+      res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate')
+    } else {
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
+    }
     return res.status(200).json(responseData)
   } catch (err) {
     console.error('Public API Live Error:', err)

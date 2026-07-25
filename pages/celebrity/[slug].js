@@ -3,10 +3,17 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../../components/Navbar'
 import PostCard from '../../components/PostCard'
+import Logo from '../../components/Logo'
 import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
-export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [] }) {
+const getOrdinal = (n) => {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null }) {
   const router = useRouter()
   const { slug, compare } = router.query
 
@@ -209,7 +216,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
     return (
       <>
         <Head>
-          <title>{celebrity.name} vs {compareCelebrity.name} — Spialr</title>
+          <title>{`${celebrity.name} vs ${compareCelebrity.name} — Spialr`}</title>
         </Head>
 
         <Navbar />
@@ -300,9 +307,14 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                     Joined: {celebrity.account_created_year}
                   </span>
                 )}
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
                   {formatCount(celebrity.posts_count || postsCount)} posts
                 </span>
+                {liveRank && (
+                  <span style={{ fontSize: 11.5, color: '#e1306c', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
+                    Ranked #{liveRank} Most Followed
+                  </span>
+                )}
               </div>
             </div>
 
@@ -347,9 +359,14 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                     Joined: {compareCelebrity.account_created_year}
                   </span>
                 )}
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
                   {formatCount(compareCelebrity.posts_count)} posts
                 </span>
+                {compareLiveRank && (
+                  <span style={{ fontSize: 11.5, color: '#e1306c', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
+                    Ranked #{compareLiveRank} Most Followed
+                  </span>
+                )}
               </div>
             </div>
 
@@ -397,14 +414,22 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
   return (
     <>
       <Head>
-        <title>{celebrity.name} — Spialr</title>
+        <title>{`${celebrity.name} — Spialr`}</title>
       </Head>
 
       <Navbar />
 
       <main style={{ maxWidth: 850, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }}>
-        {/* Back */}
-        <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24, cursor: 'pointer', padding: 0 }}>
+        <button 
+          onClick={() => {
+            if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
+              router.back()
+            } else {
+              router.push('/')
+            }
+          }} 
+          style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24, cursor: 'pointer', padding: 0 }}
+        >
           ← Back to Search
         </button>
 
@@ -460,6 +485,11 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 <span style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 600 }}>
                   <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts
                 </span>
+                {liveRank && (
+                  <span style={{ fontSize: 13.5, color: '#e1306c', fontWeight: 700, marginTop: 2 }}>
+                    Ranked #{liveRank} Most Followed
+                  </span>
+                )}
               </div>
             </div>
 
@@ -773,11 +803,24 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 background: 'var(--surface2)',
                 border: '1px solid var(--border)',
                 borderRadius: 12,
-                padding: '16px 20px',
+                padding: '20px 24px',
                 lineHeight: 1.6,
                 fontSize: 14.5,
                 color: 'var(--text-dim)'
               }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 14,
+                  borderBottom: '1px solid var(--border)',
+                  paddingBottom: 10
+                }}>
+                  <Logo height={20} />
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                    Social Audit Benchmarks
+                  </span>
+                </div>
                 {(() => {
                   const name = celebrity.name || 'This creator';
                   const category = celebrity.category || '';
@@ -799,7 +842,11 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
                   if (templateIndex === 0) {
                     // Standard / Comprehensive Style
-                    outputHtml = `Spialr provides comprehensive performance insights and profile statistics for <strong>${name}</strong>`;
+                    if (liveRank) {
+                      outputHtml = `Ranked <strong>#${liveRank}</strong> most followed account on Spialr, this profile provides comprehensive performance insights and statistics for <strong>${name}</strong>`;
+                    } else {
+                      outputHtml = `Spialr provides comprehensive performance insights and profile statistics for <strong>${name}</strong>`;
+                    }
                     if (followersVal) {
                       outputHtml += `, who has established a follower base of <strong>${followersVal}</strong>${category ? ` within the <strong>${category}</strong> category` : ''}`;
                     }
@@ -820,10 +867,19 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                     outputHtml += ` This data outlines public engagement trends and audience metrics to help creators and Social Media users analyze content reach.`;
                   } else if (templateIndex === 1) {
                     // Interaction & Growth Benchmark Style
-                    if (interactionVal) {
-                      outputHtml += `Benchmarks for <strong>${name}</strong> indicate a strong audience interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                    if (liveRank) {
+                      outputHtml += `Ranked <strong>#${liveRank}</strong> most followed account on Spialr, benchmarks for <strong>${name}</strong> `;
+                      if (interactionVal) {
+                        outputHtml += `indicate a strong audience interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                      } else {
+                        outputHtml += `showcase verified performance metrics and profile statistics. `;
+                      }
                     } else {
-                      outputHtml += `Spialr monitors public performance metrics and profile statistics for <strong>${name}</strong>. `;
+                      if (interactionVal) {
+                        outputHtml += `Benchmarks for <strong>${name}</strong> indicate a strong audience interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                      } else {
+                        outputHtml += `Spialr monitors public performance metrics and profile statistics for <strong>${name}</strong>. `;
+                      }
                     }
                     if (followersVal) {
                       outputHtml += `With a total follower base of <strong>${followersVal}</strong>${category ? ` in the <strong>${category}</strong> category` : ''}, this profile showcases steady growth. `;
@@ -841,7 +897,11 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                     outputHtml += `These analytical insights help content creators and Social Media users assess public reach and engagement velocity.`;
                   } else if (templateIndex === 2) {
                     // Performance Consistency Style
-                    outputHtml += `For <strong>${name}</strong>, Spialr tracks audience metrics and public engagement trends across several content formats. `;
+                    if (liveRank) {
+                      outputHtml += `Ranked <strong>#${liveRank}</strong> most followed account on Spialr, this profile tracks audience metrics and public engagement trends for <strong>${name}</strong> across several content formats. `;
+                    } else {
+                      outputHtml += `For <strong>${name}</strong>, Spialr tracks audience metrics and public engagement trends across several content formats. `;
+                    }
                     if (followersVal) {
                       outputHtml += `Currently, the profile holds a benchmark position with <strong>${followersVal}</strong> followers${category ? ` in the <strong>${category}</strong> sector` : ''}. `;
                     }
@@ -858,7 +918,11 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                     outputHtml += `Marketing professionals and Social Media users utilize these stats to analyze public benchmark trends.`;
                   } else {
                     // Reach & Audience Benchmark Style
-                    outputHtml += `Public performance benchmarks for <strong>${name}</strong> showcase notable metrics across various digital timelines. `;
+                    if (liveRank) {
+                      outputHtml += `Ranked <strong>#${liveRank}</strong> most followed account on Spialr, public performance benchmarks for <strong>${name}</strong> showcase notable metrics across various digital timelines. `;
+                    } else {
+                      outputHtml += `Public performance benchmarks for <strong>${name}</strong> showcase notable metrics across various digital timelines. `;
+                    }
                     if (followersVal) {
                       outputHtml += `Spialr's current data lists a follower base of <strong>${followersVal}</strong>${category ? ` in the <strong>${category}</strong> category` : ''}. `;
                     }
@@ -1077,6 +1141,36 @@ export async function getServerSideProps(context) {
       }
     }
 
+    // Fetch leaderboard data for rank calculations (highly robust, ignores case, spaces, and punctuation)
+    const { data: leaderboardData } = await supabase
+      .from('most_followed')
+      .select('name, followers_count')
+      .order('followers_count', { ascending: false })
+
+    let liveRank = null
+    if (leaderboardData) {
+      const cleanCelName = celebrity.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const matchIndex = leaderboardData.findIndex(item => {
+        const cleanItemName = item.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+        return cleanItemName === cleanCelName || cleanItemName.includes(cleanCelName)
+      })
+      if (matchIndex !== -1) {
+        liveRank = matchIndex + 1
+      }
+    }
+
+    let compareLiveRank = null
+    if (compareCelebrity && leaderboardData) {
+      const cleanCompName = compareCelebrity.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const matchIndex = leaderboardData.findIndex(item => {
+        const cleanItemName = item.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+        return cleanItemName === cleanCompName || cleanItemName.includes(cleanCompName)
+      })
+      if (matchIndex !== -1) {
+        compareLiveRank = matchIndex + 1
+      }
+    }
+
     // Fetch 4 other celebrities for internal linking and Adsense thin page prevention
     const { data: otherCelebrities } = await supabase
       .from('celebrities')
@@ -1090,7 +1184,9 @@ export async function getServerSideProps(context) {
         initialCelebrity: celebrity,
         initialPosts: posts || [],
         initialCompareCelebrity: compareCelebrity,
-        otherCelebrities: otherCelebrities || []
+        otherCelebrities: otherCelebrities || [],
+        liveRank,
+        compareLiveRank
       }
     }
   } catch (err) {

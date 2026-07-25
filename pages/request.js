@@ -26,6 +26,7 @@ export default function RequestCreator() {
     <>
       <Head>
         <title>Request Creator / Suggest Profile — Spialr</title>
+        <meta name="description" content="Suggest new creators, actors, singers, and meme pages to be tracked on Spialr's live rankings database." />
       </Head>
       <Navbar />
       <main style={{ maxWidth: 600, margin: '0 auto', padding: '60px 20px' }}>

@@ -232,6 +232,7 @@ export default function AllCelebrities() {
     <>
       <Head>
         <title>All Profiles — Spialr</title>
+        <meta name="description" content="Explore a complete directory of popular social media creators, actors, singers, and meme handles. Benchmark and compare overall follower lists." />
       </Head>
 
       <Navbar />

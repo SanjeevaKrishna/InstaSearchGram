@@ -34,7 +34,7 @@ export default async function handler(req, res) {
       const {
         celebrity_id, post_url, post_type, caption, post_date,
         tags, is_most_liked, is_most_commented, is_most_viewed, is_first_post,
-        playlist_name, playlist_cover_url
+        playlist_name, playlist_cover_url, like_count, comment_count, view_count
       } = req.body
 
       if (!celebrity_id || !post_url) {
@@ -56,6 +56,9 @@ export default async function handler(req, res) {
           is_first_post: is_first_post || false,
           playlist_name: playlist_name || null,
           playlist_cover_url: playlist_cover_url || null,
+          like_count: like_count !== undefined ? like_count : null,
+          comment_count: comment_count !== undefined ? comment_count : null,
+          view_count: view_count !== undefined ? view_count : null,
         }])
         .select()
         .single()
@@ -69,7 +72,7 @@ export default async function handler(req, res) {
       const {
         id, post_url, post_type, caption, post_date,
         tags, is_most_liked, is_most_commented, is_most_viewed, is_first_post,
-        playlist_name, playlist_cover_url
+        playlist_name, playlist_cover_url, like_count, comment_count, view_count
       } = req.body
 
       if (!id) return res.status(400).json({ error: 'id required' })
@@ -81,7 +84,10 @@ export default async function handler(req, res) {
           tags: tags || [],
           is_most_liked, is_most_commented, is_most_viewed, is_first_post,
           playlist_name: playlist_name || null,
-          playlist_cover_url: playlist_cover_url || null
+          playlist_cover_url: playlist_cover_url || null,
+          like_count: like_count !== undefined ? like_count : null,
+          comment_count: comment_count !== undefined ? comment_count : null,
+          view_count: view_count !== undefined ? view_count : null,
         })
         .eq('id', id)
         .select()

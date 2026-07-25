@@ -4,6 +4,9 @@ const nextConfig = {
   images: {
     domains: ['instagram.com', 'cdninstagram.com', 'www.instagram.com'],
   },
+  experimental: {
+    scrollRestoration: true,
+  },
 }
 
 module.exports = nextConfig

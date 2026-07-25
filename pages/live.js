@@ -1474,8 +1474,8 @@ export default function LivePage() {
                   </>
                 )}
 
-                {/* View Profile button */}
-                {activeTab === 'voting' && (
+                {/* View Analytics or View Stats button */}
+                {activeTab === 'voting' ? (
                   <button 
                     className="vote-dialog-btn btn-profile" 
                     onClick={() => {
@@ -1486,6 +1486,19 @@ export default function LivePage() {
                     <User size={18} strokeWidth={2.5} />
                     <span>View Prof</span>
                   </button>
+                ) : (
+                  selectedProfile.celebritySlug && (
+                    <button 
+                      className="vote-dialog-btn btn-profile" 
+                      onClick={() => {
+                        router.push(`/celebrity/${selectedProfile.celebritySlug}`)
+                        setSelectedProfile(null)
+                      }}
+                    >
+                      <BarChart3 size={18} strokeWidth={2.5} style={{ color: 'var(--accent)' }} />
+                      <span>Analytics</span>
+                    </button>
+                  )
                 )}
               </div>
             </div>

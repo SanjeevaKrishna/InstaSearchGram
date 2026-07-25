@@ -27,6 +27,7 @@ export default function SavedLinks() {
     <>
       <Head>
         <title>Saved Links — Spialr</title>
+        <meta name="description" content="Access your saved profiles, posts, reels, and search shortcuts on Spialr." />
       </Head>
 
       <Navbar />

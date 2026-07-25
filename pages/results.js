@@ -4,7 +4,7 @@ import Head from 'next/head'
 import Navbar from '../components/Navbar'
 import PostCard from '../components/PostCard'
 import { safeStorage } from '../lib/storage'
-import { Lightbulb, Search } from 'lucide-react'
+import { Lightbulb, Search, Heart, MessageSquare, Eye, Star } from 'lucide-react'
 
 
 export default function ResultsPage() {
@@ -33,6 +33,8 @@ export default function ResultsPage() {
     if (roundedNum >= 1000) return formatWithPrec(roundedNum / 1000, 'K')
     return roundedNum.toString()
   }
+
+  const formatCount = formatFollowers;
 
   const generateDynamicContent = () => {
     if (!celebrity || posts.length === 0) return null;
@@ -129,6 +131,29 @@ export default function ResultsPage() {
                       : filter === 'first_post' ? `Archive Spotlight: ${celebrity.name}'s Earliest Post`
                       : `Curated Highlights for ${celebrity.name}`;
 
+    // Determine metric value & label
+    let metricLabel = '';
+    let metricValue = '';
+    let metricIcon = null;
+
+    if (filter === 'most_liked') {
+      metricLabel = 'Total Likes';
+      metricValue = celebrity.most_liked_count || (post?.like_count ? formatCount(post.like_count) : (celebrity.most_likes ? formatCount(celebrity.most_likes) : 'Pending Audit'));
+      metricIcon = <Heart size={20} style={{ color: '#ff2a5f' }} />;
+    } else if (filter === 'most_commented') {
+      metricLabel = 'Total Comments';
+      metricValue = celebrity.most_commented_count || (post?.comment_count ? formatCount(post.comment_count) : 'Pending Audit');
+      metricIcon = <MessageSquare size={20} style={{ color: '#8f00ff' }} />;
+    } else if (filter === 'most_viewed') {
+      metricLabel = 'Total Views';
+      metricValue = celebrity.most_viewed_count || (post?.view_count ? formatCount(post.view_count) : 'Pending Audit');
+      metricIcon = <Eye size={20} style={{ color: '#ff6b35' }} />;
+    } else if (filter === 'first_post') {
+      metricLabel = 'First Upload Date';
+      metricValue = post?.post_date ? new Date(post.post_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Pending Audit';
+      metricIcon = <Star size={20} style={{ color: '#ffa751' }} />;
+    }
+
     return (
       <div style={{
         marginTop: 40,
@@ -150,65 +175,133 @@ export default function ResultsPage() {
         }}>
           {filterTitle}
         </h2>
-        
-        <div style={{
-          fontSize: '14.5px',
-          lineHeight: 1.7,
-          color: 'var(--text-dim)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16
-        }}>
-          <p>{introPara}</p>
-          <p>{bioText}</p>
-          <p>{engagementPara}</p>
-          <p>{contentPara}</p>
-          <p>{valuePara}</p>
-        </div>
 
-        {/* FAQ Section */}
-        <div style={{
-          marginTop: 32,
-          borderTop: '1px solid var(--border)',
-          paddingTop: 24
-        }}>
-          <h3 style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 800,
-            fontSize: 16,
-            color: 'var(--text)',
-            marginBottom: 16
+        {/* 📊 High-impact Metric Banner */}
+        {metricLabel && (
+          <div style={{
+            background: 'var(--surface2)',
+            border: '1px solid var(--border)',
+            borderRadius: 16,
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            marginBottom: 24,
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
           }}>
-            ❓ Frequently Asked Questions
-          </h3>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
-                Why is this specific post highlighted by Spialr?
-              </h4>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                Spialr tracks public engagement metrics for major profiles. This post is highlighted because it mathematically represents the highest score for the selected filter ({filterDesc}) across the celebrity's recorded uploads.
-              </p>
+            <div style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
+            }}>
+              {metricIcon}
             </div>
-
-            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
-                How can creators use these insights?
-              </h4>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                By examining the hashtags, caption structures, and media formats of {celebrity.name}'s top posts, other creators can identify successful patterns, hooks, and content structures to test on their own accounts.
-              </p>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                {metricLabel}
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2, marginTop: 2 }}>
+                {metricValue}
+              </div>
             </div>
+          </div>
+        )}
 
-            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
-                Are these statistics updated in real-time?
-              </h4>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                Social media metrics fluctuate constantly. Spialr updates engagement statistics periodically. To view the current real-time counts, likes, and comments, you can click the "Watch" button on the card to navigate directly to the official post on Instagram.
-              </p>
+        <h3 style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 16 }}>
+          📊 Analytical Report
+        </h3>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Card 1: Executive Overview */}
+          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>📝</span> Executive Overview
             </div>
+            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: 0 }}>{introPara} {bioText}</p>
+          </div>
+
+          {/* Card 2: Engagement Insights */}
+          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>📈</span> Engagement Dynamics & Reach
+            </div>
+            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: 0 }}>{engagementPara}</p>
+          </div>
+
+          {/* Card 3: Creative & Formatting Strategy */}
+          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>✍️</span> Content & Formatting Strategy
+            </div>
+            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: 0 }}>{contentPara}</p>
+          </div>
+
+          {/* Card 4: Platform Benchmarks */}
+          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>🌐</span> Platform Benchmarks
+            </div>
+            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: 0 }}>{valuePara}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const generateFaqContent = () => {
+    if (!celebrity || posts.length === 0) return null;
+    return (
+      <div style={{
+        marginTop: 40,
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 24,
+        padding: '32px',
+        boxShadow: '0 12px 36px rgba(0,0,0,0.03)',
+        color: 'var(--text)',
+      }}>
+        <h3 style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          fontSize: 16,
+          color: 'var(--text)',
+          marginBottom: 16
+        }}>
+          ❓ Frequently Asked Questions
+        </h3>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
+              Why is this specific post highlighted by Spialr?
+            </h4>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+              Spialr tracks public engagement metrics for major profiles. This post is highlighted because it mathematically represents the highest score for the selected filter ({filterDesc}) across the celebrity's recorded uploads.
+            </p>
+          </div>
+
+          <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
+              How can creators use these insights?
+            </h4>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+              By examining the hashtags, caption structures, and media formats of {celebrity.name}'s top posts, other creators can identify successful patterns, hooks, and content structures to test on their own accounts.
+            </p>
+          </div>
+
+          <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
+              Are these statistics updated in real-time?
+            </h4>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+              Social media metrics fluctuate constantly. Spialr updates engagement statistics periodically. To view the current real-time counts, likes, and comments, you can click the "Watch" button on the card to navigate directly to the official post on Instagram.
+            </p>
           </div>
         </div>
       </div>
@@ -290,6 +383,32 @@ export default function ResultsPage() {
       })
       .catch(() => setLoading(false))
   }, [slug, search, filter, date, month, start, end, playlist])
+ 
+  if (!slug) {
+    if (router.isReady) {
+      return (
+        <>
+          <Navbar />
+          <main style={{ maxWidth: 800, margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, marginBottom: 8 }}>No Profile Selected</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Please select a celebrity profile from our home listings to view insights.</p>
+            <button className="btn btn-primary" onClick={() => router.push('/')} style={{ padding: '10px 20px', borderRadius: 8, cursor: 'pointer' }}>
+              Go to Homepage
+            </button>
+          </main>
+        </>
+      )
+    }
+    return (
+      <>
+        <Navbar />
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
+          <div className="spinner" style={{ width: 40, height: 40 }} />
+        </div>
+      </>
+    )
+  }
 
   if (loading) return (
     <>
@@ -320,7 +439,18 @@ export default function ResultsPage() {
       <Navbar />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '24px 20px 80px' }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24, cursor: 'pointer', padding: 0 }}>
+        <button 
+          onClick={() => {
+            if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
+              router.back()
+            } else if (slug) {
+              router.push(`/celebrity/${slug}`)
+            } else {
+              router.push('/')
+            }
+          }} 
+          style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24, cursor: 'pointer', padding: 0 }}
+        >
           ← Back to Profile
         </button>
 
@@ -429,6 +559,8 @@ export default function ResultsPage() {
                 ))}
               </div>
             </div>
+
+            {generateFaqContent()}
           </>
         ) : (
           <div style={{
