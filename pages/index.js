@@ -3,114 +3,22 @@ import Head from 'next/head'
 import CelebrityCard from '../components/CelebrityCard'
 import Navbar from '../components/Navbar'
 import { Sparkles, Search, Flame } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
-const STATIC_FEATURED = [
-  {
-    id: "027bbe3a-5bb4-4b78-b68c-db7168be7762",
-    name: "Virat Kohli",
-    slug: "virat-kohli",
-    instagram_handle: "virat.kohli",
-    followers_count: 273000000,
-    posts_count: 1050,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1779636125/insta_search_celebrities/e3peepd1uzfwztqlx7dp.jpg"
-  },
-  {
-    id: "0798e19c-aefc-4c9d-a4de-c8ba60fe352d",
-    name: "Narendra Modi",
-    slug: "narendra-modi",
-    instagram_handle: "narendramodi",
-    followers_count: 104000000,
-    posts_count: 1000,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1779890253/insta_search_celebrities/aibrzfxxxqpxqnnwpdxz.jpg"
-  },
-  {
-    id: "shraddha-kapoor-static",
-    name: "Shraddha Kapoor",
-    slug: "shraddha-kapoor",
-    instagram_handle: "shraddhakapoor",
-    followers_count: 94500000,
-    posts_count: 2050,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780060940/insta_search_celebrities/r6rpfuowqbx9uypvwyk2.jpg"
-  },
-  {
-    id: "21e911e1-feb1-4801-a08a-d8621806b722",
-    name: "Priyanka Chopra",
-    slug: "priyanka-chopra",
-    instagram_handle: "priyankachopra",
-    followers_count: 92900000,
-    posts_count: 4063,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780047989/insta_search_celebrities/idindrsvqjnjzzuy26wi.jpg"
-  },
-  {
-    id: "70945bdb-142f-4750-8de4-11981fb4539b",
-    name: "Alia Bhatt",
-    slug: "alia-bhatt",
-    instagram_handle: "aliabhatt",
-    followers_count: 85600000,
-    posts_count: 2231,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780061010/insta_search_celebrities/v0pdtzczf12ynrz7jyph.jpg"
-  },
-  {
-    id: "katrina-kaif-static",
-    name: "Katrina Kaif",
-    slug: "katrina-kaif",
-    instagram_handle: "katrinakaif",
-    followers_count: 80400000,
-    posts_count: 1100,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780060959/insta_search_celebrities/e0wz8sifjtzspuox1d2q.jpg"
-  },
-  {
-    id: "deepika-padukone-static",
-    name: "Deepika Padukone",
-    slug: "deepika-padukone",
-    instagram_handle: "deepikapadukone",
-    followers_count: 80000000,
-    posts_count: 1200,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780060993/insta_search_celebrities/bivk8yzn0uuhq8m8n9n6.jpg"
-  },
-  {
-    id: "2577f8c2-dc39-4ba3-b705-90e1ba0037c4",
-    name: "Salman Khan",
-    slug: "salman-khan",
-    instagram_handle: "beingsalmankhan",
-    followers_count: 72100000,
-    posts_count: 1604,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780046255/insta_search_celebrities/kdkigwcnyc1n8u5m5szd.jpg"
-  },
-  {
-    id: "urvashi-rautela-static",
-    name: "Urvashi Rautela",
-    slug: "urvashi-rautela",
-    instagram_handle: "urvashirautela",
-    followers_count: 71800000,
-    posts_count: 1800,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780061044/insta_search_celebrities/zhyphv0pdtzczf12ynrz.jpg"
-  },
-  {
-    id: "jacqueline-fernandez-static",
-    name: "Jacqueline Fernandez",
-    slug: "jacqueline-fernandez",
-    instagram_handle: "jacquelinef143",
-    followers_count: 70500000,
-    posts_count: 1500,
-    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780061028/insta_search_celebrities/u5m5szdkdkigwcnyc1n8.jpg"
-  }
-]
-
-export default function Home() {
+export default function Home({ featured = [] }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [searching, setSearching] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const searchRef = useRef(null)
   const debounceRef = useRef(null)
+  const searchRef = useRef(null)
 
   const handleSearch = async (q) => {
     if (!q.trim()) {
       setResults([])
       return
     }
-    setLoading(true)
+    setSearching(true)
     try {
       const res = await fetch(`/api/celebrities?q=${encodeURIComponent(q)}`)
       const data = await res.json()
@@ -118,7 +26,7 @@ export default function Home() {
     } catch {
       setResults([])
     } finally {
-      setLoading(false)
+      setSearching(false)
     }
   }
 
@@ -200,9 +108,7 @@ export default function Home() {
               padding: '4px 4px 4px 16px',
               gap: 8,
               transition: 'border-color 0.2s',
-            }}
-            onFocus={() => {}} 
-            >
+            }}>
               <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               <input
                 ref={searchRef}
@@ -220,8 +126,8 @@ export default function Home() {
                 onFocus={() => query && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               />
-              {loading && <div className="spinner" style={{ flexShrink: 0, marginRight: 8 }} />}
-              {query && !loading && (
+              {searching && <div className="spinner" style={{ flexShrink: 0, marginRight: 8 }} />}
+              {query && !searching && (
                 <button
                   onClick={() => { setQuery(''); setResults([]); setShowSuggestions(false) }}
                   style={{
@@ -239,7 +145,7 @@ export default function Home() {
               )}
             </div>
 
-            {/* Results dropdown / list */}
+            {/* Search results dropdown */}
             {showSuggestions && results.length > 0 && (
               <div style={{
                 position: 'absolute',
@@ -299,7 +205,7 @@ export default function Home() {
               </div>
             )}
 
-            {showSuggestions && query.trim() && !loading && results.length === 0 && (
+            {showSuggestions && query.trim() && !searching && results.length === 0 && (
               <div style={{
                 position: 'absolute',
                 top: 'calc(100% + 8px)',
@@ -314,14 +220,14 @@ export default function Home() {
                 fontSize: 14,
                 zIndex: 50,
               }}>
-                No celebrity found for "{query}"
+                No celebrity found for &ldquo;{query}&rdquo;
               </div>
             )}
           </div>
         </div>
 
-        {/* Featured Celebrities */}
-        {!query && STATIC_FEATURED.length > 0 && (
+        {/* Featured Celebrities — rendered from real server-side data */}
+        {!query && featured.length > 0 && (
           <div className="fade-in">
             <h2 style={{
               fontFamily: 'var(--font-display)',
@@ -337,11 +243,41 @@ export default function Home() {
               Popular <Flame size={18} style={{ color: '#ff6b35' }} />
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {STATIC_FEATURED.map(c => <CelebrityCard key={c.id} celebrity={c} />)}
+              {featured.map(c => <CelebrityCard key={c.id} celebrity={c} />)}
             </div>
           </div>
         )}
       </main>
     </>
   )
+}
+
+// Server-side: fetch real featured creators from Supabase so the HTML source
+// already contains all profile cards and real photo_url values.
+// No loading state, no useEffect, no client-side fetch for this list.
+export async function getServerSideProps() {
+  try {
+    if (!supabase) {
+      return { props: { featured: [] } }
+    }
+
+    const { data, error } = await supabase
+      .from('celebrities')
+      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url')
+      .eq('is_featured', true)
+      .neq('hide_search', true)
+      .order('order_index', { ascending: true })
+      .order('followers_count', { ascending: false })
+      .limit(15)
+
+    if (error) {
+      console.error('Homepage getServerSideProps error:', error)
+      return { props: { featured: [] } }
+    }
+
+    return { props: { featured: data || [] } }
+  } catch (err) {
+    console.error('Homepage getServerSideProps exception:', err)
+    return { props: { featured: [] } }
+  }
 }
