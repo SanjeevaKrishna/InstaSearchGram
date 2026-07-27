@@ -435,17 +435,48 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
 
 
-        {/* Profile Header */}
-        <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginBottom: 28 }}>
-          {/* Avatar (Squircle Shape preserved) */}
+        {/* Profile Header — matches All Profiles list card style */}
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center', marginBottom: 28 }}>
+
+          {/* Circle avatar with gradient story ring — same as All Profiles */}
           <div style={{
-            width: 90, height: 90, borderRadius: 16, background: 'var(--surface2)', border: '2px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, fontWeight: 800,
-            overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', flexShrink: 0
+            width: 80,
+            height: 80,
+            borderRadius: '50%',
+            background: 'var(--gradient)',
+            padding: 3,
+            flexShrink: 0,
           }}>
-            {celebrity.photo_url ? (
-              <img src={celebrity.photo_url} alt={celebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
-            ) : celebrity.name?.charAt(0).toUpperCase()}
+            <div style={{
+              width: '100%',
+              height: '100%',
+              borderRadius: '50%',
+              background: 'var(--surface)',
+              padding: 2,
+            }}>
+              <div style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                background: 'var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 28,
+                fontWeight: 800,
+                color: 'white',
+                overflow: 'hidden',
+              }}>
+                {celebrity.photo_url ? (
+                  <img
+                    src={celebrity.photo_url}
+                    alt={celebrity.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={e => { e.target.style.display = 'none' }}
+                  />
+                ) : celebrity.name?.charAt(0).toUpperCase()}
+              </div>
+            </div>
           </div>
 
           {/* Name, Handle & Metadata */}
@@ -453,40 +484,40 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             <div style={{ minWidth: 0, flex: 1 }}>
               <h1 style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 24,
+                fontSize: 22,
                 fontWeight: 800,
                 color: 'var(--text)',
                 marginBottom: 4,
-                letterSpacing: '-0.02em'
+                letterSpacing: '-0.02em',
               }}>
                 {celebrity.name}
               </h1>
               {celebrity.instagram_handle && (
-                <div style={{ 
-                  fontSize: 15, 
-                  color: 'var(--text-muted)', 
+                <div style={{
+                  fontSize: 14,
+                  color: 'var(--text-muted)',
                   fontWeight: 600,
                   fontFamily: 'var(--font-body)',
-                  marginBottom: 8 
+                  marginBottom: 8
                 }}>
                   @{celebrity.instagram_handle}
                 </div>
               )}
-              {/* Vertical Stack Followers, Joined, Posts */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 14.5, color: 'var(--text-dim)', fontWeight: 600 }}>
+              {/* Followers · Posts · Joined — same info as All Profiles row */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 600 }}>
                   <strong>{formatCount(celebrity.followers_count)}</strong> followers
                 </span>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts
+                </span>
                 {celebrity.account_created_year && (
-                  <span style={{ fontSize: 13.5, color: 'var(--text-dim)', fontWeight: 600 }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>
                     Joined: <strong>{celebrity.account_created_year}</strong>
                   </span>
                 )}
-                <span style={{ fontSize: 13.5, color: 'var(--text-muted)', fontWeight: 600 }}>
-                  <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts
-                </span>
                 {liveRank && (
-                  <span style={{ fontSize: 13.5, color: '#e1306c', fontWeight: 700, marginTop: 2 }}>
+                  <span style={{ fontSize: 13, color: '#e1306c', fontWeight: 700, marginTop: 2 }}>
                     Ranked #{liveRank} Most Followed
                   </span>
                 )}
