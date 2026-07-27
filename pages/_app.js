@@ -51,10 +51,6 @@ export default function App({ Component, pageProps }) {
         <meta property="twitter:url" content={canonicalUrl} />
         <meta property="twitter:image" content="https://spialr.com/og-image.jpg" />
 
-        {/* Google Search Console Verification */}
-        {/* Replace content value with your actual verification code */}
-        <meta name="google-site-verification" content="google-search-console-verification-placeholder" />
-
         {/* Schema.org WebSite JSON-LD */}
         <script
           type="application/ld+json"
@@ -74,7 +70,7 @@ export default function App({ Component, pageProps }) {
         />
       </Head>
       <Component {...pageProps} />
-      {!isAdmin && ['/about', '/contact', '/privacy', '/terms', '/disclaimer', '/dmca', '/request', '/methodology'].includes(router.pathname) && <Footer />}
+      {!isAdmin && <Footer />}
       {!isAdmin && <BottomNav />}
       {!isAdmin && ['/', '/all', '/trending', '/live'].includes(router.pathname) && !(router.pathname === '/all' && router.query.compare) && (
         <Link href="/converter">

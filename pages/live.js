@@ -208,10 +208,10 @@ const playSound = (type) => {
   }
 }
 
-export default function LivePage() {
+export default function LivePage({ initialLiveData = null }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'voting'
-  const [liveData, setLiveData] = useState({ live_date: '', most_followed: [], viral_reels: [] })
+  const [liveData, setLiveData] = useState(initialLiveData || { live_date: '', most_followed: [], viral_reels: [] })
 
   // Synchronize activeTab state with the tab query parameter
   useEffect(() => {
@@ -243,7 +243,7 @@ export default function LivePage() {
   const [showSuccessAnim, setShowSuccessAnim] = useState(null)
   const [showStatsModal, setShowStatsModal] = useState(null)
   const [currentDate, setCurrentDate] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(initialLiveData ? false : true)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
@@ -486,7 +486,9 @@ export default function LivePage() {
   }
 
   useEffect(() => {
-    fetchLiveData()
+    if (!initialLiveData) {
+      fetchLiveData()
+    }
 
     if (!supabase) return
 
@@ -2061,4 +2063,67 @@ export default function LivePage() {
       `}</style>
     </>
   )
+}
+
+export async function getServerSideProps() {
+  try {
+    const [
+      settingsResult, 
+      profilesResult1, 
+      profilesResult2, 
+      profilesResult3, 
+      reelsResult
+    ] = await Promise.all([
+      supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
+      supabase.from('viral_reels').select('*')
+    ])
+
+    if (settingsResult.error) throw settingsResult.error
+    if (profilesResult1.error) throw profilesResult1.error
+    if (profilesResult2.error) throw profilesResult2.error
+    if (profilesResult3.error) throw profilesResult3.error
+    if (reelsResult.error) throw reelsResult.error
+
+    const settingsData = settingsResult.data
+    const reelsData = reelsResult.data
+
+    // Combine profiles page ranges
+    const profilesData = (profilesResult1.data || [])
+      .concat(profilesResult2.data || [])
+      .concat(profilesResult3.data || [])
+
+    const sortedReels = (reelsData || []).sort((a, b) => {
+      const rankA = a.order_index || 999999
+      const rankB = b.order_index || 999999
+      if (rankA !== rankB) return rankA - rankB
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    })
+
+    return {
+      props: {
+        initialLiveData: {
+          live_date: settingsData?.live_date || currentDate,
+          most_followed: profilesData || [],
+          viral_reels: sortedReels || []
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Live getServerSideProps error:', err)
+    return {
+      props: {
+        initialLiveData: null
+      }
+    }
+  }
 }

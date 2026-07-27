@@ -4,6 +4,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
 import { Search } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const formatCount = (num) => {
   if (!num) return '0'
@@ -14,40 +15,34 @@ const formatCount = (num) => {
   return val.toString()
 }
 
-export default function AllCelebrities() {
+export default function AllCelebrities({ initialCelebrities = [], initialOriginalCelebrity = null }) {
   const router = useRouter()
   const { compare } = router.query
 
-  const [celebrities, setCelebrities] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [originalCelebrity, setOriginalCelebrity] = useState(null)
+  const [celebrities, setCelebrities] = useState(initialCelebrities)
+  const [loading, setLoading] = useState(false)
+  const [originalCelebrity, setOriginalCelebrity] = useState(initialOriginalCelebrity)
   const [selectedCel, setSelectedCel] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-
-  useEffect(() => {
-    fetch('/api/celebrities?limit=all')
-      .then(r => r.json())
-      .then(d => {
-        setCelebrities(d.celebrities || [])
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [])
 
   // Fetch original celebrity if comparison mode is active
   useEffect(() => {
     if (compare) {
-      fetch(`/api/celebrities/${compare}`)
-        .then(r => r.json())
-        .then(d => {
-          setOriginalCelebrity(d.celebrity)
-        })
-        .catch(err => console.error("Error loading original celebrity:", err))
+      if (initialOriginalCelebrity && initialOriginalCelebrity.slug === compare) {
+        setOriginalCelebrity(initialOriginalCelebrity)
+      } else {
+        fetch(`/api/celebrities/${compare}`)
+          .then(r => r.json())
+          .then(d => {
+            setOriginalCelebrity(d.celebrity)
+          })
+          .catch(err => console.error("Error loading original celebrity:", err))
+      }
     } else {
       setOriginalCelebrity(null)
       setSelectedCel(null)
     }
-  }, [compare])
+  }, [compare, initialOriginalCelebrity])
 
   // Handle keyboard Enter button
   useEffect(() => {
@@ -431,4 +426,58 @@ export default function AllCelebrities() {
       </main>
     </>
   )
+}
+
+export async function getServerSideProps(context) {
+  const { compare } = context.query
+
+  try {
+    // 1. Fetch all celebrities
+    let celebrities = []
+    let from = 0
+    let to = 999
+    while (true) {
+      const { data: pageData, error: pageError } = await supabase
+        .from('celebrities')
+        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
+        .order('order_index', { ascending: true })
+        .order('name')
+        .neq('hide_search', true)
+        .range(from, to)
+
+      if (pageError) throw pageError
+      celebrities = celebrities.concat(pageData || [])
+      if (!pageData || pageData.length < 1000) break
+      from += 1000
+      to += 1000
+    }
+
+    // 2. Fetch compare celebrity if compare query param is present
+    let originalCelebrity = null
+    if (compare) {
+      const { data: compData, error: compError } = await supabase
+        .from('celebrities')
+        .select('*')
+        .eq('slug', compare)
+        .single()
+      if (!compError && compData) {
+        originalCelebrity = compData
+      }
+    }
+
+    return {
+      props: {
+        initialCelebrities: celebrities || [],
+        initialOriginalCelebrity: originalCelebrity
+      }
+    }
+  } catch (err) {
+    console.error('AllProfiles getServerSideProps error:', err)
+    return {
+      props: {
+        initialCelebrities: [],
+        initialOriginalCelebrity: null
+      }
+    }
+  }
 }

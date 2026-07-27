@@ -4,31 +4,18 @@ import Link from 'next/link'
 import CelebrityCard from '../components/CelebrityCard'
 import Navbar from '../components/Navbar'
 import { Sparkles, Search, Flame, Inbox } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
-export default function Home() {
+export default function Home({ initialFeatured = [] }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [featured, setFeatured] = useState([])
-  const [loadingFeatured, setLoadingFeatured] = useState(true)
+  const [featured, setFeatured] = useState(initialFeatured)
+  const [loadingFeatured, setLoadingFeatured] = useState(false)
   const searchRef = useRef(null)
   const debounceRef = useRef(null)
-
-  useEffect(() => {
-    // Load featured celebrities on mount
-    setLoadingFeatured(true)
-    fetch('/api/celebrities?featured=true')
-      .then(r => r.json())
-      .then(d => {
-        setFeatured(d.celebrities || [])
-        setLoadingFeatured(false)
-      })
-      .catch(() => {
-        setLoadingFeatured(false)
-      })
-  }, [])
 
   const handleSearch = async (q) => {
     if (!q.trim()) {
@@ -301,4 +288,32 @@ export default function Home() {
       </main>
     </>
   )
+}
+
+export async function getServerSideProps() {
+  try {
+    const { data: featured, error } = await supabase
+      .from('celebrities')
+      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
+      .order('order_index', { ascending: true })
+      .order('name')
+      .eq('is_featured', true)
+      .neq('hide_search', true)
+      .limit(10)
+
+    if (error) throw error
+
+    return {
+      props: {
+        initialFeatured: featured || []
+      }
+    }
+  } catch (err) {
+    console.error('Home getServerSideProps error:', err)
+    return {
+      props: {
+        initialFeatured: []
+      }
+    }
+  }
 }

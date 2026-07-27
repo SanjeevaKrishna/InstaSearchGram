@@ -7,13 +7,13 @@ import { safeStorage } from '../lib/storage'
 import { Lightbulb, Search, Heart, MessageSquare, Eye, Star } from 'lucide-react'
 
 
-export default function ResultsPage() {
+export default function ResultsPage({ initialCelebrity = null, initialPosts = [], initialVotingInfo = null }) {
   const router = useRouter()
   const { slug, search, filter, date, month, start, end, playlist } = router.query
 
-  const [celebrity, setCelebrity] = useState(null)
-  const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [celebrity, setCelebrity] = useState(initialCelebrity)
+  const [posts, setPosts] = useState(initialCelebrity ? initialPosts : [])
+  const [loading, setLoading] = useState(initialCelebrity ? false : true)
 
   const [requesting, setRequesting] = useState(false)
   const [requested, setRequested] = useState(false)
@@ -339,6 +339,42 @@ export default function ResultsPage() {
   }
 
   useEffect(() => {
+    if (initialCelebrity && initialCelebrity.slug === slug) {
+      let result = initialPosts || []
+
+      if (filter === 'most_liked') result = result.filter(p => p.is_most_liked)
+      else if (filter === 'most_commented') result = result.filter(p => p.is_most_commented)
+      else if (filter === 'most_viewed') result = result.filter(p => p.is_most_viewed)
+      else if (filter === 'first_post') result = result.filter(p => p.is_first_post)
+
+      if (search) {
+        const s = search.toLowerCase()
+        result = result.filter(p =>
+          (p.caption || '').toLowerCase().includes(s) ||
+          (p.tags || []).some(t => t.toLowerCase().includes(s))
+        )
+      }
+
+      if (date) {
+        result = result.filter(p => p.post_date === date)
+      }
+
+      if (month) {
+        result = result.filter(p => p.post_date && p.post_date.startsWith(month))
+      }
+
+      if (start) result = result.filter(p => p.post_date && p.post_date >= start)
+      if (end) result = result.filter(p => p.post_date && p.post_date <= end)
+
+      if (playlist) {
+        result = result.filter(p => p.playlist_name === playlist)
+      }
+
+      setPosts(result)
+      setLoading(false)
+      return
+    }
+
     if (!slug) return
     setLoading(true)
     fetch(`/api/celebrities/${slug}`)
@@ -367,7 +403,6 @@ export default function ResultsPage() {
         }
 
         if (month) {
-          // month format is YYYY-MM
           result = result.filter(p => p.post_date && p.post_date.startsWith(month))
         }
 
@@ -382,7 +417,7 @@ export default function ResultsPage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [slug, search, filter, date, month, start, end, playlist])
+  }, [slug, search, filter, date, month, start, end, playlist, initialCelebrity, initialPosts])
  
   if (!slug) {
     if (router.isReady) {
@@ -582,4 +617,81 @@ export default function ResultsPage() {
       </main>
     </>
   )
+}
+
+export async function getServerSideProps(context) {
+  const { slug } = context.query
+  if (!slug) {
+    return {
+      props: {
+        initialCelebrity: null,
+        initialPosts: [],
+        initialVotingInfo: null
+      }
+    }
+  }
+
+  try {
+    const { data: celebrity, error: celError } = await supabase
+      .from('celebrities')
+      .select('*')
+      .eq('slug', slug)
+      .single()
+
+    if (celError || !celebrity) {
+      return {
+        props: {
+          initialCelebrity: null,
+          initialPosts: [],
+          initialVotingInfo: null
+        }
+      }
+    }
+
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('celebrity_id', celebrity.id)
+      .order('post_date', { ascending: false })
+
+    if (postsError) throw postsError
+
+    let votingInfo = null
+    if (celebrity.name) {
+      const { data: exactMatch } = await supabase
+        .from('most_followed')
+        .select('votes, current_vote_rank, highest_vote_rank, lowest_vote_rank')
+        .eq('name', celebrity.name)
+        .maybeSingle()
+
+      if (exactMatch) {
+        votingInfo = exactMatch
+      } else {
+        const trimmedName = celebrity.name.trim()
+        const { data: ilikeMatch } = await supabase
+          .from('most_followed')
+          .select('votes, current_vote_rank, highest_vote_rank, lowest_vote_rank')
+          .ilike('name', `${trimmedName}%`)
+          .maybeSingle()
+        votingInfo = ilikeMatch
+      }
+    }
+
+    return {
+      props: {
+        initialCelebrity: celebrity,
+        initialPosts: posts || [],
+        initialVotingInfo: votingInfo || null
+      }
+    }
+  } catch (err) {
+    console.error('Results getServerSideProps error:', err)
+    return {
+      props: {
+        initialCelebrity: null,
+        initialPosts: [],
+        initialVotingInfo: null
+      }
+    }
+  }
 }

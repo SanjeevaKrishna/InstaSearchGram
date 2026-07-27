@@ -94,7 +94,6 @@ export default function Navbar() {
                 </svg>
               </button>
 
-              {dropdownOpen && (
                 <div style={{
                   position: 'absolute',
                   top: 'calc(100% + 8px)',
@@ -105,9 +104,10 @@ export default function Navbar() {
                   borderRadius: 16,
                   boxShadow: '0 10px 30px rgba(0, 0, 0, 0.12)',
                   padding: '16px 12px',
-                  display: 'flex',
+                  display: dropdownOpen ? 'flex' : 'none',
                   flexDirection: 'column',
                   gap: 4,
+                  zIndex: 999
                 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', padding: '4px 10px', marginBottom: 4 }}>
                     Menu Links
@@ -161,7 +161,6 @@ export default function Navbar() {
                     </div>
                   </div>
                 </div>
-              )}
             </div>
           </div>
         </div>

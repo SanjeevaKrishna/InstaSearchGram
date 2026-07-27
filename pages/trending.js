@@ -6,6 +6,7 @@ import BottomNav from '../components/BottomNav'
 import { TrendingUp, Play, Film, ChevronUp, ChevronDown, Minus, ExternalLink, Users, Eye, Heart } from 'lucide-react'
 import PostCard from '../components/PostCard'
 import { safeStorage } from '../lib/storage'
+import { supabase } from '../lib/supabase'
 
 
 // Deterministic trend indicator calculation based on Reel ID/index
@@ -223,20 +224,20 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
   )
 }
 
-export default function TrendingPage() {
-  const [activeTab, setActiveTab] = useState('trending') // 'trending' or 'most_viewed'
-  const [trendingEnabled, setTrendingEnabled] = useState(true)
+export default function TrendingPage({ initialData = null }) {
+  const [activeTab, setActiveTab] = useState(initialData?.trending_enabled ? 'trending' : 'most_viewed') // 'trending' or 'most_viewed'
+  const [trendingEnabled, setTrendingEnabled] = useState(initialData ? initialData.trending_enabled : true)
   const [hoveredTab, setHoveredTab] = useState(null)
-  const [viralReels, setViralReels] = useState([])
-  const [mostLikedReels, setMostLikedReels] = useState([])
-  const [mostViewedReels, setMostViewedReels] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [viralReels, setViralReels] = useState(initialData ? initialData.viral_reels : [])
+  const [mostLikedReels, setMostLikedReels] = useState(initialData ? initialData.most_liked_reels : [])
+  const [mostViewedReels, setMostViewedReels] = useState(initialData ? initialData.most_viewed_reels : [])
+  const [loading, setLoading] = useState(initialData ? false : true)
   const [error, setError] = useState(null)
-  const [liveDate, setLiveDate] = useState('')
+  const [liveDate, setLiveDate] = useState(initialData ? initialData.live_date : '')
   const [currentTime, setCurrentTime] = useState('')
   const [activeSubTab, setActiveSubTab] = useState('reels') // 'reels', 'liked_reels' or 'posts'
   const [hoveredSubTab, setHoveredSubTab] = useState(null)
-  const [indiaMostLikedPosts, setIndiaMostLikedPosts] = useState([])
+  const [indiaMostLikedPosts, setIndiaMostLikedPosts] = useState(initialData ? initialData.india_most_liked_posts : [])
 
   useEffect(() => {
     const savedSubTab = safeStorage.getItem('trending_active_sub_tab')
@@ -255,29 +256,32 @@ export default function TrendingPage() {
     })
     setLiveDate(today)
 
-    fetch('/api/live?fresh=true')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch trending data')
-        return res.json()
-      })
-      .then(data => {
-        setViralReels(data.viral_reels || [])
-        setMostViewedReels(data.most_viewed_reels || [])
-        setIndiaMostLikedPosts(data.india_most_liked_posts || [])
-        setMostLikedReels(data.most_liked_reels || [])
-        const isTrendingEnabled = data.trending_enabled !== undefined ? data.trending_enabled : true
-        setTrendingEnabled(isTrendingEnabled)
-        if (!isTrendingEnabled) {
-          setActiveTab('most_viewed')
-        }
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error(err)
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [])
+    if (!initialData) {
+      setLoading(true)
+      fetch('/api/live?fresh=true')
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to fetch trending data')
+          return res.json()
+        })
+        .then(data => {
+          setViralReels(data.viral_reels || [])
+          setMostViewedReels(data.most_viewed_reels || [])
+          setIndiaMostLikedPosts(data.india_most_liked_posts || [])
+          setMostLikedReels(data.most_liked_reels || [])
+          const isTrendingEnabled = data.trending_enabled !== undefined ? data.trending_enabled : true
+          setTrendingEnabled(isTrendingEnabled)
+          if (!isTrendingEnabled) {
+            setActiveTab('most_viewed')
+          }
+          setLoading(false)
+        })
+        .catch(err => {
+          console.error(err)
+          setError(err.message)
+          setLoading(false)
+        })
+    }
+  }, [initialData])
 
   useEffect(() => {
     const updateTime = () => {
@@ -898,5 +902,159 @@ export default function TrendingPage() {
       `}</style>
     </>
   )
+}
+
+export async function getServerSideProps() {
+  const parseCountText = (text) => {
+    if (!text) return 0;
+    const cleaned = text.toString().trim().toLowerCase();
+    const numMatch = cleaned.match(/^([0-9.]+)/);
+    if (!numMatch) return 0;
+    const num = parseFloat(numMatch[1]);
+    if (isNaN(num)) return 0;
+    
+    if (cleaned.includes('b') || cleaned.includes('billion')) return num * 1000000000;
+    if (cleaned.includes('m') || cleaned.includes('million')) return num * 1000000;
+    if (cleaned.includes('k') || cleaned.includes('thousand')) return num * 1000;
+    if (cleaned.includes('crore') || cleaned.includes('cr')) return num * 10000000;
+    if (cleaned.includes('lakh') || cleaned.includes('l')) return num * 100000;
+    return num;
+  }
+
+  try {
+    const [
+      settingsResult, 
+      reelsResult, 
+      mostViewedResult, 
+      celebritiesResult,
+      indiaMostLikedResult,
+      mostLikedReelsResult
+    ] = await Promise.all([
+      supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('viral_reels').select('*'),
+      supabase.from('most_viewed_reels').select('*'),
+      supabase.from('celebrities').select('name, slug, photo_url, followers_count').neq('hide_search', true),
+      supabase.from('most_liked_posts').select('*'),
+      supabase.from('most_liked_reels').select('*')
+    ])
+
+    if (settingsResult.error) throw settingsResult.error
+    if (reelsResult.error) throw reelsResult.error
+    if (mostViewedResult.error) throw mostViewedResult.error
+    if (celebritiesResult.error) throw celebritiesResult.error
+    if (indiaMostLikedResult.error) throw indiaMostLikedResult.error
+    if (mostLikedReelsResult.error) throw mostLikedReelsResult.error
+
+    const settingsData = settingsResult.data
+    const reelsData = reelsResult.data
+    const mostViewedData = mostViewedResult.data
+    const celebritiesData = celebritiesResult.data || []
+
+    const celebrityMap = {}
+    for (const c of celebritiesData) {
+      if (c.name && c.slug) {
+        celebrityMap[c.name.toLowerCase().trim()] = { slug: c.slug, photo_url: c.photo_url, followers_count: c.followers_count }
+      }
+    }
+
+    const sortedReels = (reelsData || []).sort((a, b) => {
+      const rankA = a.order_index || 999999
+      const rankB = b.order_index || 999999
+      if (rankA !== rankB) return rankA - rankB
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedReels = sortedReels.map(reel => {
+      const nameKey = (reel.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...reel,
+        creator_photo_url: reel.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
+      }
+    })
+
+    const sortedMostViewed = (mostViewedData || []).sort((a, b) => {
+      const countA = parseCountText(a.views_text)
+      const countB = parseCountText(b.views_text)
+      if (countA !== countB) return countB - countA
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedMostViewed = sortedMostViewed.map(reel => {
+      const nameKey = (reel.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...reel,
+        creator_photo_url: reel.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
+      }
+    })
+
+    const sortedMostLiked = (indiaMostLikedResult.data || []).sort((a, b) => {
+      const countA = parseCountText(a.likes_text)
+      const countB = parseCountText(b.likes_text)
+      if (countA !== countB) return countB - countA
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedMostLiked = sortedMostLiked.map(post => {
+      const nameKey = (post.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...post,
+        creator_photo_url: post.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
+      }
+    })
+
+    const sortedMostLikedReels = (mostLikedReelsResult.data || []).sort((a, b) => {
+      const countA = parseCountText(a.likes_text)
+      const countB = parseCountText(b.likes_text)
+      if (countA !== countB) return countB - countA
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedMostLikedReels = sortedMostLikedReels.map(reel => {
+      const nameKey = (reel.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...reel,
+        creator_photo_url: reel.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
+      }
+    })
+
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    })
+
+    return {
+      props: {
+        initialData: {
+          live_date: settingsData?.live_date || currentDate,
+          trending_enabled: settingsData?.trending_enabled !== undefined ? settingsData.trending_enabled : true,
+          viral_reels: mappedReels || [],
+          most_viewed_reels: mappedMostViewed || [],
+          india_most_liked_posts: mappedMostLiked || [],
+          most_liked_reels: mappedMostLikedReels || []
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Trending getServerSideProps error:', err)
+    return {
+      props: {
+        initialData: null
+      }
+    }
+  }
 }
 
