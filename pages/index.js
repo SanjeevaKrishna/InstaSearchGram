@@ -234,6 +234,11 @@ export default function Home({ initialFeatured = [] }) {
           </div>
         </div>
 
+        {/* Temporary Debug Info */}
+        <div id="ssr-debug-featured" style={{ textAlign: 'center', margin: '20px 0', fontSize: '14px', color: 'red', fontWeight: 'bold' }}>
+          DEBUG: featured count = {featured.length} | initialFeatured count = {initialFeatured.length}
+        </div>
+
         {/* Loading state - loading featured */}
         {loadingFeatured && featured.length === 0 && !query && (
           <div style={{
