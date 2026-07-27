@@ -264,11 +264,10 @@ export async function getServerSideProps() {
     const { data, error } = await supabase
       .from('celebrities')
       .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url')
-      .eq('is_featured', true)
       .neq('hide_search', true)
       .order('order_index', { ascending: true })
       .order('followers_count', { ascending: false })
-      .limit(15)
+      .limit(12)
 
     if (error) {
       console.error('Homepage getServerSideProps error:', error)
