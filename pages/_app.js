@@ -10,6 +10,7 @@ import Footer from '../components/Footer'
 export default function App({ Component, pageProps }) {
   const router = useRouter()
   const isAdmin = router.pathname.startsWith('/admin')
+  const isChat = router.pathname === '/chat'
 
   useEffect(() => {
     // Record page visit on load/path change, excluding admin and API paths
@@ -70,7 +71,7 @@ export default function App({ Component, pageProps }) {
         />
       </Head>
       <Component {...pageProps} />
-      {!isAdmin && <Footer />}
+      {!isAdmin && !isChat && <Footer />}
       {!isAdmin && <BottomNav />}
       {!isAdmin && ['/', '/all', '/trending', '/live'].includes(router.pathname) && !(router.pathname === '/all' && router.query.compare) && (
         <Link href="/converter">

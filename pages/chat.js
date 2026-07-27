@@ -1171,6 +1171,55 @@ export default function ChatPage() {
         </section>
       </main>
 
+      {/* Compact Chat Page Footer */}
+      <footer style={{
+        borderTop: '1px solid var(--border)',
+        background: 'var(--surface)',
+        padding: '14px 20px 80px', // 80px bottom for BottomNav clearance
+        fontFamily: 'Roboto, "Segoe UI", sans-serif',
+      }}>
+        <div style={{
+          maxWidth: 1100,
+          margin: '0 auto',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px 20px',
+        }}>
+          {/* Copyright */}
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+            © {new Date().getFullYear()} Spialr
+          </span>
+
+          {/* Legal links — single row, wraps cleanly on mobile */}
+          <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', alignItems: 'center' }}>
+            {[
+              { href: '/privacy', label: 'Privacy Policy' },
+              { href: '/terms', label: 'Terms of Service' },
+              { href: '/disclaimer', label: 'Disclaimer' },
+              { href: '/contact', label: 'Contact' },
+            ].map(({ href, label }) => (
+              <a
+                key={href}
+                href={href}
+                style={{
+                  fontSize: 12,
+                  color: 'var(--text-muted)',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => e.target.style.color = 'var(--accent)'}
+                onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </footer>
+
       {/* Long Press Actions Bottom Sheet / Popup Menu */}
       {activeMenuMessage && (
         <div style={{
