@@ -235,7 +235,7 @@ export default function Home({ initialFeatured = [] }) {
         </div>
 
         {/* Loading state - loading featured */}
-        {loadingFeatured && !query && (
+        {loadingFeatured && featured.length === 0 && !query && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
