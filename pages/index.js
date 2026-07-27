@@ -1,21 +1,107 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import Head from 'next/head'
-import Link from 'next/link'
 import CelebrityCard from '../components/CelebrityCard'
 import Navbar from '../components/Navbar'
-import { Sparkles, Search, Flame, Inbox } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { Sparkles, Search, Flame } from 'lucide-react'
 
-// Trigger fresh deploy for AdSense compliance and SSR rendering
+const STATIC_FEATURED = [
+  {
+    id: "027bbe3a-5bb4-4b78-b68c-db7168be7762",
+    name: "Virat Kohli",
+    slug: "virat-kohli",
+    instagram_handle: "virat.kohli",
+    followers_count: 273000000,
+    posts_count: 1050,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1779636125/insta_search_celebrities/e3peepd1uzfwztqlx7dp.jpg"
+  },
+  {
+    id: "0798e19c-aefc-4c9d-a4de-c8ba60fe352d",
+    name: "Narendra Modi",
+    slug: "narendra-modi",
+    instagram_handle: "narendramodi",
+    followers_count: 104000000,
+    posts_count: 1000,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1779890253/insta_search_celebrities/aibrzfxxxqpxqnnwpdxz.jpg"
+  },
+  {
+    id: "shraddha-kapoor-static",
+    name: "Shraddha Kapoor",
+    slug: "shraddha-kapoor",
+    instagram_handle: "shraddhakapoor",
+    followers_count: 94500000,
+    posts_count: 2050,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780060940/insta_search_celebrities/r6rpfuowqbx9uypvwyk2.jpg"
+  },
+  {
+    id: "21e911e1-feb1-4801-a08a-d8621806b722",
+    name: "Priyanka Chopra",
+    slug: "priyanka-chopra",
+    instagram_handle: "priyankachopra",
+    followers_count: 92900000,
+    posts_count: 4063,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780047989/insta_search_celebrities/idindrsvqjnjzzuy26wi.jpg"
+  },
+  {
+    id: "70945bdb-142f-4750-8de4-11981fb4539b",
+    name: "Alia Bhatt",
+    slug: "alia-bhatt",
+    instagram_handle: "aliabhatt",
+    followers_count: 85600000,
+    posts_count: 2231,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780061010/insta_search_celebrities/v0pdtzczf12ynrz7jyph.jpg"
+  },
+  {
+    id: "katrina-kaif-static",
+    name: "Katrina Kaif",
+    slug: "katrina-kaif",
+    instagram_handle: "katrinakaif",
+    followers_count: 80400000,
+    posts_count: 1100,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780060959/insta_search_celebrities/e0wz8sifjtzspuox1d2q.jpg"
+  },
+  {
+    id: "deepika-padukone-static",
+    name: "Deepika Padukone",
+    slug: "deepika-padukone",
+    instagram_handle: "deepikapadukone",
+    followers_count: 80000000,
+    posts_count: 1200,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780060993/insta_search_celebrities/bivk8yzn0uuhq8m8n9n6.jpg"
+  },
+  {
+    id: "2577f8c2-dc39-4ba3-b705-90e1ba0037c4",
+    name: "Salman Khan",
+    slug: "salman-khan",
+    instagram_handle: "beingsalmankhan",
+    followers_count: 72100000,
+    posts_count: 1604,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780046255/insta_search_celebrities/kdkigwcnyc1n8u5m5szd.jpg"
+  },
+  {
+    id: "urvashi-rautela-static",
+    name: "Urvashi Rautela",
+    slug: "urvashi-rautela",
+    instagram_handle: "urvashirautela",
+    followers_count: 71800000,
+    posts_count: 1800,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780061044/insta_search_celebrities/zhyphv0pdtzczf12ynrz.jpg"
+  },
+  {
+    id: "jacqueline-fernandez-static",
+    name: "Jacqueline Fernandez",
+    slug: "jacqueline-fernandez",
+    instagram_handle: "jacquelinef143",
+    followers_count: 70500000,
+    posts_count: 1500,
+    photo_url: "https://res.cloudinary.com/dpbzdndia/image/upload/v1780061028/insta_search_celebrities/u5m5szdkdkigwcnyc1n8.jpg"
+  }
+]
 
-export default function Home({ initialFeatured = [] }) {
+export default function Home() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
-  const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [featured, setFeatured] = useState(initialFeatured)
-  const [loadingFeatured, setLoadingFeatured] = useState(false)
   const searchRef = useRef(null)
   const debounceRef = useRef(null)
 
@@ -234,30 +320,14 @@ export default function Home({ initialFeatured = [] }) {
           </div>
         </div>
 
-
-        {/* Loading state - loading featured */}
-        {loadingFeatured && featured.length === 0 && !query && (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '60px 20px',
-            gap: 16
-          }}>
-            <div className="spinner" />
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Please wait, data is loading...</div>
-          </div>
-        )}
-
         {/* Featured Celebrities */}
-        {!loadingFeatured && !query && featured.length > 0 && (
+        {!query && STATIC_FEATURED.length > 0 && (
           <div className="fade-in">
             <h2 style={{
               fontFamily: 'var(--font-display)',
               fontSize: 18,
               fontWeight: 700,
-              marginBottom: 16,
+              margin: '32px 0 16px',
               color: 'var(--text-dim)',
               letterSpacing: '-0.01em',
               display: 'flex',
@@ -267,56 +337,11 @@ export default function Home({ initialFeatured = [] }) {
               Popular <Flame size={18} style={{ color: '#ff6b35' }} />
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {featured.map(c => <CelebrityCard key={c.id} celebrity={c} />)}
+              {STATIC_FEATURED.map(c => <CelebrityCard key={c.id} celebrity={c} />)}
             </div>
-          </div>
-        )}
-
-
-        {/* Empty state - no featured */}
-        {!loadingFeatured && featured.length === 0 && !query && (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <Inbox size={48} strokeWidth={1.5} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
-            <p style={{ fontSize: 15, margin: 0 }}>No celebrities added yet.<br />Add some from the admin panel!</p>
           </div>
         )}
       </main>
     </>
   )
-}
-
-export async function getServerSideProps() {
-  try {
-    const { data: featured, error } = await supabase
-      .from('celebrities')
-      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
-      .order('order_index', { ascending: true })
-      .order('name')
-      .eq('is_featured', true)
-      .neq('hide_search', true)
-      .limit(10)
-
-    if (error) throw error
-
-    return {
-      props: {
-        initialFeatured: featured || []
-      }
-    }
-  } catch (err) {
-    console.error('Home getServerSideProps error:', err)
-    return {
-      props: {
-        initialFeatured: []
-      }
-    }
-  }
 }
