@@ -315,7 +315,7 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
           </div>
         </div>
 
-        {loading ? (
+        {loading && celebrities.length === 0 ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
             <div className="spinner" />
           </div>

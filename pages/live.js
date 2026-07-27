@@ -837,7 +837,7 @@ export default function LivePage({ initialLiveData = null }) {
           </div>
 
         {/* Main Content Area */}
-        {loading ? (
+        {loading && !initialLiveData ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 16 }}>
             <div className="spinner" />
             <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Fetching latest live updates...</div>

@@ -308,7 +308,7 @@ export default function TrendingPage({ initialData = null }) {
       <Navbar />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '16px 20px 100px' }}>
-        {loading ? (
+        {loading && !initialData ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '120px 0' }}>
             <div className="spinner" />
           </div>
