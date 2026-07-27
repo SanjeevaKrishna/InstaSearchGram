@@ -6,6 +6,8 @@ import Navbar from '../components/Navbar'
 import { Sparkles, Search, Flame, Inbox } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
+// Trigger fresh deploy for AdSense compliance and SSR rendering
+
 export default function Home({ initialFeatured = [] }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
