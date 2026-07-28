@@ -159,8 +159,8 @@ export default function ContactPage() {
   const inputStyle = (hasError) => ({
     width: '100%',
     padding: '12px 16px',
-    borderRadius: 10,
-    border: `1.5px solid ${hasError ? '#dc2743' : 'var(--border)'}`,
+    borderRadius: 8,
+    border: `1px solid ${hasError ? '#dc2743' : 'var(--border)'}`,
     background: 'var(--surface)',
     color: 'var(--text)',
     fontSize: 14,
@@ -249,8 +249,8 @@ export default function ContactPage() {
             to { transform: rotate(360deg); }
           }
           .contact-input:focus {
-            border-color: var(--accent) !important;
-            box-shadow: 0 0 0 3px rgba(225, 48, 108, 0.1);
+            border-color: var(--text) !important;
+            box-shadow: 0 0 0 1px var(--text);
           }
           .contact-input::placeholder {
             color: var(--text-muted);
@@ -301,54 +301,39 @@ export default function ContactPage() {
         {/* Hero */}
         <section
           style={{
-            background: 'linear-gradient(135deg, rgba(240,148,51,0.07) 0%, rgba(225,48,108,0.07) 50%, rgba(188,24,136,0.07) 100%)',
+            background: 'var(--surface)',
             borderBottom: '1px solid var(--border)',
-            padding: '64px 24px 56px',
-            textAlign: 'center',
+            padding: '80px 24px 60px',
             animation: 'fadeInUp 0.5s ease',
           }}
         >
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 64,
-              height: 64,
-              borderRadius: 18,
-              background: 'var(--gradient)',
-              marginBottom: 20,
-              boxShadow: '0 8px 24px rgba(220, 39, 67, 0.25)',
-            }}
-          >
-            <Mail size={28} color="white" strokeWidth={1.8} />
+          <div style={{ maxWidth: 1040, margin: '0 auto' }}>
+            <h1
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(32px, 5vw, 48px)',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                color: 'var(--text)',
+                marginBottom: 16,
+                lineHeight: 1.15,
+              }}
+            >
+              Contact Us
+            </h1>
+            <p
+              style={{
+                color: 'var(--text-dim)',
+                fontSize: 'clamp(15px, 2vw, 17px)',
+                maxWidth: 700,
+                lineHeight: 1.6,
+              }}
+            >
+              We&apos;d love to hear from you. Whether you have feedback, found incorrect information,
+              want to suggest a profile, report a technical issue, discuss a business opportunity,
+              or have copyright concerns — we&apos;re here to help.
+            </p>
           </div>
-          <h1
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(28px, 5vw, 42px)',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              color: 'var(--text)',
-              marginBottom: 14,
-              lineHeight: 1.15,
-            }}
-          >
-            Contact Us
-          </h1>
-          <p
-            style={{
-              color: 'var(--text-dim)',
-              fontSize: 'clamp(14px, 2vw, 16px)',
-              maxWidth: 620,
-              margin: '0 auto',
-              lineHeight: 1.75,
-            }}
-          >
-            We&apos;d love to hear from you. Whether you have feedback, found incorrect information,
-            want to suggest a profile, report a technical issue, discuss a business opportunity,
-            or have copyright concerns — we&apos;re here to help.
-          </p>
         </section>
 
         <div className="contact-outer-grid">
@@ -358,7 +343,7 @@ export default function ContactPage() {
               style={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
-                borderRadius: 20,
+                borderRadius: 12,
                 padding: '32px 28px',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
                 animation: 'fadeInUp 0.5s ease 0.1s both',
@@ -383,26 +368,26 @@ export default function ContactPage() {
                   alignItems: 'flex-start',
                   gap: 16,
                   padding: '20px',
-                  background: 'linear-gradient(135deg, rgba(240,148,51,0.06), rgba(188,24,136,0.06))',
-                  border: '1px solid rgba(225, 48, 108, 0.15)',
-                  borderRadius: 14,
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
                   marginBottom: 28,
                 }}
               >
                 <div
                   style={{
                     flexShrink: 0,
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: 'var(--gradient)',
+                    width: 40,
+                    height: 40,
+                    borderRadius: 8,
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(220,39,67,0.25)',
                   }}
                 >
-                  <Mail size={20} color="white" strokeWidth={1.8} />
+                  <Mail size={18} color="var(--text-muted)" strokeWidth={1.8} />
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 4 }}>
@@ -493,7 +478,7 @@ export default function ContactPage() {
                 role="alert"
                 style={{
                   border: '1px solid #16a34a',
-                  borderRadius: 20,
+                  borderRadius: 12,
                   padding: '48px 40px',
                   textAlign: 'center',
                   background: 'rgba(22, 163, 74, 0.04)',
@@ -545,9 +530,9 @@ export default function ContactPage() {
                 style={{
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
-                  borderRadius: 20,
+                  borderRadius: 12,
                   padding: 'clamp(24px, 4vw, 40px)',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                 }}
               >
                 <h2
@@ -739,6 +724,7 @@ export default function ContactPage() {
                       marginTop: 24,
                       fontSize: 15,
                       padding: '14px 24px',
+                      borderRadius: 8,
                       opacity: status === 'sending' ? 0.75 : 1,
                       cursor: status === 'sending' ? 'not-allowed' : 'pointer',
                     }}
@@ -821,9 +807,9 @@ export default function ContactPage() {
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              borderRadius: 20,
+              borderRadius: 12,
               padding: '8px 28px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             }}
             className="faq-card"
           >
