@@ -259,6 +259,39 @@ export default function ContactPage() {
           .faq-card .card:hover {
             transform: none !important;
           }
+          /* Outer two-column layout */
+          .contact-outer-grid {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 48px 20px 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+            gap: 32px;
+            align-items: start;
+          }
+          /* Inner form two-column layout (name + email side by side) */
+          .contact-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 20px;
+          }
+          .form-col-half { grid-column: span 1; }
+          .form-col-full { grid-column: 1 / -1; }
+          /* On mobile: stack everything to single column */
+          @media (max-width: 700px) {
+            .contact-outer-grid {
+              grid-template-columns: 1fr;
+              padding: 28px 16px 0;
+              gap: 20px;
+            }
+            .contact-form-grid {
+              grid-template-columns: 1fr;
+            }
+            .form-col-half,
+            .form-col-full {
+              grid-column: 1 !important;
+            }
+          }
         `}</style>
       </Head>
 
@@ -318,17 +351,7 @@ export default function ContactPage() {
           </p>
         </section>
 
-        <div
-          style={{
-            maxWidth: 1040,
-            margin: '0 auto',
-            padding: '48px 20px 0',
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.6fr)',
-            gap: 32,
-            alignItems: 'start',
-          }}
-        >
+        <div className="contact-outer-grid">
           {/* LEFT — Contact Info Card */}
           <aside>
             <div
@@ -554,9 +577,9 @@ export default function ContactPage() {
                     style={{ display: 'none' }}
                   />
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 20px' }}>
+                  <div className="contact-form-grid">
                     {/* Full Name */}
-                    <div style={{ gridColumn: '1' }}>
+                    <div className="form-col-half">
                       <label htmlFor="contact-name" style={labelStyle}>Full Name</label>
                       <input
                         id="contact-name"
@@ -580,7 +603,7 @@ export default function ContactPage() {
                     </div>
 
                     {/* Email */}
-                    <div style={{ gridColumn: '2' }}>
+                    <div className="form-col-half">
                       <label htmlFor="contact-email" style={labelStyle}>Email Address</label>
                       <input
                         id="contact-email"
@@ -604,7 +627,7 @@ export default function ContactPage() {
                     </div>
 
                     {/* Subject */}
-                    <div style={{ gridColumn: '1 / -1' }}>
+                    <div className="form-col-full">
                       <label htmlFor="contact-subject" style={labelStyle}>Subject</label>
                       <select
                         id="contact-subject"
@@ -638,7 +661,7 @@ export default function ContactPage() {
                     </div>
 
                     {/* Message */}
-                    <div style={{ gridColumn: '1 / -1' }}>
+                    <div className="form-col-full">
                       <label htmlFor="contact-message" style={labelStyle}>Message</label>
                       <textarea
                         id="contact-message"
@@ -853,18 +876,6 @@ export default function ContactPage() {
         </footer>
       </main>
 
-      <style jsx>{`
-        @media (max-width: 720px) {
-          div[style*="gridTemplateColumns"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-        @media (max-width: 500px) {
-          div[style*="grid-template-columns: 1fr 1fr"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </>
   )
 }
