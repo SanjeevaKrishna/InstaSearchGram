@@ -988,7 +988,9 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 </>
               )}
 
-              {/* Dynamic Analytical Summary */}
+              {/* Dynamic Analytical Summary — hidden per-profile via admin show_social_audit flag */}
+              {celebrity.show_social_audit !== false && (
+              <>
               <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
                 Social Media Insights & Analytics
               </h3>
@@ -1137,6 +1139,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   );
                 })()}
               </div>
+              </>
+              )}
             </div>
           </div>
         )}

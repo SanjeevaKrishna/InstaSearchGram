@@ -2112,6 +2112,77 @@ export default function AdminPanel() {
     }
   }
 
+  const toggleSocialAudit = async (cel) => {
+    // Default is true when field is null/undefined — flip to explicit false and back
+    const currentlyOn = cel.show_social_audit !== false
+    const newVal = !currentlyOn
+    try {
+      const res = await adminFetch('/api/admin/celebrities', {
+        method: 'PUT',
+        body: {
+          ...cel,
+          show_social_audit: newVal,
+          followers_count: cel.followers_count ? Number(cel.followers_count) : null,
+          posts_count: cel.posts_count ? Number(cel.posts_count) : null,
+          order_index: cel.order_index ? Number(cel.order_index) : 0,
+          total_reel_views: cel.total_reel_views ? Number(cel.total_reel_views) : 0,
+          total_reel_likes: cel.total_reel_likes ? Number(cel.total_reel_likes) : 0,
+          total_post_likes: cel.total_post_likes ? Number(cel.total_post_likes) : 0,
+          total_comments: cel.total_comments ? Number(cel.total_comments) : 0,
+          total_shares: cel.total_shares ? Number(cel.total_shares) : 0,
+          total_reposts: cel.total_reposts ? Number(cel.total_reposts) : 0,
+          average_views: cel.average_views ? Number(cel.average_views) : 0,
+          average_reel_likes: cel.average_reel_likes ? Number(cel.average_reel_likes) : 0,
+          average_post_likes: cel.average_post_likes ? Number(cel.average_post_likes) : 0,
+          followers_interaction: cel.followers_interaction ? Number(cel.followers_interaction) : 0,
+        }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setCelebrities(list => list.map(c => c.id === cel.id ? data.celebrity : c))
+      showToast(newVal ? '✅ Social Audit ON for ' + cel.name : '🔕 Social Audit OFF for ' + cel.name)
+    } catch(e) {
+      alert('Error updating audit: ' + e.message)
+    }
+  }
+
+  const toggleAllSocialAudit = async (turnOn) => {
+    if (!confirm(`Turn Social Audit ${turnOn ? 'ON' : 'OFF'} for ALL profiles?`)) return
+    let updated = 0
+    for (const cel of celebrities) {
+      const currentlyOn = cel.show_social_audit !== false
+      if (turnOn === currentlyOn) continue // already in desired state, skip
+      try {
+        const res = await adminFetch('/api/admin/celebrities', {
+          method: 'PUT',
+          body: {
+            ...cel,
+            show_social_audit: turnOn,
+            followers_count: cel.followers_count ? Number(cel.followers_count) : null,
+            posts_count: cel.posts_count ? Number(cel.posts_count) : null,
+            order_index: cel.order_index ? Number(cel.order_index) : 0,
+            total_reel_views: cel.total_reel_views ? Number(cel.total_reel_views) : 0,
+            total_reel_likes: cel.total_reel_likes ? Number(cel.total_reel_likes) : 0,
+            total_post_likes: cel.total_post_likes ? Number(cel.total_post_likes) : 0,
+            total_comments: cel.total_comments ? Number(cel.total_comments) : 0,
+            total_shares: cel.total_shares ? Number(cel.total_shares) : 0,
+            total_reposts: cel.total_reposts ? Number(cel.total_reposts) : 0,
+            average_views: cel.average_views ? Number(cel.average_views) : 0,
+            average_reel_likes: cel.average_reel_likes ? Number(cel.average_reel_likes) : 0,
+            average_post_likes: cel.average_post_likes ? Number(cel.average_post_likes) : 0,
+            followers_interaction: cel.followers_interaction ? Number(cel.followers_interaction) : 0,
+          }
+        })
+        const data = await res.json()
+        if (!data.error) {
+          setCelebrities(list => list.map(c => c.id === cel.id ? data.celebrity : c))
+          updated++
+        }
+      } catch(e) { /* continue */ }
+    }
+    showToast(`✅ Social Audit turned ${turnOn ? 'ON' : 'OFF'} for ${updated} profiles`)
+  }
+
 
   const deletePost = async (id) => {
     if (!confirm('Delete this post?')) return
@@ -2367,22 +2438,40 @@ export default function AdminPanel() {
               )
             })()}
 
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
               <input
                 className="input-field"
                 value={searchCel}
                 onChange={e => setSearchCel(e.target.value)}
                 placeholder="🔍 Search celebrities by name or handle..."
-                style={{ flex: 1 }}
+                style={{ flex: 1, minWidth: 200 }}
               />
               <button
                 className="btn btn-primary"
-                onClick={() => {
-                  // Explicit trigger or visual indicator, search matches instantly on state update
-                }}
+                onClick={() => {}}
                 style={{ padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 Search
+              </button>
+              <button
+                onClick={() => toggleAllSocialAudit(false)}
+                style={{
+                  background: 'rgba(156,39,176,0.1)', border: '1px solid rgba(156,39,176,0.4)',
+                  color: '#9c27b0', borderRadius: 8, padding: '8px 14px',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap'
+                }}
+              >
+                🔕 Toggle All Audit Off
+              </button>
+              <button
+                onClick={() => toggleAllSocialAudit(true)}
+                style={{
+                  background: 'rgba(33,150,243,0.1)', border: '1px solid rgba(33,150,243,0.4)',
+                  color: '#2196f3', borderRadius: 8, padding: '8px 14px',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap'
+                }}
+              >
+                📊 Toggle All Audit On
               </button>
             </div>
 
@@ -2420,6 +2509,7 @@ export default function AdminPanel() {
                             @{cel.instagram_handle || '—'} &nbsp;·&nbsp; {formatCount(cel.followers_count)} followers
                             {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
                             {cel.hide_search && <span style={{ marginLeft: 8, color: '#f44336', fontWeight: 600 }}>🚫 Disabled</span>}
+                            {cel.show_social_audit === false && <span style={{ marginLeft: 8, color: '#9c27b0', fontWeight: 600 }}>🔕 Audit Off</span>}
                             {cel.has_full_details ? (
                               <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Add Search</span>
                             ) : (
@@ -2472,6 +2562,21 @@ export default function AdminPanel() {
                             }}
                           >
                             {cel.hide_search ? '🟢 Enable Profile' : '🔴 Disable Profile'}
+                          </button>
+                          <button
+                            onClick={() => toggleSocialAudit(cel)}
+                            style={{
+                              background: cel.show_social_audit === false ? 'rgba(156,39,176,0.1)' : 'rgba(33,150,243,0.1)',
+                              border: cel.show_social_audit === false ? '1px solid rgba(156,39,176,0.4)' : '1px solid rgba(33,150,243,0.4)',
+                              color: cel.show_social_audit === false ? '#9c27b0' : '#2196f3',
+                              borderRadius: 8,
+                              padding: '6px 12px',
+                              fontSize: 12,
+                              cursor: 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            {cel.show_social_audit === false ? '🔕 Audit Off' : '📊 Audit On'}
                           </button>
                           <button
                             onClick={() => deleteCelebrity(cel.id)}
