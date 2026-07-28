@@ -1,4 +1,6 @@
 import { getAdminClient } from '../../../lib/supabase'
+// Fields stored in live_settings row id=1:
+//   live_date, trending_enabled, show_social_audit
 
 function verifyAdmin(req) {
   const auth = req.headers['x-admin-token']
@@ -33,7 +35,7 @@ export default async function handler(req, res) {
 
     // POST/PUT - update settings (id = 1)
     if (req.method === 'POST' || req.method === 'PUT') {
-      const { live_date, trending_enabled } = req.body
+      const { live_date, trending_enabled, show_social_audit } = req.body
 
       const { data, error } = await supabase
         .from('live_settings')
@@ -41,6 +43,7 @@ export default async function handler(req, res) {
           id: 1, 
           live_date, 
           trending_enabled: trending_enabled !== undefined ? trending_enabled : true,
+          show_social_audit: show_social_audit !== undefined ? show_social_audit : true,
           updated_at: new Date().toISOString() 
         })
         .select()

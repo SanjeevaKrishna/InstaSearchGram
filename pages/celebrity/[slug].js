@@ -142,7 +142,7 @@ function generateProfileNarrative(cel, liveRank, postsCount) {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null }) {
+export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null, showSocialAudit = true }) {
   const router = useRouter()
   const { slug, compare } = router.query
 
@@ -988,8 +988,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 </>
               )}
 
-              {/* Dynamic Analytical Summary — hidden per-profile via admin show_social_audit flag */}
-              {celebrity.show_social_audit !== false && (
+              {/* Dynamic Analytical Summary — hidden globally via admin Global Settings */}
+              {showSocialAudit && (
               <>
               <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
                 Social Media Insights & Analytics
@@ -1376,6 +1376,14 @@ export async function getServerSideProps(context) {
       .neq('id', celebrity.id)
       .limit(4)
 
+    // Fetch global settings for show_social_audit
+    const { data: settingsData } = await supabase
+      .from('live_settings')
+      .select('show_social_audit')
+      .eq('id', 1)
+      .maybeSingle()
+    const showSocialAudit = settingsData?.show_social_audit !== false
+
     return {
       props: {
         initialCelebrity: celebrity,
@@ -1383,7 +1391,8 @@ export async function getServerSideProps(context) {
         initialCompareCelebrity: compareCelebrity,
         otherCelebrities: otherCelebrities || [],
         liveRank,
-        compareLiveRank
+        compareLiveRank,
+        showSocialAudit,
       }
     }
   } catch (err) {
