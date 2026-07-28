@@ -988,7 +988,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 </>
               )}
 
-              {/* Dynamic Analytical Summary — hidden globally via admin Global Settings */}
+              {/* SOCIAL_AUDIT_SECTION - disabled for AdSense review, re-enable after approval
               {showSocialAudit && (
               <>
               <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
@@ -1026,8 +1026,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   const peakLikesVal = celebrity.most_likes ? formatCount(celebrity.most_likes) : '';
 
                   const metricsList = [];
-                  if (avgLikesVal) metricsList.push(`<strong>${avgLikesVal}</strong> likes per post`);
-                  if (avgViewsVal) metricsList.push(`<strong>${avgViewsVal}</strong> average reel views`);
+                  if (avgLikesVal) metricsList.push(`<strong>\${avgLikesVal}</strong> likes per post`);
+                  if (avgViewsVal) metricsList.push(`<strong>\${avgViewsVal}</strong> average reel views`);
                   const metricsListJoined = metricsList.join(' and ');
 
                   // Choose template index deterministically based on celebrity name/ID hash
@@ -1038,24 +1038,24 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   if (templateIndex === 0) {
                     // Standard / Comprehensive Style
                     if (liveRank) {
-                      outputHtml = `Ranked <strong>#${liveRank}</strong> most followed account on Spialr, this profile provides comprehensive performance insights and statistics for <strong>${name}</strong>`;
+                      outputHtml = `Ranked <strong>#\${liveRank}</strong> most followed account on Spialr, this profile provides comprehensive performance insights and statistics for <strong>\${name}</strong>`;
                     } else {
-                      outputHtml = `Spialr provides comprehensive performance insights and profile statistics for <strong>${name}</strong>`;
+                      outputHtml = `Spialr provides comprehensive performance insights and profile statistics for <strong>\${name}</strong>`;
                     }
                     if (followersVal) {
-                      outputHtml += `, who has established a follower base of <strong>${followersVal}</strong>${category ? ` within the <strong>${category}</strong> category` : ''}`;
+                      outputHtml += `, who has established a follower base of <strong>\${followersVal}</strong>\${category ? ` within the <strong>\${category}</strong> category` : ''}`;
                     }
                     outputHtml += `.`;
                     if (interactionVal) {
-                      outputHtml += ` Analytical benchmarks indicate a strong audience interaction rate of <strong>${interactionVal}</strong> of total followers.`;
+                      outputHtml += ` Analytical benchmarks indicate a strong audience interaction rate of <strong>\${interactionVal}</strong> of total followers.`;
                     }
                     if (metricsListJoined || peakLikesVal) {
                       outputHtml += ` This engagement is driven by stellar audience response`;
                       if (metricsListJoined) {
-                        outputHtml += `, averaging ${metricsListJoined}`;
+                        outputHtml += `, averaging \${metricsListJoined}`;
                       }
                       if (peakLikesVal) {
-                        outputHtml += `, with peak engagement hitting <strong>${peakLikesVal}</strong> likes on their most popular post`;
+                        outputHtml += `, with peak engagement hitting <strong>\${peakLikesVal}</strong> likes on their most popular post`;
                       }
                       outputHtml += ` across recent content timelines.`;
                     }
@@ -1063,29 +1063,29 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   } else if (templateIndex === 1) {
                     // Interaction & Growth Benchmark Style
                     if (liveRank) {
-                      outputHtml += `Ranked <strong>#${liveRank}</strong> most followed account on Spialr, benchmarks for <strong>${name}</strong> `;
+                      outputHtml += `Ranked <strong>#\${liveRank}</strong> most followed account on Spialr, benchmarks for <strong>\${name}</strong> `;
                       if (interactionVal) {
-                        outputHtml += `indicate a strong audience interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                        outputHtml += `indicate a strong audience interaction rate of <strong>\${interactionVal}</strong> of total followers. `;
                       } else {
                         outputHtml += `showcase verified performance metrics and profile statistics. `;
                       }
                     } else {
                       if (interactionVal) {
-                        outputHtml += `Benchmarks for <strong>${name}</strong> indicate a strong audience interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                        outputHtml += `Benchmarks for <strong>\${name}</strong> indicate a strong audience interaction rate of <strong>\${interactionVal}</strong> of total followers. `;
                       } else {
-                        outputHtml += `Spialr monitors public performance metrics and profile statistics for <strong>${name}</strong>. `;
+                        outputHtml += `Spialr monitors public performance metrics and profile statistics for <strong>\${name}</strong>. `;
                       }
                     }
                     if (followersVal) {
-                      outputHtml += `With a total follower base of <strong>${followersVal}</strong>${category ? ` in the <strong>${category}</strong> category` : ''}, this profile showcases steady growth. `;
+                      outputHtml += `With a total follower base of <strong>\${followersVal}</strong>\${category ? ` in the <strong>\${category}</strong> category` : ''}, this profile showcases steady growth. `;
                     }
                     if (metricsListJoined || peakLikesVal) {
                       outputHtml += `Recent content analysis reveals stellar audience response`;
                       if (metricsListJoined) {
-                        outputHtml += `, including ${metricsListJoined}`;
+                        outputHtml += `, including \${metricsListJoined}`;
                       }
                       if (peakLikesVal) {
-                        outputHtml += `, highlighted by peak engagement of <strong>${peakLikesVal}</strong> likes`;
+                        outputHtml += `, highlighted by peak engagement of <strong>\${peakLikesVal}</strong> likes`;
                       }
                       outputHtml += `. `;
                     }
@@ -1093,20 +1093,20 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   } else if (templateIndex === 2) {
                     // Performance Consistency Style
                     if (liveRank) {
-                      outputHtml += `Ranked <strong>#${liveRank}</strong> most followed account on Spialr, this profile tracks audience metrics and public engagement trends for <strong>${name}</strong> across several content formats. `;
+                      outputHtml += `Ranked <strong>#\${liveRank}</strong> most followed account on Spialr, this profile tracks audience metrics and public engagement trends for <strong>\${name}</strong> across several content formats. `;
                     } else {
-                      outputHtml += `For <strong>${name}</strong>, Spialr tracks audience metrics and public engagement trends across several content formats. `;
+                      outputHtml += `For <strong>\${name}</strong>, Spialr tracks audience metrics and public engagement trends across several content formats. `;
                     }
                     if (followersVal) {
-                      outputHtml += `Currently, the profile holds a benchmark position with <strong>${followersVal}</strong> followers${category ? ` in the <strong>${category}</strong> sector` : ''}. `;
+                      outputHtml += `Currently, the profile holds a benchmark position with <strong>\${followersVal}</strong> followers\${category ? ` in the <strong>\${category}</strong> sector` : ''}. `;
                     }
                     if (interactionVal) {
-                      outputHtml += `This audience exhibits high interest, resulting in an interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                      outputHtml += `This audience exhibits high interest, resulting in an interaction rate of <strong>\${interactionVal}</strong> of total followers. `;
                     }
                     if (metricsListJoined || peakLikesVal) {
-                      outputHtml += `The engagement metrics indicate strong consistency, averaging ${metricsListJoined || 'stellar numbers'}`;
+                      outputHtml += `The engagement metrics indicate strong consistency, averaging \${metricsListJoined || 'stellar numbers'}`;
                       if (peakLikesVal) {
-                        outputHtml += `, with the most popular post gathering up to <strong>${peakLikesVal}</strong> likes`;
+                        outputHtml += `, with the most popular post gathering up to <strong>\${peakLikesVal}</strong> likes`;
                       }
                       outputHtml += `. `;
                     }
@@ -1114,22 +1114,22 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   } else {
                     // Reach & Audience Benchmark Style
                     if (liveRank) {
-                      outputHtml += `Ranked <strong>#${liveRank}</strong> most followed account on Spialr, public performance benchmarks for <strong>${name}</strong> showcase notable metrics across various digital timelines. `;
+                      outputHtml += `Ranked <strong>#\${liveRank}</strong> most followed account on Spialr, public performance benchmarks for <strong>\${name}</strong> showcase notable metrics across various digital timelines. `;
                     } else {
-                      outputHtml += `Public performance benchmarks for <strong>${name}</strong> showcase notable metrics across various digital timelines. `;
+                      outputHtml += `Public performance benchmarks for <strong>\${name}</strong> showcase notable metrics across various digital timelines. `;
                     }
                     if (followersVal) {
-                      outputHtml += `Spialr's current data lists a follower base of <strong>${followersVal}</strong>${category ? ` in the <strong>${category}</strong> category` : ''}. `;
+                      outputHtml += `Spialr's current data lists a follower base of <strong>\${followersVal}</strong>\${category ? ` in the <strong>\${category}</strong> category` : ''}. `;
                     }
                     if (metricsListJoined || peakLikesVal) {
-                      outputHtml += `Timelines show consistent views and likes, specifically averaging ${metricsListJoined || 'stellar responses'}`;
+                      outputHtml += `Timelines show consistent views and likes, specifically averaging \${metricsListJoined || 'stellar responses'}`;
                       if (peakLikesVal) {
-                        outputHtml += `, alongside a peak post performance of <strong>${peakLikesVal}</strong> likes`;
+                        outputHtml += `, alongside a peak post performance of <strong>\${peakLikesVal}</strong> likes`;
                       }
                       outputHtml += `. `;
                     }
                     if (interactionVal) {
-                      outputHtml += `This yields an overall audience interaction rate of <strong>${interactionVal}</strong> of total followers. `;
+                      outputHtml += `This yields an overall audience interaction rate of <strong>\${interactionVal}</strong> of total followers. `;
                     }
                     outputHtml += `Creators and Social Media users can leverage these structured metrics to evaluate overall digital reach.`;
                   }
@@ -1141,6 +1141,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               </div>
               </>
               )}
+              */}
             </div>
           </div>
         )}
