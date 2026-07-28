@@ -142,7 +142,7 @@ function generateProfileNarrative(cel, liveRank, postsCount) {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null, showSocialAudit = true }) {
+export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null }) {
   const router = useRouter()
   const { slug, compare } = router.query
 
@@ -1377,18 +1377,6 @@ export async function getServerSideProps(context) {
       .neq('id', celebrity.id)
       .limit(4)
 
-    // Fetch global settings for show_social_audit (stored in live_date string hack to avoid DB migration)
-    const { data: settingsData } = await supabase
-      .from('live_settings')
-      .select('live_date')
-      .eq('id', 1)
-      .maybeSingle()
-    
-    let showSocialAudit = true
-    if (settingsData?.live_date && settingsData.live_date.includes('||AUDIT_OFF')) {
-      showSocialAudit = false
-    }
-
     return {
       props: {
         initialCelebrity: celebrity,
@@ -1397,7 +1385,6 @@ export async function getServerSideProps(context) {
         otherCelebrities: otherCelebrities || [],
         liveRank,
         compareLiveRank,
-        showSocialAudit,
       }
     }
   } catch (err) {
