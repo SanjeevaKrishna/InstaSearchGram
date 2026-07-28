@@ -37,7 +37,7 @@ export default function Privacy() {
           <p style={{ marginBottom: 16 }}>Spialr links to Instagram posts and reels. Clicking these links takes you to Instagram, which has its own privacy policy. We are not responsible for Instagram's data practices.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>Contact</h2>
-          <p>If you have any questions about this policy, please reach out through our website or contact us directly at <a href="mailto:professionalusepurpose@gmail.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>professionalusepurpose@gmail.com</a>.</p>
+          <p>If you have any questions about this policy, please reach out through our website or contact us directly at <a href="mailto:contact@spialr.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>contact@spialr.com</a>.</p>
         </div>
       </main>
     </>

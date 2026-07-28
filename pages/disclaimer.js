@@ -29,7 +29,7 @@ export default function Disclaimer() {
           <p style={{ marginBottom: 16 }}>The site cannot and does not contain professional, financial, or legal advice. The information is provided for general informational and educational purposes only and is not a substitute for professional advice.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>5. Contact and Feedback</h2>
-          <p>For any queries or concerns regarding this disclaimer or any content on this website, please reach out to us at <a href="mailto:professionalusepurpose@gmail.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>professionalusepurpose@gmail.com</a>.</p>
+          <p>For any queries or concerns regarding this disclaimer or any content on this website, please reach out to us at <a href="mailto:contact@spialr.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>contact@spialr.com</a>.</p>
         </div>
       </main>
     </>

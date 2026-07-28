@@ -77,7 +77,7 @@ export default function Footer() {
           </p>
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, fontSize: 12 }}>
             <span>© {new Date().getFullYear()} Spialr. All rights reserved.</span>
-            <span>Email Support: <a href="mailto:professionalusepurpose@gmail.com" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>professionalusepurpose@gmail.com</a></span>
+            <span>Email Support: <a href="mailto:contact@spialr.com" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>contact@spialr.com</a></span>
           </div>
         </div>
       </div>

@@ -34,7 +34,7 @@ export default function Terms() {
           <p style={{ marginBottom: 16 }}>These terms are governed by and construed in accordance with the laws of India, and you submit to the exclusive jurisdiction of the courts in that location.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>6. Contact Information</h2>
-          <p>If you have any questions about these Terms of Service, please contact us directly at <a href="mailto:professionalusepurpose@gmail.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>professionalusepurpose@gmail.com</a>.</p>
+          <p>If you have any questions about these Terms of Service, please contact us directly at <a href="mailto:contact@spialr.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>contact@spialr.com</a>.</p>
         </div>
       </main>
     </>

@@ -116,7 +116,7 @@ export default function About() {
             No login required. No endless scrolling. Just data and curation.
           </p>
           <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.8 }}>
-            Have a suggestion, question, want to request a profile, or need assistance? Reach out to us directly through our <a href="/contact" style={{ color: 'var(--accent)', fontWeight: 600 }}>Contact Us</a> page or email us at <a href="mailto:professionalusepurpose@gmail.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>professionalusepurpose@gmail.com</a>.
+            Have a suggestion, question, want to request a profile, or need assistance? Reach out to us directly through our <a href="/contact" style={{ color: 'var(--accent)', fontWeight: 600 }}>Contact Us</a> page or email us at <a href="mailto:contact@spialr.com" style={{ color: 'var(--accent)', fontWeight: 600 }}>contact@spialr.com</a>.
           </p>
         </div>
       </main>

@@ -124,7 +124,7 @@ export default function Methodology() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 750, color: 'var(--text)', marginBottom: 8 }}>
               <span>❓ Have Questions?</span>
             </div>
-            If you have feedback regarding our sorting criteria, want to correct an outdated metric, or have questions about how our curation works, please contact us at <a href="mailto:professionalusepurpose@gmail.com" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>professionalusepurpose@gmail.com</a>.
+            If you have feedback regarding our sorting criteria, want to correct an outdated metric, or have questions about how our curation works, please contact us at <a href="mailto:contact@spialr.com" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>contact@spialr.com</a>.
           </div>
         </div>
       </main>
