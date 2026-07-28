@@ -13,6 +13,135 @@ const getOrdinal = (n) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+// ─── Data-driven profile narrative generator ────────────────────────────────
+// Produces structurally different text for each follower tier, account age,
+// and posting behaviour. Deterministic: same inputs → same output every render.
+function generateProfileNarrative(cel, liveRank, postsCount) {
+  const name = cel.name || 'This creator'
+  const followers = Number(cel.followers_count || 0)
+  const posts = Number(cel.posts_count || postsCount || 0)
+  const year = cel.account_created_year ? Number(cel.account_created_year) : null
+  const currentYear = 2026
+  const age = year ? currentYear - year : null
+  const handle = cel.instagram_handle ? `@${cel.instagram_handle}` : null
+  const avgViews = Number(cel.average_views || 0)
+  const engagement = Number(cel.followers_interaction || 0)
+
+  const fmt = (n) => {
+    if (!n) return null
+    if (n >= 1e9) return `${(n / 1e9).toFixed(1).replace(/\.0$/, '')}B`
+    if (n >= 1e6) return `${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M`
+    if (n >= 1e3) return `${(n / 1e3).toFixed(1).replace(/\.0$/, '')}K`
+    return n.toString()
+  }
+
+  const parts = []
+
+  // ── Paragraph 1: opening — varies by follower tier ─────────────────────────
+  if (followers >= 250_000_000) {
+    parts.push(
+      `${name} is one of the most-followed individuals on Instagram globally, with ${fmt(followers)} followers placing them` +
+      (liveRank ? ` at rank #${liveRank} on Spialr's leaderboard` : ' in an extremely rare tier shared by only a handful of accounts worldwide') +
+      '. At this scale, even a single post reaches an audience larger than the population of most countries.'
+    )
+  } else if (followers >= 100_000_000) {
+    parts.push(
+      `With ${fmt(followers)} followers, ${name} ranks among India's most-followed Instagram personalities` +
+      (liveRank ? ` — currently #${liveRank} on Spialr's live follower leaderboard` : '') +
+      '. Accounts at this level have built long-term, cross-demographic audiences that extend well beyond a single niche or fan base.'
+    )
+  } else if (followers >= 50_000_000) {
+    parts.push(
+      `${name} has amassed ${fmt(followers)} followers on Instagram` +
+      (liveRank ? `, ranking #${liveRank} among the most-followed accounts tracked by Spialr` : '') +
+      '. This places them firmly in the top tier of Indian social media — a level reached by very few creators or public figures.'
+    )
+  } else if (followers >= 10_000_000) {
+    parts.push(
+      `Tracking ${fmt(followers)} followers` +
+      (handle ? ` under the handle ${handle}` : '') +
+      `, ${name} represents a significant presence in the Indian creator space` +
+      (liveRank ? ` and is ranked #${liveRank} on Spialr's follower index` : '') +
+      '. Accounts in this range typically span multiple content formats and command both organic and brand-driven engagement.'
+    )
+  } else {
+    parts.push(
+      `${name}` + (handle ? ` (${handle})` : '') +
+      ` currently holds ${fmt(followers) || 'a growing number of'} followers on Instagram` +
+      (liveRank ? `, placing them at #${liveRank} on Spialr's live rankings` : '') +
+      '. Profiles at this stage often show rapid audience growth as their content finds its audience.'
+    )
+  }
+
+  // ── Paragraph 2: account age & posting context — varies by age ─────────────
+  if (age && posts) {
+    const postsPerYear = Math.round(posts / age)
+    if (age >= 10) {
+      parts.push(
+        `The account dates back to ${year}, making it over a decade old. Across that time, ${name} has published around ${fmt(posts)} posts` +
+        ` — an average of roughly ${postsPerYear.toLocaleString()} posts per year. This level of longevity on the platform signals sustained audience investment rather than a short-term viral spike.`
+      )
+    } else if (age >= 5) {
+      parts.push(
+        `Active since ${year} (${age} years on the platform), ${name} has built up a library of approximately ${fmt(posts)} posts,` +
+        ` averaging around ${postsPerYear.toLocaleString()} per year. This steady publishing cadence suggests deliberate, consistent content strategy rather than purely reactive posting.`
+      )
+    } else if (age >= 2) {
+      parts.push(
+        `The account was established in ${year}, giving ${name} roughly ${age} years to grow their ${fmt(followers)}-follower base through ${fmt(posts)} posts.` +
+        ` Achieving this audience size in a relatively short window points to strong content momentum and audience resonance.`
+      )
+    } else if (age === 1) {
+      parts.push(
+        `Having joined Instagram in ${year}, ${name} is a relatively recent entrant who has already accumulated ${fmt(followers)} followers and ${fmt(posts)} posts.` +
+        ` That rate of audience growth within a single year is a notable indicator of early traction.`
+      )
+    }
+  } else if (posts) {
+    parts.push(
+      `The profile shows ${fmt(posts)} total posts indexed on Spialr. ` +
+      (posts > 2000
+        ? `This high post volume suggests a long-standing, prolific content history.`
+        : posts > 500
+        ? `This moderate post count reflects a steady, consistent publishing approach.`
+        : `A focused post count like this can indicate selective, quality-over-quantity publishing.`)
+    )
+  }
+
+  // ── Paragraph 3: engagement or views context ────────────────────────────────
+  if (avgViews && avgViews > 0) {
+    const viewsVsFollowers = followers > 0 ? ((avgViews / followers) * 100).toFixed(1) : null
+    if (Number(viewsVsFollowers) >= 50) {
+      parts.push(
+        `Reels from ${name} average ${fmt(avgViews)} views each — a reach that represents ${viewsVsFollowers}% of the follower base per video, indicating unusually strong content spread beyond existing followers.`
+      )
+    } else if (Number(viewsVsFollowers) >= 10) {
+      parts.push(
+        `With an average of ${fmt(avgViews)} views per reel, ${name}'s video content consistently reaches a broad slice of their audience, pointing to solid algorithmic distribution.`
+      )
+    } else {
+      parts.push(
+        `Spialr tracks an average of ${fmt(avgViews)} views per reel for ${name}. At this scale of followers, even a fraction of the audience represents millions of individual views per video.`
+      )
+    }
+  } else if (engagement && engagement > 0) {
+    const engLabel = engagement >= 5 ? 'high' : engagement >= 2 ? 'healthy' : 'measured'
+    parts.push(
+      `${name} records a ${engLabel} followers-interaction rate of ${Number(engagement).toFixed(2)}% — a metric Spialr calculates as average post interactions divided by total followers. A ${engLabel} rate at this follower scale is a meaningful signal of genuine audience connection.`
+    )
+  }
+
+  // ── Paragraph 4: ranking methodology note ──────────────────────────────────
+  parts.push(
+    `Spialr ranks profiles by verified follower count sourced from public Instagram data, updated on a rolling basis. ` +
+    `${name}'s position on the leaderboard reflects their standing at the time of the most recent data refresh. ` +
+    `All engagement figures — views, likes, comments, shares — are aggregated from posts indexed in Spialr's database and do not include data from private or archived posts.`
+  )
+
+  return parts
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null }) {
   const router = useRouter()
   const { slug, compare } = router.query
@@ -414,7 +543,11 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
   return (
     <>
       <Head>
-        <title>{`${celebrity.name} — Spialr`}</title>
+        <title>{`${celebrity.name} Instagram Stats & Follower Count — Spialr`}</title>
+        <meta
+          name="description"
+          content={`${celebrity.name} has ${formatCount(celebrity.followers_count)} Instagram followers${celebrity.account_created_year ? `, active since ${celebrity.account_created_year}` : ''}${celebrity.posts_count ? ` with ${formatCount(celebrity.posts_count)} posts` : ''}. View live follower rankings, reel stats, post analytics and more on Spialr.`}
+        />
       </Head>
 
       <Navbar />
@@ -548,7 +681,36 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
           </div>
         </div>
 
-
+        {/* ── Data-driven profile narrative ── */}
+        {(() => {
+          const narrative = generateProfileNarrative(celebrity, liveRank, postsCount)
+          return (
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 14,
+                padding: '20px 22px',
+                marginBottom: 24,
+                lineHeight: 1.72,
+              }}
+            >
+              {narrative.map((para, i) => (
+                <p
+                  key={i}
+                  style={{
+                    margin: i === narrative.length - 1 ? 0 : '0 0 14px',
+                    fontSize: 14,
+                    color: i === narrative.length - 1 ? 'var(--text-muted)' : 'var(--text-dim)',
+                    fontFamily: 'Roboto, "Segoe UI", sans-serif',
+                  }}
+                >
+                  {para}
+                </p>
+              ))}
+            </div>
+          )
+        })()}
 
         {/* Account Insights (Premium Analytics Cards) */}
         {(celebrity.total_reel_views || celebrity.total_reel_likes || celebrity.total_post_likes || celebrity.total_comments || celebrity.total_shares || celebrity.total_reposts) ? (
