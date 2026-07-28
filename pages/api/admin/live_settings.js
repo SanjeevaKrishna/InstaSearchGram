@@ -30,27 +30,55 @@ export default async function handler(req, res) {
         .maybeSingle()
 
       if (error) return res.status(500).json({ error: error.message })
-      return res.status(200).json({ settings: data || { id: 1, live_date: '' } })
+      
+      let settings = data || { id: 1, live_date: '' }
+      let liveDateStr = settings.live_date || ''
+      let showSocialAudit = true
+      
+      if (liveDateStr.includes('||AUDIT_OFF')) {
+        showSocialAudit = false
+        liveDateStr = liveDateStr.replace('||AUDIT_OFF', '')
+      }
+      
+      settings.live_date = liveDateStr
+      settings.show_social_audit = showSocialAudit
+
+      return res.status(200).json({ settings })
     }
 
     // POST/PUT - update settings (id = 1)
     if (req.method === 'POST' || req.method === 'PUT') {
       const { live_date, trending_enabled, show_social_audit } = req.body
 
+      let finalLiveDate = (live_date || '').replace('||AUDIT_OFF', '')
+      if (show_social_audit === false) {
+        finalLiveDate += '||AUDIT_OFF'
+      }
+
       const { data, error } = await supabase
         .from('live_settings')
         .upsert({ 
           id: 1, 
-          live_date, 
+          live_date: finalLiveDate, 
           trending_enabled: trending_enabled !== undefined ? trending_enabled : true,
-          show_social_audit: show_social_audit !== undefined ? show_social_audit : true,
           updated_at: new Date().toISOString() 
         })
         .select()
         .single()
 
       if (error) return res.status(500).json({ error: error.message })
-      return res.status(200).json({ settings: data })
+        
+      let settings = data
+      let liveDateStr = settings.live_date || ''
+      let returnedAudit = true
+      if (liveDateStr.includes('||AUDIT_OFF')) {
+        returnedAudit = false
+        liveDateStr = liveDateStr.replace('||AUDIT_OFF', '')
+      }
+      settings.live_date = liveDateStr
+      settings.show_social_audit = returnedAudit
+
+      return res.status(200).json({ settings })
     }
 
     res.setHeader('Allow', ['GET', 'POST', 'PUT'])

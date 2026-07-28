@@ -1376,13 +1376,17 @@ export async function getServerSideProps(context) {
       .neq('id', celebrity.id)
       .limit(4)
 
-    // Fetch global settings for show_social_audit
+    // Fetch global settings for show_social_audit (stored in live_date string hack to avoid DB migration)
     const { data: settingsData } = await supabase
       .from('live_settings')
-      .select('show_social_audit')
+      .select('live_date')
       .eq('id', 1)
       .maybeSingle()
-    const showSocialAudit = settingsData?.show_social_audit !== false
+    
+    let showSocialAudit = true
+    if (settingsData?.live_date && settingsData.live_date.includes('||AUDIT_OFF')) {
+      showSocialAudit = false
+    }
 
     return {
       props: {
