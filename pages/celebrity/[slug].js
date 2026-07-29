@@ -4,7 +4,7 @@ import Head from 'next/head'
 import Navbar from '../../components/Navbar'
 import PostCard from '../../components/PostCard'
 import Logo from '../../components/Logo'
-import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent } from 'lucide-react'
+import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 const getOrdinal = (n) => {
@@ -16,10 +16,10 @@ const getOrdinal = (n) => {
 // ─── Data-driven profile narrative generator ────────────────────────────────
 // Produces structurally different text for each follower tier, account age,
 // and posting behaviour. Deterministic: same inputs → same output every render.
-function generateProfileNarrative(cel, liveRank, postsCount) {
+function generateProfileNarrative(cel, liveRank, postsCount, posts = []) {
   const name = cel.name || 'This creator'
   const followers = Number(cel.followers_count || 0)
-  const posts = Number(cel.posts_count || postsCount || 0)
+  const postsNum = Number(cel.posts_count || postsCount || 0)
   const year = cel.account_created_year ? Number(cel.account_created_year) : null
   const currentYear = 2026
   const age = year ? currentYear - year : null
@@ -74,35 +74,35 @@ function generateProfileNarrative(cel, liveRank, postsCount) {
   }
 
   // ── Paragraph 2: account age & posting context — varies by age ─────────────
-  if (age && posts) {
-    const postsPerYear = Math.round(posts / age)
+  if (age && postsNum) {
+    const postsPerYear = Math.round(postsNum / age)
     if (age >= 10) {
       parts.push(
-        `The account dates back to ${year}, making it over a decade old. Across that time, ${name} has published around ${fmt(posts)} posts` +
+        `The account dates back to ${year}, making it over a decade old. Across that time, ${name} has published around ${fmt(postsNum)} posts` +
         ` — an average of roughly ${postsPerYear.toLocaleString()} posts per year. This level of longevity on the platform signals sustained audience investment rather than a short-term viral spike.`
       )
     } else if (age >= 5) {
       parts.push(
-        `Active since ${year} (${age} years on the platform), ${name} has built up a library of approximately ${fmt(posts)} posts,` +
+        `Active since ${year} (${age} years on the platform), ${name} has built up a library of approximately ${fmt(postsNum)} posts,` +
         ` averaging around ${postsPerYear.toLocaleString()} per year. This steady publishing cadence suggests deliberate, consistent content strategy rather than purely reactive posting.`
       )
     } else if (age >= 2) {
       parts.push(
-        `The account was established in ${year}, giving ${name} roughly ${age} years to grow their ${fmt(followers)}-follower base through ${fmt(posts)} posts.` +
+        `The account was established in ${year}, giving ${name} roughly ${age} years to grow their ${fmt(followers)}-follower base through ${fmt(postsNum)} posts.` +
         ` Achieving this audience size in a relatively short window points to strong content momentum and audience resonance.`
       )
     } else if (age === 1) {
       parts.push(
-        `Having joined Instagram in ${year}, ${name} is a relatively recent entrant who has already accumulated ${fmt(followers)} followers and ${fmt(posts)} posts.` +
+        `Having joined Instagram in ${year}, ${name} is a relatively recent entrant who has already accumulated ${fmt(followers)} followers and ${fmt(postsNum)} posts.` +
         ` That rate of audience growth within a single year is a notable indicator of early traction.`
       )
     }
-  } else if (posts) {
+  } else if (postsNum) {
     parts.push(
-      `The profile shows ${fmt(posts)} total posts indexed on Spialr. ` +
-      (posts > 2000
+      `The profile shows ${fmt(postsNum)} total posts indexed on Spialr. ` +
+      (postsNum > 2000
         ? `This high post volume suggests a long-standing, prolific content history.`
-        : posts > 500
+        : postsNum > 500
         ? `This moderate post count reflects a steady, consistent publishing approach.`
         : `A focused post count like this can indicate selective, quality-over-quantity publishing.`)
     )
@@ -131,11 +131,41 @@ function generateProfileNarrative(cel, liveRank, postsCount) {
     )
   }
 
-  // ── Paragraph 4: ranking methodology note ──────────────────────────────────
+  // ── Paragraph 4: Post-level dynamics ───────────────────────────────────────
+  if (posts && posts.length > 0) {
+    const sortedPosts = [...posts].sort((a, b) => new Date(a.post_date) - new Date(b.post_date))
+    const recentPosts = sortedPosts.slice(-10)
+    const oldPosts = sortedPosts.slice(0, 10)
+    
+    if (recentPosts.length > 5 && oldPosts.length > 5) {
+      const recentAvgViews = recentPosts.reduce((acc, p) => acc + (Number(p.views) || 0), 0) / recentPosts.length
+      const oldAvgViews = oldPosts.reduce((acc, p) => acc + (Number(p.views) || 0), 0) / oldPosts.length
+      
+      const recentAvgReposts = recentPosts.reduce((acc, p) => acc + (Number(p.reposts) || 0), 0) / recentPosts.length
+      const oldAvgReposts = oldPosts.reduce((acc, p) => acc + (Number(p.reposts) || 0), 0) / oldPosts.length
+
+      let dynamicInsight = ''
+      if (recentAvgViews > oldAvgViews * 1.5) {
+        dynamicInsight += ` Recent content shows a significant surge in reach, with views trending upward compared to earlier posts.`
+      } else if (recentAvgViews && oldAvgViews) {
+        dynamicInsight += ` Viewership has remained remarkably consistent across the indexed timeline.`
+      }
+
+      if (recentAvgReposts > oldAvgReposts * 1.2) {
+        dynamicInsight += ` Additionally, there is a clear upward trend in repost growth rate, indicating that newer content is highly shareable.`
+      }
+
+      if (dynamicInsight) {
+        parts.push(`An analysis of manually compiled post-level data reveals shifting engagement dynamics.` + dynamicInsight)
+      }
+    }
+  }
+
+  // ── Paragraph 5: ranking methodology note ──────────────────────────────────
   parts.push(
     `Spialr ranks profiles by verified follower count sourced from public Instagram data, updated on a rolling basis. ` +
     `${name}'s position on the leaderboard reflects their standing at the time of the most recent data refresh. ` +
-    `All engagement figures — views, likes, comments, shares — are aggregated from posts indexed in Spialr's database and do not include data from private or archived posts.`
+    `All engagement figures — views, likes, comments, shares — are aggregated from posts manually indexed in Spialr's database (not scraped via API) and do not include data from private or archived posts.`
   )
 
   return parts
@@ -345,7 +375,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
     return (
       <>
         <Head>
-          <title>{`${celebrity.name} vs ${compareCelebrity.name} — Spialr`}</title>
+          <title>{`${celebrity.name?.trim()} vs ${compareCelebrity.name?.trim()} — Spialr`}</title>
         </Head>
 
         <Navbar />
@@ -543,10 +573,29 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
   return (
     <>
       <Head>
-        <title>{`${celebrity.name} Instagram Stats & Follower Count — Spialr`}</title>
+        <title>{`${celebrity.name?.trim()} Instagram Stats & Follower Count — Spialr`}</title>
         <meta
           name="description"
           content={`${celebrity.name} has ${formatCount(celebrity.followers_count)} Instagram followers${celebrity.account_created_year ? `, active since ${celebrity.account_created_year}` : ''}${celebrity.posts_count ? ` with ${formatCount(celebrity.posts_count)} posts` : ''}. View live follower rankings, reel stats, post analytics and more on Spialr.`}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Person",
+              "name": celebrity.name,
+              "url": `https://spialr.com/celebrity/${celebrity.slug}`,
+              "image": celebrity.photo_url || '',
+              "interactionStatistic": [
+                {
+                  "@type": "InteractionCounter",
+                  "interactionType": "https://schema.org/FollowAction",
+                  "userInteractionCount": celebrity.followers_count
+                }
+              ]
+            })
+          }}
         />
       </Head>
 
@@ -683,7 +732,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
         {/* ── Data-driven profile narrative ── */}
         {(() => {
-          const narrative = generateProfileNarrative(celebrity, liveRank, postsCount)
+          const narrative = generateProfileNarrative(celebrity, liveRank, postsCount, posts)
           return (
             <div
               style={{
@@ -785,6 +834,23 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   Total Repost
                 </div>
               </div>
+            </div>
+
+            <div style={{
+              marginTop: 20,
+              padding: '12px 16px',
+              background: 'var(--surface2)',
+              borderRadius: 8,
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 13,
+              color: 'var(--text-dim)',
+              justifyContent: 'center'
+            }}>
+              <ShieldCheck size={16} style={{ color: '#10b981' }} />
+              <span>Manually verified as of {new Date(celebrity.updated_at || new Date()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, across <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts.</span>
             </div>
           </div>
         ) : null}
@@ -988,160 +1054,6 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 </>
               )}
 
-              {/* SOCIAL_AUDIT_SECTION - disabled for AdSense review, re-enable after approval
-              {showSocialAudit && (
-              <>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
-                Social Media Insights & Analytics
-              </h3>
-              <div style={{
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                borderRadius: 12,
-                padding: '20px 24px',
-                lineHeight: 1.6,
-                fontSize: 14.5,
-                color: 'var(--text-dim)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: 14,
-                  borderBottom: '1px solid var(--border)',
-                  paddingBottom: 10
-                }}>
-                  <Logo height={20} />
-                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
-                    Social Audit Benchmarks
-                  </span>
-                </div>
-                {(() => {
-                  const name = celebrity.name || 'This creator';
-                  const category = celebrity.category || '';
-                  const followersVal = celebrity.followers_count ? formatCount(celebrity.followers_count) : '';
-                  const interactionVal = celebrity.followers_interaction ? Number(celebrity.followers_interaction).toFixed(2) + '%' : '';
-                  const avgLikesVal = celebrity.average_post_likes ? formatCount(celebrity.average_post_likes) : '';
-                  const avgViewsVal = celebrity.average_views ? formatCount(celebrity.average_views) : '';
-                  const peakLikesVal = celebrity.most_likes ? formatCount(celebrity.most_likes) : '';
-
-                  const metricsList = [];
-                  if (avgLikesVal) metricsList.push(`<strong>\${avgLikesVal}</strong> likes per post`);
-                  if (avgViewsVal) metricsList.push(`<strong>\${avgViewsVal}</strong> average reel views`);
-                  const metricsListJoined = metricsList.join(' and ');
-
-                  // Choose template index deterministically based on celebrity name/ID hash
-                  const templateIndex = ((celebrity.id || '').charCodeAt(0) + name.length) % 4;
-
-                  let outputHtml = '';
-
-                  if (templateIndex === 0) {
-                    // Standard / Comprehensive Style
-                    if (liveRank) {
-                      outputHtml = `Ranked <strong>#\${liveRank}</strong> most followed account on Spialr, this profile provides comprehensive performance insights and statistics for <strong>\${name}</strong>`;
-                    } else {
-                      outputHtml = `Spialr provides comprehensive performance insights and profile statistics for <strong>\${name}</strong>`;
-                    }
-                    if (followersVal) {
-                      outputHtml += `, who has established a follower base of <strong>\${followersVal}</strong>\${category ? ` within the <strong>\${category}</strong> category` : ''}`;
-                    }
-                    outputHtml += `.`;
-                    if (interactionVal) {
-                      outputHtml += ` Analytical benchmarks indicate a strong audience interaction rate of <strong>\${interactionVal}</strong> of total followers.`;
-                    }
-                    if (metricsListJoined || peakLikesVal) {
-                      outputHtml += ` This engagement is driven by stellar audience response`;
-                      if (metricsListJoined) {
-                        outputHtml += `, averaging \${metricsListJoined}`;
-                      }
-                      if (peakLikesVal) {
-                        outputHtml += `, with peak engagement hitting <strong>\${peakLikesVal}</strong> likes on their most popular post`;
-                      }
-                      outputHtml += ` across recent content timelines.`;
-                    }
-                    outputHtml += ` This data outlines public engagement trends and audience metrics to help creators and Social Media users analyze content reach.`;
-                  } else if (templateIndex === 1) {
-                    // Interaction & Growth Benchmark Style
-                    if (liveRank) {
-                      outputHtml += `Ranked <strong>#\${liveRank}</strong> most followed account on Spialr, benchmarks for <strong>\${name}</strong> `;
-                      if (interactionVal) {
-                        outputHtml += `indicate a strong audience interaction rate of <strong>\${interactionVal}</strong> of total followers. `;
-                      } else {
-                        outputHtml += `showcase verified performance metrics and profile statistics. `;
-                      }
-                    } else {
-                      if (interactionVal) {
-                        outputHtml += `Benchmarks for <strong>\${name}</strong> indicate a strong audience interaction rate of <strong>\${interactionVal}</strong> of total followers. `;
-                      } else {
-                        outputHtml += `Spialr monitors public performance metrics and profile statistics for <strong>\${name}</strong>. `;
-                      }
-                    }
-                    if (followersVal) {
-                      outputHtml += `With a total follower base of <strong>\${followersVal}</strong>\${category ? ` in the <strong>\${category}</strong> category` : ''}, this profile showcases steady growth. `;
-                    }
-                    if (metricsListJoined || peakLikesVal) {
-                      outputHtml += `Recent content analysis reveals stellar audience response`;
-                      if (metricsListJoined) {
-                        outputHtml += `, including \${metricsListJoined}`;
-                      }
-                      if (peakLikesVal) {
-                        outputHtml += `, highlighted by peak engagement of <strong>\${peakLikesVal}</strong> likes`;
-                      }
-                      outputHtml += `. `;
-                    }
-                    outputHtml += `These analytical insights help content creators and Social Media users assess public reach and engagement velocity.`;
-                  } else if (templateIndex === 2) {
-                    // Performance Consistency Style
-                    if (liveRank) {
-                      outputHtml += `Ranked <strong>#\${liveRank}</strong> most followed account on Spialr, this profile tracks audience metrics and public engagement trends for <strong>\${name}</strong> across several content formats. `;
-                    } else {
-                      outputHtml += `For <strong>\${name}</strong>, Spialr tracks audience metrics and public engagement trends across several content formats. `;
-                    }
-                    if (followersVal) {
-                      outputHtml += `Currently, the profile holds a benchmark position with <strong>\${followersVal}</strong> followers\${category ? ` in the <strong>\${category}</strong> sector` : ''}. `;
-                    }
-                    if (interactionVal) {
-                      outputHtml += `This audience exhibits high interest, resulting in an interaction rate of <strong>\${interactionVal}</strong> of total followers. `;
-                    }
-                    if (metricsListJoined || peakLikesVal) {
-                      outputHtml += `The engagement metrics indicate strong consistency, averaging \${metricsListJoined || 'stellar numbers'}`;
-                      if (peakLikesVal) {
-                        outputHtml += `, with the most popular post gathering up to <strong>\${peakLikesVal}</strong> likes`;
-                      }
-                      outputHtml += `. `;
-                    }
-                    outputHtml += `Marketing professionals and Social Media users utilize these stats to analyze public benchmark trends.`;
-                  } else {
-                    // Reach & Audience Benchmark Style
-                    if (liveRank) {
-                      outputHtml += `Ranked <strong>#\${liveRank}</strong> most followed account on Spialr, public performance benchmarks for <strong>\${name}</strong> showcase notable metrics across various digital timelines. `;
-                    } else {
-                      outputHtml += `Public performance benchmarks for <strong>\${name}</strong> showcase notable metrics across various digital timelines. `;
-                    }
-                    if (followersVal) {
-                      outputHtml += `Spialr's current data lists a follower base of <strong>\${followersVal}</strong>\${category ? ` in the <strong>\${category}</strong> category` : ''}. `;
-                    }
-                    if (metricsListJoined || peakLikesVal) {
-                      outputHtml += `Timelines show consistent views and likes, specifically averaging \${metricsListJoined || 'stellar responses'}`;
-                      if (peakLikesVal) {
-                        outputHtml += `, alongside a peak post performance of <strong>\${peakLikesVal}</strong> likes`;
-                      }
-                      outputHtml += `. `;
-                    }
-                    if (interactionVal) {
-                      outputHtml += `This yields an overall audience interaction rate of <strong>\${interactionVal}</strong> of total followers. `;
-                    }
-                    outputHtml += `Creators and Social Media users can leverage these structured metrics to evaluate overall digital reach.`;
-                  }
-
-                  return (
-                    <p style={{ margin: 0 }} dangerouslySetInnerHTML={{ __html: outputHtml }} />
-                  );
-                })()}
-              </div>
-              </>
-              )}
-              */}
             </div>
           </div>
         )}

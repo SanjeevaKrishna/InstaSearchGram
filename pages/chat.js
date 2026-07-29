@@ -1533,3 +1533,9 @@ export default function ChatPage() {
     </>
   )
 }
+
+export async function getServerSideProps() {
+  return {
+    notFound: true
+  }
+}

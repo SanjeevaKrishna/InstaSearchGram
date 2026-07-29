@@ -212,6 +212,7 @@ export default function LivePage({ initialLiveData = null }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'voting'
   const [liveData, setLiveData] = useState(initialLiveData || { live_date: '', most_followed: [], viral_reels: [] })
+  const profileCount = initialLiveData?.most_followed?.length || 'thousands of'
 
   // Synchronize activeTab state with the tab query parameter
   useEffect(() => {
@@ -542,13 +543,13 @@ export default function LivePage({ initialLiveData = null }) {
     <>
       <Head>
         <title>Most Followed Instagram Accounts Live Standings — Spialr</title>
-        <meta name="description" content="Check real-time follower counts of 1000s of the most followed Instagram accounts globally and in India. Live standings of top 100 Instagram accounts, top creators, actors, athletes, and influencers ordered by followers." />
+        <meta name="description" content={`Check real-time follower counts of ${profileCount} top Instagram accounts globally and in India. Live standings of top 100 Instagram accounts, top creators, actors, athletes, and influencers ordered by followers.`} />
         <meta name="keywords" content="top 100 instagram accounts in india, most followed instagram accounts, most followed actors on instagram, top creators on instagram, top instagram influencers, live instagram follower counts, sports stars instagram followers, top meme pages, most followed politicians, instagram follower rankings" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         
         {/* Open Graph / Social Sharing SEO */}
         <meta property="og:title" content="Most Followed Instagram Accounts (Live Rankings) — Spialr" />
-        <meta property="og:description" content="Track real-time follower counts of 1000s of the most followed Instagram accounts globally and in India. View top-ranked actors, creators, influencers, athletes, and politicians ordered by followers." />
+        <meta property="og:description" content={`Track real-time follower counts of ${profileCount} top Instagram accounts globally and in India. View top-ranked actors, creators, influencers, athletes, and politicians ordered by followers.`} />
         <meta property="og:type" content="website" />
         
         {/* Schema Markup for Google Rich Snippets */}

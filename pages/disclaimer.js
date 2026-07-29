@@ -23,7 +23,7 @@ export default function Disclaimer() {
           <p style={{ marginBottom: 16 }}>Spialr is an independent search tool and directory. We are not sponsored, endorsed, administered by, or associated with Instagram, Meta Platforms, Inc., or any of the celebrities, creators, or profiles listed on this website.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>3. Information Accuracy</h2>
-          <p style={{ marginBottom: 16 }}>The information on Spialr is compiled from public sources. While we strive to keep information updated (such as follower counts and trends), we make no representations or warranties of any kind about the accuracy or completeness of the data.</p>
+          <p style={{ marginBottom: 16 }}>The information on Spialr is meticulously compiled and manually curated from public sources by our research team led by Sanjeeva. While we strive to keep information updated (such as follower counts and trends) and hand-verify all metrics, social data changes rapidly, and we make no representations or warranties of any kind about the permanent accuracy or completeness of the data at any given moment.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>4. Professional Disclaimer</h2>
           <p style={{ marginBottom: 16 }}>The site cannot and does not contain professional, financial, or legal advice. The information is provided for general informational and educational purposes only and is not a substitute for professional advice.</p>

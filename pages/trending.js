@@ -303,6 +303,23 @@ export default function TrendingPage({ initialData = null }) {
       <Head>
         <title>Daily Viral Instagram Reels Leaderboard — Spialr</title>
         <meta name="description" content="Check out the top daily viral trending Instagram reels in order. Visual leaderboard of creator rankings in India." />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "name": "Daily Viral Instagram Reels Leaderboard",
+              "description": "Top daily viral trending Instagram reels and posts.",
+              "itemListElement": activeReels.slice(0, 15).map((reel, idx) => ({
+                "@type": "ListItem",
+                "position": idx + 1,
+                "name": reel.title || reel.caption || 'Instagram Post',
+                "url": `https://spialr.com/reel/${generateReelSlug(reel)}`
+              }))
+            })
+          }}
+        />
       </Head>
 
       <Navbar />

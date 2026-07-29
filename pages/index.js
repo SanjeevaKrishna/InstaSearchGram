@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar'
 import { Sparkles, Search, Flame } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-export default function Home({ featured = [] }) {
+export default function Home({ featured = [], profileCount = 'thousands of' }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -47,7 +47,7 @@ export default function Home({ featured = [] }) {
     <>
       <Head>
         <title>Spialr - Most Followed Instagram Accounts in India.</title>
-        <meta name="description" content="Discover 1000s of top Instagram accounts ordered by followers count. Search and find Instagram posts, reels, and trending profiles in India and globally — without endless scrolling." />
+        <meta name="description" content={`Discover ${featured.length > 0 ? profileCount : 'verified'} top Instagram accounts ordered by followers count. Search and find Instagram posts, reels, and trending profiles in India and globally — without endless scrolling.`} />
         <meta name="keywords" content="top 100 instagram accounts in india, most followed instagram accounts, top instagram creators, spialr, instagram follower rankings, famous instagram profiles, search instagram reels, list of top instagram accounts" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -242,6 +242,23 @@ export default function Home({ featured = [] }) {
             }}>
               Popular <Flame size={18} style={{ color: '#ff6b35' }} />
             </h2>
+            
+            <div style={{
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              padding: '16px 20px',
+              marginBottom: 24,
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: 'var(--text-dim)',
+              textAlign: 'left'
+            }}>
+              <p style={{ margin: 0 }}>
+                Spialr tracks lifetime performance insights across verified creator profiles. Unlike other directories that rely on official APIs or automated scraping with 90-day limitations, <strong>our data is meticulously compiled manually</strong>. We hand-count likes, views, comments, and reposts across thousands of posts per profile to provide an unrestricted, lifetime view of digital influence.
+              </p>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {featured.map(c => <CelebrityCard key={c.id} celebrity={c} />)}
             </div>
@@ -261,20 +278,26 @@ export async function getServerSideProps() {
       return { props: { featured: [] } }
     }
 
-    const { data, error } = await supabase
-      .from('celebrities')
-      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url')
-      .neq('hide_search', true)
-      .order('order_index', { ascending: true })
-      .order('followers_count', { ascending: false })
-      .limit(12)
+    const [{ data, error }, { count }] = await Promise.all([
+      supabase
+        .from('celebrities')
+        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url')
+        .neq('hide_search', true)
+        .order('order_index', { ascending: true })
+        .order('followers_count', { ascending: false })
+        .limit(12),
+      supabase
+        .from('celebrities')
+        .select('id', { count: 'exact', head: true })
+        .neq('hide_search', true)
+    ])
 
     if (error) {
       console.error('Homepage getServerSideProps error:', error)
       return { props: { featured: [] } }
     }
 
-    return { props: { featured: data || [] } }
+    return { props: { featured: data || [], profileCount: count || 'thousands of' } }
   } catch (err) {
     console.error('Homepage getServerSideProps exception:', err)
     return { props: { featured: [] } }

@@ -2,8 +2,9 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
 import { TrendingUp, BarChart3, Trophy, Search } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
-export default function About() {
+export default function About({ profileCount = 'thousands of' }) {
   return (
     <>
       <Head>
@@ -52,7 +53,7 @@ export default function About() {
                 </h3>
               </div>
               <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.6, margin: 0 }}>
-                Check real-time standings and follower count leaderboards for thousands of top Instagram profiles. We track ranks across multiple categories including Actors, Singers, Creators, Meme Pages, and Politicians in India and globally.
+                Check real-time standings and follower count leaderboards for {profileCount} top Instagram profiles. We track ranks across multiple categories including Actors, Singers, Creators, Meme Pages, and Politicians in India and globally.
               </p>
             </div>
 
@@ -105,8 +106,11 @@ export default function About() {
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>
             Our Curation & Quality Standard
           </h2>
+          <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.8, marginBottom: 16 }}>
+            Unlike automated aggregators or crawlers that scrape the web, <strong>every profile standing, ranking index, and timeline featured on Spialr is hand-counted, researched, and entered manually</strong> by our dedicated curation team, led by our head curator <strong>Sanjeeva</strong>. 
+          </p>
           <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.8, marginBottom: 32 }}>
-            Unlike automated aggregators or crawlers that scrap the web, <strong>every profile standings, ranking index, and playlist featured on Spialr is compiled, researched, and entered manually</strong> by our dedicated curation team. We analyze public benchmarks directly from official creator feeds, ensuring complete accuracy of data and respect for intellectual property rights.
+            We analyze public benchmarks directly from official creator feeds, logging individual likes, views, comments, and reposts. This manual effort bypasses standard 90-day API limitations, ensuring you receive an unrestricted, lifetime view of digital influence with complete accuracy and respect for intellectual property rights.
           </p>
 
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>
@@ -122,4 +126,25 @@ export default function About() {
       </main>
     </>
   )
+}
+
+export async function getServerSideProps() {
+  try {
+    if (!supabase) {
+      return { props: { profileCount: 'thousands of' } }
+    }
+
+    const { count, error } = await supabase
+      .from('celebrities')
+      .select('id', { count: 'exact', head: true })
+      .neq('hide_search', true)
+
+    if (error) {
+      return { props: { profileCount: 'thousands of' } }
+    }
+
+    return { props: { profileCount: count || 'thousands of' } }
+  } catch (err) {
+    return { props: { profileCount: 'thousands of' } }
+  }
 }

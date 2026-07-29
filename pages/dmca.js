@@ -16,7 +16,7 @@ export default function DMCA() {
         <div style={{ color: 'var(--text-dim)', lineHeight: 1.9, fontSize: 15 }}>
           <p style={{ marginBottom: 20 }}>Last updated: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
 
-          <p style={{ marginBottom: 16 }}>Spialr respects the intellectual property rights of others. We comply with the Digital Millennium Copyright Act (DMCA) and other applicable intellectual property laws.</p>
+          <p style={{ marginBottom: 16 }}>Spialr respects the intellectual property rights of others. Although all statistics, metrics, and leaderboards on our platform are manually curated, hand-counted, and researched by our curation team led by Sanjeeva (and not scraped via automated bots), we comply with the Digital Millennium Copyright Act (DMCA) and other applicable intellectual property laws regarding any referenced media or profile data.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>1. Copyright Infringement Claims</h2>
           <p style={{ marginBottom: 16 }}>If you believe that your copyrighted work has been copied or used on Spialr in a way that constitutes copyright infringement, please notify our designated copyright agent with the following details:</p>

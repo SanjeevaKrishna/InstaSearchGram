@@ -66,7 +66,7 @@ export default function Methodology() {
                 <strong>No Partnerships/Official APIs:</strong> Spialr operates independently. We do not claim official API access or integrations with Instagram or Meta Platforms, Inc., nor do we represent any official partnerships.
               </li>
               <li>
-                <strong>Curation Accuracy:</strong> Every celebrity standings index and ranking folder is researched, reviewed, and updated manually by our research team to maintain data integrity.
+                <strong>Curation Accuracy:</strong> Every celebrity standing index and ranking folder is meticulously hand-counted, researched, and entered manually by our dedicated curation team, led by our head curator <strong>Sanjeeva</strong>, bypassing automated API constraints to maintain data integrity and lifetime insights.
               </li>
             </ul>
           </div>

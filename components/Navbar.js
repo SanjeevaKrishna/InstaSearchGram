@@ -66,9 +66,7 @@ export default function Navbar() {
               <Link href="/live">
                 <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Live</button>
               </Link>
-              <Link href="/chat">
-                <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Chat</button>
-              </Link>
+
             </div>
 
             {/* Menu Dropdown */}
@@ -143,9 +141,7 @@ export default function Navbar() {
                   <Link href="/live" className="dropdown-item" onClick={closeDropdown}>
                     <Flame size={14} style={{ marginRight: 8 }} /> Live
                   </Link>
-                  <Link href="/chat" className="dropdown-item" onClick={closeDropdown}>
-                    <MessageSquare size={14} style={{ marginRight: 8 }} /> Chat Room
-                  </Link>
+
 
                   <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
 

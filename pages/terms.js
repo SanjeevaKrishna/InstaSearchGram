@@ -19,7 +19,7 @@ export default function Terms() {
           <p style={{ marginBottom: 16 }}>Welcome to Spialr. By accessing our website, you agree to comply with and be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>1. Use of the Site</h2>
-          <p style={{ marginBottom: 16 }}>Spialr is an information and search directory for public social media profiles. You agree to use the site only for lawful, personal, and non-commercial purposes.</p>
+          <p style={{ marginBottom: 16 }}>Spialr is an information and search directory for public social media profiles. All data is hand-counted, researched, and entered manually by our dedicated curation team, led by Sanjeeva. You agree to use the site only for lawful, personal, and non-commercial purposes.</p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>2. Intellectual Property</h2>
           <p style={{ marginBottom: 16 }}>All trademarks, logos, content, and code on Spialr are the property of their respective owners. Instagram profile pictures, reels, posts, and names referenced belong to the respective creators and Instagram (Meta Platforms, Inc.). We claim no ownership over Instagram content.</p>

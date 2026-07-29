@@ -58,14 +58,25 @@ export default function App({ Component, pageProps }) {
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "Spialr",
-              "url": "https://spialr.com/",
-              "potentialAction": {
-                "@type": "SearchAction",
-                "target": "https://spialr.com/results?q={search_term_string}",
-                "query-input": "required name=search_term_string"
-              }
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "name": "Spialr",
+                  "url": "https://spialr.com/",
+                  "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": "https://spialr.com/results?q={search_term_string}",
+                    "query-input": "required name=search_term_string"
+                  }
+                },
+                {
+                  "@type": "Organization",
+                  "name": "Spialr Analytics",
+                  "url": "https://spialr.com/",
+                  "logo": "https://spialr.com/favicon.png",
+                  "description": "Curating, indexing, and analyzing top social media creators to provide instant search and insights."
+                }
+              ]
             })
           }}
         />
