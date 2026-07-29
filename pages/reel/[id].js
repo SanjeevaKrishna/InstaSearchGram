@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Navbar from '../../components/Navbar'
 import BottomNav from '../../components/BottomNav'
-import { ArrowLeft, Calendar, Users, ExternalLink, Heart, Eye } from 'lucide-react'
+import { ArrowLeft, Calendar, Users, ExternalLink, Heart, Eye, Film, Play } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 export default function ReelDetailPage({ initialReel, moreFromCreator = [], topCategoryReels = [], celebrityProfile }) {
@@ -185,30 +185,39 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
                 zIndex: 0
               }} />
 
-              {/* Left Column: Big Thumbnail Card (non-clickable) */}
-              {reel.photo_url && (
-                <div 
-                  style={{
-                    width: 240,
-                    height: 360,
-                    borderRadius: 16,
-                    overflow: 'hidden',
-                    position: 'relative',
-                    boxShadow: '0 12px 36px rgba(0,0,0,0.12)',
-                    flexShrink: 0,
-                    border: '1px solid var(--border)',
-                    zIndex: 1
-                  }}
-                  className="big-thumbnail-card"
-                >
-                  <img 
-                    src={reel.photo_url} 
-                    alt="" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                    className="big-thumbnail-img"
-                  />
+              {/* Left Column: Small Thumbnail Card */}
+              <div 
+                style={{
+                  width: 88,
+                  height: 132,
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  background: '#09090b',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                  flexShrink: 0,
+                  border: '1px solid var(--border)',
+                  zIndex: 1
+                }}
+              >
+                {reel.photo_url ? (
+                  <>
+                    <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+                    <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: '9px', color: 'rgba(255,255,255,0.9)', background: 'rgba(0,0,0,0.6)', padding: '2px 4px', borderRadius: '4px', fontWeight: 600 }}>via Instagram</div>
+                  </>
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                    <Film size={18} />
+                  </div>
+                )}
+                <div style={{
+                  position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none'
+                }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                    <Play size={10} fill="currentColor" style={{ marginLeft: 1 }} />
+                  </div>
                 </div>
-              )}
+              </div>
 
               {/* Right Column: Title, Creator, Metadata & CTA */}
               <div style={{
@@ -220,81 +229,40 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
                 minWidth: 0
               }}>
                 <div>
-                  {/* Creator Profile Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+                  {/* Title and Creator (Replaces old avatar header and quote box) */}
+                  <div style={{ marginBottom: 24 }}>
+                    {reel.title && (
+                      <h1 style={{
+                        fontSize: '15px',
+                        fontWeight: 650,
+                        color: 'var(--text)',
+                        margin: '0 0 8px 0',
+                        lineHeight: 1.4,
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                      }}>
+                        {reel.title}
+                      </h1>
+                    )}
+                    
                     <div style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      background: 'var(--surface2)',
-                      border: '2px solid var(--border)',
-                      flexShrink: 0,
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: 'var(--accent)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
                     }}>
-                      {reel.creator_photo_url ? (
-                        <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--text-muted)' }}>
-                          {initials}
-                        </div>
-                      )}
-                    </div>
-                    <div>
                       {reel.creator_slug ? (
-                        <a href={'/celebrity/' + reel.creator_slug} style={{ textDecoration: 'none' }}>
-                          <h2 style={{
-                            fontSize: '18px',
-                            fontWeight: 800,
-                            color: 'var(--accent)',
-                            margin: 0,
-                            letterSpacing: '-0.01em',
-                            fontFamily: 'var(--font-display)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4
-                          }} className="creator-link-hover">
-                            {reel.creator_name || '@anonymous'}
-                            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 10, background: 'rgba(255, 42, 95, 0.08)', color: 'var(--accent)', marginLeft: 4 }}>Creator</span>
-                          </h2>
+                        <a href={'/celebrity/' + reel.creator_slug} style={{ color: 'inherit', textDecoration: 'none' }} className="creator-link-hover">
+                          {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
                         </a>
                       ) : (
-                        <h2 style={{
-                          fontSize: '18px',
-                          fontWeight: 800,
-                          color: 'var(--text)',
-                          margin: 0,
-                          letterSpacing: '-0.01em',
-                          fontFamily: 'var(--font-display)'
-                        }}>
-                          {reel.creator_name || '@anonymous'}
-                        </h2>
+                        <span>{reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}</span>
                       )}
-                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Instagram Creator Profile</div>
+                      {reel.creator_slug && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 10, background: 'rgba(255, 42, 95, 0.08)', color: 'var(--accent)' }}>Creator</span>}
                     </div>
                   </div>
-
-                  {/* Caption / Quote Section */}
-                  {reel.title && (
-                    <div style={{
-                      fontSize: '14.5px',
-                      fontWeight: 500,
-                      lineHeight: 1.6,
-                      color: 'var(--text-dim)',
-                      marginBottom: 24,
-                      whiteSpace: 'pre-wrap',
-                      background: 'var(--surface2)',
-                      padding: '16px 20px',
-                      borderRadius: 16,
-                      border: '1px solid var(--border)',
-                      position: 'relative',
-                      fontStyle: 'italic',
-                      fontFamily: 'var(--font-body)'
-                    }}>
-                      <span style={{ position: 'absolute', top: 4, left: 6, fontSize: 32, opacity: 0.1, fontFamily: 'serif', lineHeight: 1 }}>“</span>
-                      <div style={{ paddingLeft: 6 }}>{reel.title}</div>
-                    </div>
-                  )}
 
                   {/* Grid Metrics (Hides completely if metric is 0 or undefined) */}
                   <div style={{
@@ -693,9 +661,6 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
         .detail-card-container {
           flex-direction: row;
         }
-        .big-thumbnail-card {
-          box-shadow: 0 12px 36px rgba(0,0,0,0.12) !important;
-        }
         .creator-link-hover:hover {
           color: var(--accent-hover) !important;
         }
@@ -708,15 +673,10 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
         }
         @media (max-width: 680px) {
           .detail-card-container {
-            flex-direction: column !important;
-            padding: 20px !important;
-            gap: 24px !important;
-          }
-          .big-thumbnail-card {
-            width: 100% !important;
-            height: 380px !important;
-            max-width: 320px;
-            margin: 0 auto;
+            flex-direction: row !important;
+            padding: 16px !important;
+            gap: 16px !important;
+            align-items: flex-start !important;
           }
         }
       `}</style>
