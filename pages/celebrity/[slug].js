@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import Navbar from '../../components/Navbar'
 import PostCard from '../../components/PostCard'
 import Logo from '../../components/Logo'
 import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck } from 'lucide-react'
@@ -11,6 +10,18 @@ const getOrdinal = (n) => {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+const normalizeBioText = (text) => {
+  if (!text) return text;
+  return text
+    .replace(/\bPowerful Acting\b/g, 'powerful acting')
+    .replace(/\bBold Personality\b/g, 'bold personality')
+    .replace(/\bUnique Style\b/g, 'unique style')
+    .replace(/\bDynamic Presence\b/g, 'dynamic presence')
+    .replace(/\bEngaging Content\b/g, 'engaging content')
+    .replace(/\bStrong Screen Presence\b/g, 'strong screen presence')
+    .replace(/\bExceptional Talent\b/g, 'exceptional talent');
 }
 
 // ─── Data-driven profile narrative generator ────────────────────────────────
@@ -244,8 +255,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
   if (loading) return (
     <>
-      <Navbar />
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
         <div className="spinner" style={{ width: 40, height: 40 }} />
       </div>
     </>
@@ -253,8 +263,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
   if (!celebrity) return (
     <>
-      <Navbar />
-      <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <Search size={48} strokeWidth={1.5} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
         <p style={{ margin: 0 }}>Celebrity not found</p>
         <button onClick={() => router.push('/')} className="btn btn-ghost" style={{ marginTop: 16 }}>← Back to search</button>
@@ -264,8 +273,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
   if (loadingCompare) return (
     <>
-      <Navbar />
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
         <div className="spinner" style={{ width: 40, height: 40 }} />
       </div>
     </>
@@ -378,8 +386,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
           <title>{`${celebrity.name?.trim()} vs ${compareCelebrity.name?.trim()} — Spialr`}</title>
         </Head>
 
-        <Navbar />
-
+        
         <main style={{ maxWidth: 850, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }} className="fade-in">
           {/* Back Button */}
           <button 
@@ -599,8 +606,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
         />
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 850, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }}>
         <button 
           onClick={() => {
@@ -1040,7 +1046,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                     About {celebrity.name}
                   </h3>
                   <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 20, wordBreak: 'break-word' }}>
-                    {celebrity.description}
+                    {normalizeBioText(celebrity.description)}
                   </p>
                   
                   {/* Pink-Red divider line */}

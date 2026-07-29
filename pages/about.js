@@ -1,6 +1,5 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import Navbar from '../components/Navbar'
 import { TrendingUp, BarChart3, Trophy, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -12,8 +11,7 @@ export default function About({ profileCount = 'thousands of' }) {
         <meta name="description" content="Discover Spialr - a professional analytics platform featuring live creator ranks, trending Reels ranking, total views, reel likes, post likes, and instant keyword search." />
       </Head>
       
-      <Navbar />
-      
+            
       <main style={{ maxWidth: 750, margin: '0 auto', padding: '40px 20px 80px' }}>
         <div className="fade-in">
           {/* Back button */}

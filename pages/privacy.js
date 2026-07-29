@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 
 export default function Privacy() {
   return (
@@ -8,8 +7,7 @@ export default function Privacy() {
         <title>Privacy Policy — Spialr</title>
         <meta name="description" content="Read the official Privacy Policy of Spialr. Learn how we handle cookies, Google Analytics, third-party advertising partners like Google AdSense, and cookie opt-out options." />
       </Head>
-      <Navbar />
-      <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
+            <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, marginBottom: 32, letterSpacing: '-0.02em' }}>
           Privacy Policy
         </h1>

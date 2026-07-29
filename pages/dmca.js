@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 
 export default function DMCA() {
   return (
@@ -8,8 +7,7 @@ export default function DMCA() {
         <title>DMCA Policy — Spialr</title>
         <meta name="description" content="Read the Digital Millennium Copyright Act (DMCA) policy of Spialr, including how to submit infringement claims to our designated copyright agent." />
       </Head>
-      <Navbar />
-      <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
+            <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, marginBottom: 32, letterSpacing: '-0.02em' }}>
           DMCA Copyright Policy
         </h1>

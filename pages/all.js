@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
-import Navbar from '../components/Navbar'
 import { Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -230,8 +229,7 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
         <meta name="description" content="Explore a complete directory of popular social media creators, actors, singers, and meme handles. Benchmark and compare overall follower lists." />
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 20px 140px' }}>
 
         <h1 style={{

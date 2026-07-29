@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 
 export default function Disclaimer() {
   return (
@@ -8,8 +7,7 @@ export default function Disclaimer() {
         <title>Disclaimer — Spialr</title>
         <meta name="description" content="View the external links and information accuracy disclaimer of Spialr. We are an independent search directory not affiliated with Instagram." />
       </Head>
-      <Navbar />
-      <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
+            <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, marginBottom: 32, letterSpacing: '-0.02em' }}>
           Disclaimer
         </h1>

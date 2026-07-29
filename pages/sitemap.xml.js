@@ -1,6 +1,18 @@
 import { supabase } from '../lib/supabase'
+import fs from 'fs'
+import path from 'path'
 
 const EXTERNAL_DATA_URL = 'https://spialr.com'
+
+const getFileLastMod = (pagePath) => {
+  try {
+    const fullPath = path.join(process.cwd(), 'pages', pagePath);
+    const stat = fs.statSync(fullPath);
+    return stat.mtime.toISOString();
+  } catch (e) {
+    return new Date().toISOString();
+  }
+}
 
 function generateSiteMap(celebrities) {
   const today = new Date().toISOString()
@@ -9,79 +21,79 @@ function generateSiteMap(celebrities) {
      <!-- Static URLs -->
      <url>
        <loc>${EXTERNAL_DATA_URL}/</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('index.js')}</lastmod>
        <changefreq>daily</changefreq>
        <priority>1.0</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/all</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('all.js')}</lastmod>
        <changefreq>daily</changefreq>
        <priority>0.8</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/live</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('live.js')}</lastmod>
        <changefreq>daily</changefreq>
        <priority>0.9</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/trending</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('trending.js')}</lastmod>
        <changefreq>daily</changefreq>
        <priority>0.8</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/about</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('about.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.5</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/privacy</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('privacy.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.5</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/terms</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('terms.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.5</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/disclaimer</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('disclaimer.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.5</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/contact</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('contact.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.5</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/dmca</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('dmca.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.5</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/request</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('request.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.6</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/converter</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('converter.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.7</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/methodology</loc>
-       <lastmod>${today}</lastmod>
+       <lastmod>${getFileLastMod('methodology.js')}</lastmod>
        <changefreq>monthly</changefreq>
        <priority>0.7</priority>
      </url>

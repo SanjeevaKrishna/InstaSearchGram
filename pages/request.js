@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 import { Sparkles } from 'lucide-react'
 
 export default function RequestCreator() {
@@ -28,8 +27,7 @@ export default function RequestCreator() {
         <title>Request Creator / Suggest Profile — Spialr</title>
         <meta name="description" content="Suggest new creators, actors, singers, and meme pages to be tracked on Spialr's live rankings database." />
       </Head>
-      <Navbar />
-      <main style={{ maxWidth: 600, margin: '0 auto', padding: '60px 20px' }}>
+            <main style={{ maxWidth: 600, margin: '0 auto', padding: '60px 20px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 800, marginBottom: 12, letterSpacing: '-0.02em', textAlign: 'center' }}>
           Request Creator / Suggest Profile
         </h1>

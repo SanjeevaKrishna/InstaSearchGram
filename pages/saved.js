@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 import PostCard from '../components/PostCard'
 import { safeStorage } from '../lib/storage'
 
@@ -30,8 +29,7 @@ export default function SavedLinks() {
         <meta name="description" content="Access your saved profiles, posts, reels, and search shortcuts on Spialr." />
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 20px' }}>
         <h1 style={{
           fontFamily: 'var(--font-display)',

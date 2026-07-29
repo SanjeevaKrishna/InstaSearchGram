@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, Fragment } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import Navbar from '../components/Navbar'
 import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus, CornerUpLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { safeStorage } from '../lib/storage'
@@ -572,8 +571,7 @@ export default function LivePage({ initialLiveData = null }) {
         />
       </Head>
 
-      <Navbar />
-
+      
       <main className="main-container" style={{ maxWidth: 850, margin: '0 auto', padding: '16px 20px 80px' }}>
         {/* Header section with live pulse indicator and manual date */}
         <div className="fade-in header-section" style={{

@@ -4,6 +4,7 @@ import '../styles/globals.css'
 import Head from 'next/head'
 import Script from 'next/script'
 import { useRouter } from 'next/router'
+import Navbar from '../components/Navbar'
 import BottomNav from '../components/BottomNav'
 import Footer from '../components/Footer'
 
@@ -81,6 +82,7 @@ export default function App({ Component, pageProps }) {
           }}
         />
       </Head>
+      {!isAdmin && !isChat && <Navbar />}
       <Component {...pageProps} />
       {!isAdmin && !isChat && <Footer />}
       {!isAdmin && <BottomNav />}

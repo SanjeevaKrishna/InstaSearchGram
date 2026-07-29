@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import Navbar from '../components/Navbar'
 import { convertImageToDotArt, loadImageFromFile } from '../lib/dotArt'
 import { Sparkles, Copy, Check, Upload, Image as ImageIcon } from 'lucide-react'
 
@@ -190,8 +189,7 @@ export default function Converter() {
         <meta name="description" content="Generate beautiful Unicode Braille dot art optimized for Instagram, YouTube, and WhatsApp comments." />
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 20px', minHeight: 'calc(100vh - 130px)' }}>
         {/* Back Button */}
         <div style={{ marginBottom: 24, textAlign: 'left' }}>

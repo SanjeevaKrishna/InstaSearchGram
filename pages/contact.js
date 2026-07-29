@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import Navbar from '../components/Navbar'
 import { Mail, Clock, Send, CheckCircle, AlertCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 
 const SUBJECT_OPTIONS = [
@@ -295,8 +294,7 @@ export default function ContactPage() {
         `}</style>
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ background: 'var(--surface)', minHeight: '100vh', paddingBottom: 80 }}>
         {/* Hero */}
         <section

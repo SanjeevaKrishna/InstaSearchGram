@@ -40,6 +40,7 @@ export default function Footer() {
               <Link href="/all" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>All Profiles</Link>
               <Link href="/trending" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Trending Reels</Link>
               <Link href="/live" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Live Standings</Link>
+              <Link href="/converter" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Dot Art Converter</Link>
             </div>
           </div>
 

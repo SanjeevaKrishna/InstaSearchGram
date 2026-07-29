@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 import BottomNav from '../components/BottomNav'
 import { TrendingUp, Play, Film, ChevronUp, ChevronDown, Minus, ExternalLink, Users, Eye, Heart } from 'lucide-react'
 import PostCard from '../components/PostCard'
@@ -325,8 +324,7 @@ export default function TrendingPage({ initialData = null }) {
         />
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '16px 20px 100px' }}>
         {loading && !initialData ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '120px 0' }}>

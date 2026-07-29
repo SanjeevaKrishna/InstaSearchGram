@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react'
 import Head from 'next/head'
 import CelebrityCard from '../components/CelebrityCard'
-import Navbar from '../components/Navbar'
 import { Sparkles, Search, Flame } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -54,8 +53,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
         <link rel="icon" href="/favicon.png" type="image/png" />
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 20px' }}>
         {/* Hero */}
         <div className="fade-in" style={{ textAlign: 'center', marginBottom: 50 }}>

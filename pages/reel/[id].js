@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import Navbar from '../../components/Navbar'
 import BottomNav from '../../components/BottomNav'
 import { ArrowLeft, Calendar, Users, ExternalLink, Heart, Eye, Film, Play } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
@@ -100,8 +99,7 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
         {isThinContent && <meta name="robots" content="noindex, follow" />}
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 850, margin: '0 auto', padding: '24px 20px 100px' }}>
         {/* Back Navigation */}
         <div style={{ marginBottom: 16 }}>

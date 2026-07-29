@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 
 export default function Terms() {
   return (
@@ -8,8 +7,7 @@ export default function Terms() {
         <title>Terms of Service — Spialr</title>
         <meta name="description" content="Review the official Terms of Service of Spialr, detailing website guidelines, disclaimer of warranties, and legal limitations." />
       </Head>
-      <Navbar />
-      <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
+            <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, marginBottom: 32, letterSpacing: '-0.02em' }}>
           Terms of Service
         </h1>

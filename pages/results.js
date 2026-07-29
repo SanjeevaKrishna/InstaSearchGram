@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
 import PostCard from '../components/PostCard'
 import { safeStorage } from '../lib/storage'
 import { Lightbulb, Search, Heart, MessageSquare, Eye, Star } from 'lucide-react'
@@ -423,8 +422,7 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
     if (router.isReady) {
       return (
         <>
-          <Navbar />
-          <main style={{ maxWidth: 800, margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
+                    <main style={{ maxWidth: 800, margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, marginBottom: 8 }}>No Profile Selected</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>Please select a celebrity profile from our home listings to view insights.</p>
@@ -437,8 +435,7 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
     }
     return (
       <>
-        <Navbar />
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
           <div className="spinner" style={{ width: 40, height: 40 }} />
         </div>
       </>
@@ -447,8 +444,7 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
 
   if (loading) return (
     <>
-      <Navbar />
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
         <div className="spinner" style={{ width: 40, height: 40 }} />
       </div>
     </>
@@ -471,8 +467,7 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
         <title>Results — Spialr</title>
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '24px 20px 80px' }}>
         <button 
           onClick={() => {

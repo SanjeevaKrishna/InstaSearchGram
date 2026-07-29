@@ -1,6 +1,5 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import Navbar from '../components/Navbar'
 import { Info, BarChart3, TrendingUp } from 'lucide-react'
 
 export default function Methodology() {
@@ -11,8 +10,7 @@ export default function Methodology() {
         <meta name="description" content="Learn how Spialr collects public social metrics, builds creator directory leaderboards, and compiles ranking indexes transparently." />
       </Head>
 
-      <Navbar />
-
+      
       <main style={{ maxWidth: 750, margin: '0 auto', padding: '40px 20px 80px' }}>
         <div className="fade-in">
           {/* Back button */}
