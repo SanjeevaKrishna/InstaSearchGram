@@ -146,3 +146,5 @@ export async function getServerSideProps() {
     return { props: { profileCount: 'thousands of' } }
   }
 }
+
+// Cache buster for Vercel deployment
