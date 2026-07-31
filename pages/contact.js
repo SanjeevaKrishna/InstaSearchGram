@@ -817,47 +817,6 @@ export default function ContactPage() {
           </div>
         </section>
 
-        {/* Bottom footer links */}
-        <footer
-          style={{
-            marginTop: 64,
-            paddingTop: 24,
-            borderTop: '1px solid var(--border)',
-            textAlign: 'center',
-          }}
-          aria-label="Page footer"
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: '8px 24px',
-              padding: '0 20px',
-              marginBottom: 14,
-            }}
-          >
-            {[
-              { href: '/privacy', label: 'Privacy Policy' },
-              { href: '/terms', label: 'Terms & Conditions' },
-              { href: '/about', label: 'About' },
-              { href: '/contact', label: 'Contact' },
-            ].map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                style={{ fontSize: 13, color: 'var(--text-muted)', transition: 'color 0.2s ease' }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            © {new Date().getFullYear()} Spialr. All rights reserved. Independent website — not affiliated with Instagram or Meta.
-          </p>
-        </footer>
       </main>
 
     </>

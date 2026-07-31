@@ -568,7 +568,7 @@ export default function Converter() {
             Why Use Braille Art on Instagram, YouTube & WhatsApp?
           </h3>
           <p style={{ marginBottom: 16 }}>
-            Normal ASCII art relies on monospaced letters and characters like <code>@, #, *, .</code> which look extremely distorted when shared in web comments or chat messages. Because social networks adjust character widths dynamically, traditional text art breaks easily. 
+            Normal ASCII art relies on monospaced letters and characters like <code>@, #, *, .</code> which look extremely distorted when shared in web comments or messages. Because social networks adjust character widths dynamically, traditional text art breaks easily. 
           </p>
           <p style={{ marginBottom: 20 }}>
             <strong>Braille symbols</strong> solve this limitation. Every Braille character (from <code>⠁</code> to <code>⣿</code>) has an identical, standard bounding box containing a grid of up to 8 dots. Because the box width remains 100% constant, Braille art maintains its formatting and layout alignment across multiple browsers, device dimensions, and platforms.
@@ -588,7 +588,7 @@ export default function Converter() {
             <li><strong>Select Format Mode:</strong> Choose your target platform above. For instance, select <em>Instagram Comments</em> (which locks output to a safe 24-character width) or <em>WhatsApp</em> (21-character width) to prevent lines from wrapping and breaking.</li>
             <li><strong>Upload Photo:</strong> Click the upload box or drag-and-drop your image. PNG, JPG, WebP, and SVG files are fully supported.</li>
             <li><strong>Optimize Contrast/Crop:</strong> Adjust outline settings and use our Braille contrast parameters to highlight essential details. Use "Invert" if pasting into light-themed app comments.</li>
-            <li><strong>Copy and Paste:</strong> Click the "Copy Art" button. Paste directly into your chat box or comment section.</li>
+            <li><strong>Copy and Paste:</strong> Click the "Copy Art" button. Paste directly into your message box or comment section.</li>
           </ol>
 
           <h3 style={{
