@@ -1141,7 +1141,6 @@ export default function LivePage({ initialLiveData = null }) {
                                 {profile.name}
                               </span>
                             </div>
-                            <span style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: 2, opacity: 0.8 }}>via Instagram</span>
                             {profile.category && (
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
                                 {profile.category.split(',').map((catStr, cIdx) => {
@@ -1382,7 +1381,6 @@ export default function LivePage({ initialLiveData = null }) {
                             }}>
                               {profile.name}
                             </span>
-                            <span style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: 2, opacity: 0.8 }}>via Instagram</span>
                           </div>
                         </div>
 

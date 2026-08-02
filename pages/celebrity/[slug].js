@@ -748,13 +748,39 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 padding: '20px 22px',
                 marginBottom: 24,
                 lineHeight: 1.72,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12
               }}
             >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <img 
+                  src="/logo.png" 
+                  alt="Spialr Logo" 
+                  style={{ 
+                    width: 22, 
+                    height: 22, 
+                    borderRadius: 5, 
+                    flexShrink: 0,
+                    border: '1px solid var(--border)'
+                  }} 
+                />
+                <span style={{ 
+                  fontWeight: 800, 
+                  fontSize: 15, 
+                  color: 'var(--text)',
+                  fontFamily: 'var(--font-display)',
+                  letterSpacing: '-0.02em'
+                }}>
+                  Spi<span style={{ color: 'var(--accent)' }}>alr</span>
+                </span>
+              </div>
+              
               {narrative.map((para, i) => (
                 <p
                   key={i}
                   style={{
-                    margin: i === narrative.length - 1 ? 0 : '0 0 14px',
+                    margin: 0,
                     fontSize: 14,
                     color: i === narrative.length - 1 ? 'var(--text-muted)' : 'var(--text-dim)',
                     fontFamily: 'Roboto, "Segoe UI", sans-serif',

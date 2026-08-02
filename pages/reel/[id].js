@@ -258,92 +258,76 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
                       ) : (
                         <span>{reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}</span>
                       )}
-                      {reel.creator_slug && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 10, background: 'rgba(255, 42, 95, 0.08)', color: 'var(--accent)' }}>Creator</span>}
                     </div>
                   </div>
 
-                  {/* Grid Metrics (Hides completely if metric is 0 or undefined) */}
+                  {/* Inline Clean Metrics */}
                   <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                    gap: 12,
-                    marginBottom: 28
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '16px 28px',
+                    marginBottom: 28,
+                    padding: '4px 0'
                   }}>
                     {hasFollowers && (
                       <div style={{
-                        background: 'var(--surface2)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 14,
-                        padding: '12px 14px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 10
+                        gap: 8
                       }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(99, 102, 241, 0.08)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Users size={16} />
                         </div>
                         <div>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{followersDisplay}</div>
-                          <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)' }}>Followers</div>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{followersDisplay}</div>
+                          <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.25 }}>Followers</div>
                         </div>
                       </div>
                     )}
 
                     {hasViews && (
                       <div style={{
-                        background: 'var(--surface2)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 14,
-                        padding: '12px 14px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 10
+                        gap: 8
                       }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(168, 85, 247, 0.08)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Eye size={16} />
                         </div>
                         <div>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{reel.views_text}</div>
-                          <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)' }}>Total Views</div>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{reel.views_text}</div>
+                          <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.25 }}>Total Views</div>
                         </div>
                       </div>
                     )}
 
                     {hasLikes && (
                       <div style={{
-                        background: 'var(--surface2)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 14,
-                        padding: '12px 14px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 10
+                        gap: 8
                       }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255, 42, 95, 0.08)', color: '#ff2a5f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ color: '#ff2a5f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Heart size={16} fill="currentColor" />
                         </div>
                         <div>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{reel.likes_text}</div>
-                          <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)' }}>Total Likes</div>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{reel.likes_text}</div>
+                          <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.25 }}>Total Likes</div>
                         </div>
                       </div>
                     )}
 
                     <div style={{
-                      background: 'var(--surface2)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 14,
-                      padding: '12px 14px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 10
+                      gap: 8
                     }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(16, 185, 129, 0.08)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Calendar size={16} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{getFormattedDate(reel.created_at)}</div>
-                        <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)' }}>Published</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{getFormattedDate(reel.created_at)}</div>
+                        <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.25 }}>Published</div>
                       </div>
                     </div>
                   </div>
@@ -360,21 +344,22 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 8,
-                      background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                      color: '#fff',
-                      padding: '14px 28px',
-                      borderRadius: '14px',
-                      fontWeight: 700,
-                      fontSize: '14px',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border-bright)',
+                      color: 'var(--text)',
+                      padding: '10px 20px',
+                      borderRadius: '10px',
+                      fontWeight: 600,
+                      fontSize: '13.5px',
                       textDecoration: 'none',
-                      boxShadow: '0 6px 20px rgba(220, 39, 67, 0.25)',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                       cursor: 'pointer',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      boxShadow: 'none'
                     }}
                     className="watch-reel-cta"
                   >
-                    <ExternalLink size={16} />
+                    <ExternalLink size={15} />
                     Watch Reel on Instagram
                   </a>
                 </div>
@@ -663,8 +648,10 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
           color: var(--accent-hover) !important;
         }
         .watch-reel-cta:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 24px rgba(220, 39, 67, 0.4) !important;
+          background-color: var(--surface2) !important;
+          border-color: var(--accent) !important;
+          color: var(--accent) !important;
+          transform: translateY(-1px);
         }
         .watch-reel-cta:active {
           transform: translateY(0);

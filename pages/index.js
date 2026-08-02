@@ -250,8 +250,33 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
               fontSize: 14,
               lineHeight: 1.6,
               color: 'var(--text-dim)',
-              textAlign: 'left'
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12
             }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <img 
+                  src="/logo.png" 
+                  alt="Spialr Logo" 
+                  style={{ 
+                    width: 22, 
+                    height: 22, 
+                    borderRadius: 5, 
+                    flexShrink: 0,
+                    border: '1px solid var(--border)'
+                  }} 
+                />
+                <span style={{ 
+                  fontWeight: 800, 
+                  fontSize: 15, 
+                  color: 'var(--text)',
+                  fontFamily: 'var(--font-display)',
+                  letterSpacing: '-0.02em'
+                }}>
+                  Spi<span style={{ color: 'var(--accent)' }}>alr</span>
+                </span>
+              </div>
               <p style={{ margin: 0 }}>
                 Spialr tracks lifetime performance insights across verified creator profiles. Unlike other directories that rely on official APIs or automated scraping with 90-day limitations, <strong>our data is meticulously compiled manually</strong>. We hand-count likes, views, comments, and reposts across thousands of posts per profile to provide an unrestricted, lifetime view of digital influence.
               </p>
