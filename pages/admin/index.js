@@ -1240,7 +1240,11 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         hours_ago: getInitialHoursAgo(initial.created_at),
         uploaded_date: initialDate,
         description: initial.description || '',
-        why_notable: initial.why_notable || ''
+        why_notable: initial.why_notable || '',
+        show_in_most_liked: initial.show_in_most_liked !== undefined ? !!initial.show_in_most_liked : false,
+        show_in_all_posts: initial.show_in_all_posts !== undefined ? !!initial.show_in_all_posts : true,
+        show_in_original: initial.show_in_original !== undefined ? !!initial.show_in_original : false,
+        show_in_all_reels: initial.show_in_all_reels !== undefined ? !!initial.show_in_all_reels : true
       }
     }
     return {
@@ -1255,7 +1259,11 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
       hours_ago: '0 hours ago',
       uploaded_date: initialDate,
       description: '',
-      why_notable: ''
+      why_notable: '',
+      show_in_most_liked: false,
+      show_in_all_posts: true,
+      show_in_original: false,
+      show_in_all_reels: true
     }
   })
   const [saving, setSaving] = useState(false)
@@ -1302,6 +1310,10 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
           followers_text: form.followers_text || '',
           description: form.description || '',
           why_notable: form.why_notable || '',
+          show_in_most_liked: form.show_in_most_liked !== undefined ? !!form.show_in_most_liked : false,
+          show_in_all_posts: form.show_in_all_posts !== undefined ? !!form.show_in_all_posts : true,
+          show_in_original: form.show_in_original !== undefined ? !!form.show_in_original : false,
+          show_in_all_reels: form.show_in_all_reels !== undefined ? !!form.show_in_all_reels : true,
           ...(isMostLiked ? { likes_text: form.views_text || '' } : { views_text: form.views_text || '' }),
           created_at: calculatedCreatedAt
         },
@@ -1570,6 +1582,66 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         </>
       )}
 
+      {apiEndpoint.includes('most_liked_posts') && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '12px 14px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)', margin: '8px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              id="show_in_most_liked"
+              checked={!!form.show_in_most_liked}
+              onChange={e => set('show_in_most_liked', e.target.checked)}
+              style={{ width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <label htmlFor="show_in_most_liked" style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 700, cursor: 'pointer' }}>
+              Show in Most Liked
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              id="show_in_all_posts"
+              checked={form.show_in_all_posts !== false}
+              onChange={e => set('show_in_all_posts', e.target.checked)}
+              style={{ width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <label htmlFor="show_in_all_posts" style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 700, cursor: 'pointer' }}>
+              Show in All Posts
+            </label>
+          </div>
+        </div>
+      )}
+
+      {apiEndpoint.includes('most_viewed_reels') && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '12px 14px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)', margin: '8px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              id="show_in_original"
+              checked={!!form.show_in_original}
+              onChange={e => set('show_in_original', e.target.checked)}
+              style={{ width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <label htmlFor="show_in_original" style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 700, cursor: 'pointer' }}>
+              Show in Original
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              id="show_in_all_reels"
+              checked={form.show_in_all_reels !== false}
+              onChange={e => set('show_in_all_reels', e.target.checked)}
+              style={{ width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <label htmlFor="show_in_all_reels" style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 700, cursor: 'pointer' }}>
+              Show in All
+            </label>
+          </div>
+        </div>
+      )}
+
       {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
         <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
@@ -1612,6 +1684,10 @@ export default function AdminPanel() {
   const [showMostLikedPostsForm, setShowMostLikedPostsForm] = useState(false)
   const [editingMostLikedPosts, setEditingMostLikedPosts] = useState(null)
 
+  const [mostLikedComments, setMostLikedComments] = useState([])
+  const [showMostLikedCommentsForm, setShowMostLikedCommentsForm] = useState(false)
+  const [editingMostLikedComments, setEditingMostLikedComments] = useState(null)
+
   const handleDragStart = (e, index) => {
     setDraggedIndex(index)
     e.dataTransfer.effectAllowed = 'move'
@@ -1634,9 +1710,10 @@ export default function AdminPanel() {
     const isMostViewed = tab === 'most_viewed_reels'
     const isMostLiked = tab === 'most_liked_posts'
     const isMostLikedReels = tab === 'most_liked_reels'
-    const targetList = isMostViewed ? mostViewedReels : (isMostLiked ? mostLikedPosts : (isMostLikedReels ? mostLikedReels : viralReels))
-    const setList = isMostViewed ? setMostViewedReels : (isMostLiked ? setMostLikedPosts : (isMostLikedReels ? setMostLikedReels : setViralReels))
-    const dbTable = isMostViewed ? 'most_viewed_reels' : (isMostLiked ? 'most_liked_posts' : (isMostLikedReels ? 'most_liked_reels' : 'viral_reels'))
+    const isMostLikedComments = tab === 'most_liked_comments'
+    const targetList = isMostViewed ? mostViewedReels : (isMostLiked ? mostLikedPosts : (isMostLikedReels ? mostLikedReels : (isMostLikedComments ? mostLikedComments : viralReels)))
+    const setList = isMostViewed ? setMostViewedReels : (isMostLiked ? setMostLikedPosts : (isMostLikedReels ? setMostLikedReels : (isMostLikedComments ? setMostLikedComments : setViralReels)))
+    const dbTable = isMostViewed ? 'most_viewed_reels' : (isMostLiked ? 'most_liked_posts' : (isMostLikedReels ? 'most_liked_reels' : (isMostLikedComments ? 'most_liked_comments' : 'viral_reels')))
 
     const newReels = [...targetList]
     const [draggedItem] = newReels.splice(draggedIndex, 1)
@@ -1666,9 +1743,10 @@ export default function AdminPanel() {
     const isMostViewed = tab === 'most_viewed_reels'
     const isMostLiked = tab === 'most_liked_posts'
     const isMostLikedReels = tab === 'most_liked_reels'
-    const targetList = isMostViewed ? mostViewedReels : (isMostLiked ? mostLikedPosts : (isMostLikedReels ? mostLikedReels : viralReels))
-    const setList = isMostViewed ? setMostViewedReels : (isMostLiked ? setMostLikedPosts : (isMostLikedReels ? setMostLikedReels : setViralReels))
-    const dbTable = isMostViewed ? 'most_viewed_reels' : (isMostLiked ? 'most_liked_posts' : (isMostLikedReels ? 'most_liked_reels' : 'viral_reels'))
+    const isMostLikedComments = tab === 'most_liked_comments'
+    const targetList = isMostViewed ? mostViewedReels : (isMostLiked ? mostLikedPosts : (isMostLikedReels ? mostLikedReels : (isMostLikedComments ? mostLikedComments : viralReels)))
+    const setList = isMostViewed ? setMostViewedReels : (isMostLiked ? setMostLikedPosts : (isMostLikedReels ? setMostLikedReels : (isMostLikedComments ? setMostLikedComments : setViralReels)))
+    const dbTable = isMostViewed ? 'most_viewed_reels' : (isMostLiked ? 'most_liked_posts' : (isMostLikedReels ? 'most_liked_reels' : (isMostLikedComments ? 'most_liked_comments' : 'viral_reels')))
 
     const newIndex = direction === 'up' ? index - 1 : index + 1
     if (newIndex < 0 || newIndex >= targetList.length) return
@@ -1760,6 +1838,7 @@ export default function AdminPanel() {
   const [searchMostViewedReels, setSearchMostViewedReels] = useState('')
   const [searchMostLikedReels, setSearchMostLikedReels] = useState('')
   const [searchMostLikedPosts, setSearchMostLikedPosts] = useState('')
+  const [searchMostLikedComments, setSearchMostLikedComments] = useState('')
 
   const showToast = (msg) => {
     setToast(msg)
@@ -1932,6 +2011,11 @@ export default function AdminPanel() {
         const data = await res.json()
         setMostLikedReels(data.reels || [])
       }
+      if (tab === 'most_liked_comments') {
+        const res = await adminFetch('/api/admin/most_liked_comments')
+        const data = await res.json()
+        setMostLikedComments(data.comments || data.reels || [])
+      }
     } catch {}
     setLoadingData(false)
   }
@@ -1988,6 +2072,13 @@ export default function AdminPanel() {
     await adminFetch('/api/admin/most_liked_reels', { method: 'DELETE', body: { id } })
     setMostLikedReels(reels => reels.filter(x => x.id !== id))
     showToast('✅ Reel deleted')
+  }
+
+  const deleteMostLikedComment = async (id) => {
+    if (!confirm('Delete this most liked comment?')) return
+    await adminFetch('/api/admin/most_liked_comments', { method: 'DELETE', body: { id } })
+    setMostLikedComments(comments => comments.filter(x => x.id !== id))
+    showToast('✅ Comment deleted')
   }
 
   const saveGlobalSettings = async () => {
@@ -2199,6 +2290,7 @@ export default function AdminPanel() {
             { id: 'most_viewed_reels', label: '👁️ Most Viewed Reels' },
             { id: 'most_liked_reels', label: '🎬 Most Liked Reels' },
             { id: 'most_liked_posts', label: '❤️ Most Liked Posts' },
+            { id: 'most_liked_comments', label: '💬 Most Liked Comments' },
             { id: 'most_followed', label: '📊 Most Followed' },
             { id: 'voting_management', label: '🏆 Voting Management' },
             { id: 'visitors', label: '👥 Visitors' },
@@ -2225,6 +2317,8 @@ export default function AdminPanel() {
                 setEditingMostLikedReels(null)
                 setShowMostLikedPostsForm(false)
                 setEditingMostLikedPosts(null)
+                setShowMostLikedCommentsForm(false)
+                setEditingMostLikedComments(null)
                 setReorderMode(false)
               }}
               style={{
@@ -3467,6 +3561,18 @@ export default function AdminPanel() {
                             )}
                             <span>Creator: <strong>{item.creator_name || '@anonymous'}</strong></span>
                           </div>
+                          <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+                            {item.show_in_original && (
+                              <span style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700 }}>
+                                Original
+                              </span>
+                            )}
+                            {item.show_in_all_reels !== false && (
+                              <span style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700 }}>
+                                All
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -3675,6 +3781,18 @@ export default function AdminPanel() {
                               </>
                             )}
                           </div>
+                          <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+                            {item.show_in_most_liked && (
+                              <span style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700 }}>
+                                Most Liked
+                              </span>
+                            )}
+                            {item.show_in_all_posts !== false && (
+                              <span style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 700 }}>
+                                All Posts
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -3687,6 +3805,210 @@ export default function AdminPanel() {
                           </button>
                           <button
                             onClick={() => deleteMostLikedPost(item.id)}
+                            style={{
+                              background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                              color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── MOST LIKED COMMENTS TAB ────────────────────────────────────────── */}
+        {tab === 'most_liked_comments' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
+                Most Liked Comments ({mostLikedComments.length})
+              </h2>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                {!showMostLikedCommentsForm && !editingMostLikedComments && (
+                  <button className="btn btn-primary" onClick={() => setShowMostLikedCommentsForm(true)}>
+                    + Add Comment
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {(showMostLikedCommentsForm || editingMostLikedComments) && (
+              <AdminModal
+                isOpen={showMostLikedCommentsForm || !!editingMostLikedComments}
+                onClose={() => { setShowMostLikedCommentsForm(false); setEditingMostLikedComments(null); }}
+                title={editingMostLikedComments ? '✏️ Edit Comment' : '➕ Add Most Liked Comment'}
+              >
+                <ViralReelsForm
+                  apiEndpoint="/api/admin/most_liked_comments"
+                  initial={editingMostLikedComments}
+                  onSave={(comment) => {
+                    if (editingMostLikedComments) {
+                      setMostLikedComments(r => {
+                        const updated = r.map(x => x.id === comment.id ? comment : x)
+                        return updated.sort((a, b) => {
+                          const countA = parseCountText(a.likes_text)
+                          const countB = parseCountText(b.likes_text)
+                          if (countA !== countB) return countB - countA
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        })
+                      })
+                    } else {
+                      setMostLikedComments(r => {
+                        const updated = [comment, ...r]
+                        return updated.sort((a, b) => {
+                          const countA = parseCountText(a.likes_text)
+                          const countB = parseCountText(b.likes_text)
+                          if (countA !== countB) return countB - countA
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        })
+                      })
+                    }
+                    setShowMostLikedCommentsForm(false)
+                    setEditingMostLikedComments(null)
+                    showToast('✅ Comment saved!')
+                  }}
+                  onCancel={() => { setShowMostLikedCommentsForm(false); setEditingMostLikedComments(null) }}
+                />
+              </AdminModal>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <input
+                className="input-field"
+                value={searchMostLikedComments}
+                onChange={e => setSearchMostLikedComments(e.target.value)}
+                placeholder="🔍 Search comments by text or creator..."
+              />
+            </div>
+
+            {loadingData ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" /></div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(() => {
+                  const filtered = mostLikedComments.filter(item => 
+                    item.title?.toLowerCase().includes(searchMostLikedComments.toLowerCase()) ||
+                    item.creator_name?.toLowerCase().includes(searchMostLikedComments.toLowerCase())
+                  )
+                  if (filtered.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        {mostLikedComments.length === 0 ? "No most liked comments yet. Add your first one! 👆" : "No matching comments found."}
+                      </div>
+                    )
+                  }
+                  return filtered.map(item => {
+                    const globalIdx = mostLikedComments.findIndex(x => x.id === item.id)
+                    const isFirst = globalIdx === 0
+                    const isLast = globalIdx === mostLikedComments.length - 1
+
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="card" 
+                        draggable={reorderMode ? "true" : "false"}
+                        onDragStart={(e) => handleDragStart(e, globalIdx)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, globalIdx)}
+                        style={{ 
+                          display: 'flex', 
+                          gap: 14, 
+                          alignItems: 'center',
+                          cursor: reorderMode ? 'grab' : 'default',
+                          userSelect: 'none',
+                          border: draggedIndex === globalIdx ? '2px dashed var(--accent)' : '1px solid var(--border)',
+                          transition: 'all 0.15s ease',
+                          background: draggedIndex === globalIdx ? 'var(--surface2)' : 'var(--surface)'
+                        }}
+                      >
+                        {/* Drag Handle */}
+                        {reorderMode && (
+                          <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', cursor: 'grab' }}>
+                            <GripVertical size={16} />
+                          </div>
+                        )}
+
+                        {/* Move controls for touch/accessibility */}
+                        {reorderMode && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); moveReel(globalIdx, 'up'); }}
+                              disabled={isFirst}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: isFirst ? 'var(--border)' : 'var(--text-dim)',
+                                cursor: isFirst ? 'default' : 'pointer',
+                                padding: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Move Up"
+                            >
+                              <ChevronUp size={16} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); moveReel(globalIdx, 'down'); }}
+                              disabled={isLast}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: isLast ? 'var(--border)' : 'var(--text-dim)',
+                                cursor: isLast ? 'default' : 'pointer',
+                                padding: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Move Down"
+                            >
+                              <ChevronDown size={16} />
+                            </button>
+                          </div>
+                        )}
+
+                        {item.photo_url ? (
+                          <img src={item.photo_url} alt="" style={{ width: 90, height: 50, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)', pointerEvents: 'none' }} />
+                        ) : (
+                          <div style={{ width: 90, height: 50, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, pointerEvents: 'none' }}>💬</div>
+                        )}
+                        
+                        <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.title}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Rank: #{globalIdx + 1}</span>
+                            &nbsp;·&nbsp;
+                            {item.creator_photo_url && (
+                              <img src={item.creator_photo_url} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />
+                            )}
+                            <span>Creator: <strong>{item.creator_name || '@anonymous'}</strong></span>
+                            {item.likes_text && (
+                              <>
+                                &nbsp;·&nbsp;
+                                <span>Likes: <strong>{item.likes_text}</strong></span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <a href={item.instagram_link} target="_blank" rel="noopener noreferrer">
+                            <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View Link</button>
+                          </a>
+                          <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
+                            onClick={() => { setEditingMostLikedComments(item); setShowMostLikedCommentsForm(false) }}>
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteMostLikedComment(item.id)}
                             style={{
                               background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
                               color: '#ff5252', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer',

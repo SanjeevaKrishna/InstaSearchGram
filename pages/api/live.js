@@ -58,7 +58,8 @@ export default async function handler(req, res) {
       mostViewedResult, 
       celebritiesResult,
       indiaMostLikedResult,
-      mostLikedReelsResult
+      mostLikedReelsResult,
+      mostLikedCommentsResult
     ] = await Promise.all([
       supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
@@ -68,7 +69,8 @@ export default async function handler(req, res) {
       supabase.from('most_viewed_reels').select('*'),
       supabase.from('celebrities').select('name, slug, photo_url, followers_count').neq('hide_search', true),
       supabase.from('most_liked_posts').select('*'),
-      supabase.from('most_liked_reels').select('*')
+      supabase.from('most_liked_reels').select('*'),
+      supabase.from('most_liked_comments').select('*')
     ])
 
     if (settingsResult.error) throw settingsResult.error
@@ -183,6 +185,27 @@ export default async function handler(req, res) {
       }
     })
 
+    const rawCommentsData = (mostLikedCommentsResult && mostLikedCommentsResult.data) ? mostLikedCommentsResult.data : []
+    const sortedMostLikedComments = [...rawCommentsData].sort((a, b) => {
+      const countA = parseCountText(a.likes_text)
+      const countB = parseCountText(b.likes_text)
+      if (countA !== countB) {
+        return countB - countA
+      }
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedMostLikedComments = sortedMostLikedComments.map(comment => {
+      const nameKey = (comment.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...comment,
+        creator_photo_url: comment.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
+      }
+    })
+
     const currentDate = new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -197,7 +220,8 @@ export default async function handler(req, res) {
       viral_reels: mappedReels,
       most_viewed_reels: mappedMostViewed,
       india_most_liked_posts: mappedMostLiked,
-      most_liked_reels: mappedMostLikedReels
+      most_liked_reels: mappedMostLikedReels,
+      most_liked_comments: mappedMostLikedComments
     }
 
     // Save to server-side memory cache

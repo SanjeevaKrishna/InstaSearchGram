@@ -760,6 +760,21 @@ export async function getServerSideProps(context) {
       }
     }
 
+    // 5. Try most_liked_comments
+    if (!reel) {
+      const { data: mlComment } = await supabase
+        .from('most_liked_comments')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (mlComment) {
+        reel = mlComment
+        categoryName = 'Most Liked Comments'
+        matchedTable = 'most_liked_comments'
+      }
+    }
+
     if (!reel) {
       return {
         notFound: true

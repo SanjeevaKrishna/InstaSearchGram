@@ -77,30 +77,30 @@ export default async function handler(req, res) {
 
     const supabase = getAdminClient()
 
-    // GET - list all most viewed reels
+    // GET - list all most liked comments
     if (req.method === 'GET') {
       const { data, error } = await supabase
-        .from('most_viewed_reels')
+        .from('most_liked_comments')
         .select('*')
 
       if (error) return res.status(500).json({ error: error.message })
 
-      // Sort automatically by parsed views_text count descending, then created_at descending
+      // Sort automatically by parsed likes_text count descending, then created_at descending
       const sorted = (data || []).sort((a, b) => {
-        const countA = parseCountText(a.views_text)
-        const countB = parseCountText(b.views_text)
+        const countA = parseCountText(a.likes_text)
+        const countB = parseCountText(b.likes_text)
         if (countA !== countB) {
           return countB - countA
         }
         return new Date(b.created_at) - new Date(a.created_at)
       })
 
-      return res.status(200).json({ reels: sorted })
+      return res.status(200).json({ comments: sorted, reels: sorted })
     }
 
-    // POST - add a new most viewed reel
+    // POST - add a new most liked comment
     if (req.method === 'POST') {
-      const { title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, views_text, created_at, description, why_notable, show_in_original, show_in_all_reels } = req.body
+      const { title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, likes_text, created_at, description, why_notable } = req.body
       if (!title) return res.status(400).json({ error: 'Title is required' })
       if (!instagram_link) return res.status(400).json({ error: 'Instagram link is required' })
 
@@ -112,27 +112,25 @@ export default async function handler(req, res) {
         creator_name: creator_name || '',
         creator_photo_url: creator_photo_url || '',
         followers_text: followers_text || '',
-        views_text: views_text || '',
+        likes_text: likes_text || '',
         description: description || '',
         why_notable: why_notable || '',
-        show_in_original: show_in_original !== undefined ? !!show_in_original : false,
-        show_in_all_reels: show_in_all_reels !== undefined ? !!show_in_all_reels : true,
         ...(created_at ? { created_at } : {})
       }
 
       const { data, error } = await supabase
-        .from('most_viewed_reels')
+        .from('most_liked_comments')
         .insert([payload])
         .select()
         .single()
 
       if (error) return res.status(500).json({ error: error.message })
-      return res.status(201).json({ reel: data })
+      return res.status(201).json({ comment: data, reel: data })
     }
 
-    // PUT - update a most viewed reel
+    // PUT - update a most liked comment
     if (req.method === 'PUT') {
-      const { id, title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, views_text, created_at, description, why_notable, show_in_original, show_in_all_reels } = req.body
+      const { id, title, photo_url, instagram_link, order_index, creator_name, creator_photo_url, followers_text, likes_text, created_at, description, why_notable } = req.body
       if (!id) return res.status(400).json({ error: 'ID is required' })
       if (!title) return res.status(400).json({ error: 'Title is required' })
       if (!instagram_link) return res.status(400).json({ error: 'Instagram link is required' })
@@ -145,52 +143,50 @@ export default async function handler(req, res) {
         creator_name: creator_name || '',
         creator_photo_url: creator_photo_url || '',
         followers_text: followers_text || '',
-        views_text: views_text || '',
+        likes_text: likes_text || '',
         description: description || '',
         why_notable: why_notable || '',
-        show_in_original: show_in_original !== undefined ? !!show_in_original : false,
-        show_in_all_reels: show_in_all_reels !== undefined ? !!show_in_all_reels : true,
         ...(created_at ? { created_at } : {})
       }
 
       const { data, error } = await supabase
-        .from('most_viewed_reels')
+        .from('most_liked_comments')
         .update(payload)
         .eq('id', id)
         .select()
         .single()
 
       if (error) return res.status(500).json({ error: error.message })
-      return res.status(200).json({ reel: data })
+      return res.status(200).json({ comment: data, reel: data })
     }
 
-    // DELETE - remove a most viewed reel
+    // DELETE - remove a most liked comment
     if (req.method === 'DELETE') {
       const { id } = req.body
       if (!id) return res.status(400).json({ error: 'ID is required' })
 
-      // Fetch the reel first to clean up its images
-      const { data: reel } = await supabase
-        .from('most_viewed_reels')
+      // Fetch the comment first to clean up its images
+      const { data: item } = await supabase
+        .from('most_liked_comments')
         .select('photo_url, creator_photo_url')
         .eq('id', id)
         .maybeSingle()
 
       const { error } = await supabase
-        .from('most_viewed_reels')
+        .from('most_liked_comments')
         .delete()
         .eq('id', id)
 
       if (error) return res.status(500).json({ error: error.message })
 
       // Clean up uploaded files in Cloudinary
-      if (reel) {
-        if (reel.photo_url) {
-          const publicId = getCloudinaryPublicId(reel.photo_url)
+      if (item) {
+        if (item.photo_url) {
+          const publicId = getCloudinaryPublicId(item.photo_url)
           if (publicId) await cloudinary.uploader.destroy(publicId).catch(console.error)
         }
-        if (reel.creator_photo_url) {
-          const publicId = getCloudinaryPublicId(reel.creator_photo_url)
+        if (item.creator_photo_url) {
+          const publicId = getCloudinaryPublicId(item.creator_photo_url)
           if (publicId) await cloudinary.uploader.destroy(publicId).catch(console.error)
         }
       }

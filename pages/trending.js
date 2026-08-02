@@ -237,14 +237,27 @@ export default function TrendingPage({ initialData = null }) {
   const [error, setError] = useState(null)
   const [liveDate, setLiveDate] = useState(initialData ? initialData.live_date : '')
   const [currentTime, setCurrentTime] = useState('')
-  const [activeSubTab, setActiveSubTab] = useState('reels') // 'reels', 'liked_reels' or 'posts'
+  const [activeSubTab, setActiveSubTab] = useState('posts') // 'posts', 'reels', 'liked_reels' or 'comments'
   const [hoveredSubTab, setHoveredSubTab] = useState(null)
   const [indiaMostLikedPosts, setIndiaMostLikedPosts] = useState(initialData ? initialData.india_most_liked_posts : [])
+  const [mostLikedComments, setMostLikedComments] = useState(initialData ? initialData.most_liked_comments : [])
+  const [postFilterMode, setPostFilterMode] = useState('most_liked') // 'most_liked' or 'all'
+  const [isPostFilterDropdownOpen, setIsPostFilterDropdownOpen] = useState(false)
+  const [reelFilterMode, setReelFilterMode] = useState('original') // 'original' or 'all'
+  const [isReelFilterDropdownOpen, setIsReelFilterDropdownOpen] = useState(false)
 
   useEffect(() => {
     const savedSubTab = safeStorage.getItem('trending_active_sub_tab')
-    if (savedSubTab === 'reels' || savedSubTab === 'liked_reels' || savedSubTab === 'posts') {
+    if (savedSubTab === 'reels' || savedSubTab === 'liked_reels' || savedSubTab === 'posts' || savedSubTab === 'comments') {
       setActiveSubTab(savedSubTab)
+    }
+    const savedPostFilterMode = safeStorage.getItem('trending_post_filter_mode')
+    if (savedPostFilterMode === 'most_liked' || savedPostFilterMode === 'all') {
+      setPostFilterMode(savedPostFilterMode)
+    }
+    const savedReelFilterMode = safeStorage.getItem('trending_reel_filter_mode')
+    if (savedReelFilterMode === 'original' || savedReelFilterMode === 'all') {
+      setReelFilterMode(savedReelFilterMode)
     }
   }, [])
 
@@ -270,6 +283,7 @@ export default function TrendingPage({ initialData = null }) {
           setMostViewedReels(data.most_viewed_reels || [])
           setIndiaMostLikedPosts(data.india_most_liked_posts || [])
           setMostLikedReels(data.most_liked_reels || [])
+          setMostLikedComments(data.most_liked_comments || [])
           const isTrendingEnabled = data.trending_enabled !== undefined ? data.trending_enabled : true
           setTrendingEnabled(isTrendingEnabled)
           if (!isTrendingEnabled) {
@@ -296,9 +310,25 @@ export default function TrendingPage({ initialData = null }) {
     return () => clearInterval(interval)
   }, [])
 
+  const postsForDisplay = indiaMostLikedPosts.filter(p => {
+    if (postFilterMode === 'most_liked') {
+      return p.show_in_most_liked === true
+    }
+    // 'all' section: present available posts moved to all section
+    return p.show_in_all_posts !== false
+  })
+
+  const reelsForDisplay = mostViewedReels.filter(r => {
+    if (reelFilterMode === 'original') {
+      return r.show_in_original === true
+    }
+    // 'all' section: current reels moved to all section
+    return r.show_in_all_reels !== false
+  })
+
   const activeReels = activeTab === 'trending' 
     ? viralReels 
-    : (activeSubTab === 'reels' ? mostViewedReels : (activeSubTab === 'liked_reels' ? mostLikedReels : indiaMostLikedPosts))
+    : (activeSubTab === 'reels' ? reelsForDisplay : (activeSubTab === 'liked_reels' ? mostLikedReels : (activeSubTab === 'posts' ? postsForDisplay : mostLikedComments)))
 
   return (
     <>
@@ -408,7 +438,7 @@ export default function TrendingPage({ initialData = null }) {
             </button>
             
             <button
-              onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('reels'); safeStorage.setItem('trending_active_tab', 'most_viewed'); safeStorage.setItem('trending_active_sub_tab', 'reels'); }}
+              onClick={() => { setActiveTab('most_viewed'); setActiveSubTab('posts'); safeStorage.setItem('trending_active_tab', 'most_viewed'); safeStorage.setItem('trending_active_sub_tab', 'posts'); }}
               onMouseEnter={() => setHoveredTab('most_viewed')}
               onMouseLeave={() => setHoveredTab(null)}
               style={{
@@ -460,6 +490,31 @@ export default function TrendingPage({ initialData = null }) {
               margin: '0 auto 28px'
             }}>
               <button
+                onClick={() => { setActiveSubTab('posts'); safeStorage.setItem('trending_active_sub_tab', 'posts'); }}
+                onMouseEnter={() => setHoveredSubTab('posts')}
+                onMouseLeave={() => setHoveredSubTab(null)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 4px',
+                  borderRadius: '100px',
+                  border: 'none',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: activeSubTab === 'posts' ? 'var(--surface)' : 'transparent',
+                  color: activeSubTab === 'posts' ? 'var(--accent)' : 'var(--text-muted)',
+                  boxShadow: activeSubTab === 'posts' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span style={{ marginRight: 4, fontSize: 12 }}>❤️</span>
+                Posts
+              </button>
+
+              <button
                 onClick={() => { setActiveSubTab('reels'); safeStorage.setItem('trending_active_sub_tab', 'reels'); }}
                 onMouseEnter={() => setHoveredSubTab('reels')}
                 onMouseLeave={() => setHoveredSubTab(null)}
@@ -508,10 +563,10 @@ export default function TrendingPage({ initialData = null }) {
                 <span style={{ marginRight: 4, fontSize: 12 }}>🎬</span>
                 Likes
               </button>
-              
+
               <button
-                onClick={() => { setActiveSubTab('posts'); safeStorage.setItem('trending_active_sub_tab', 'posts'); }}
-                onMouseEnter={() => setHoveredSubTab('posts')}
+                onClick={() => { setActiveSubTab('comments'); safeStorage.setItem('trending_active_sub_tab', 'comments'); }}
+                onMouseEnter={() => setHoveredSubTab('comments')}
                 onMouseLeave={() => setHoveredSubTab(null)}
                 style={{
                   flex: 1,
@@ -524,106 +579,286 @@ export default function TrendingPage({ initialData = null }) {
                   fontSize: '11.5px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  background: activeSubTab === 'posts' ? 'var(--surface)' : 'transparent',
-                  color: activeSubTab === 'posts' ? 'var(--accent)' : 'var(--text-muted)',
-                  boxShadow: activeSubTab === 'posts' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  background: activeSubTab === 'comments' ? 'var(--surface)' : 'transparent',
+                  color: activeSubTab === 'comments' ? 'var(--accent)' : 'var(--text-muted)',
+                  boxShadow: activeSubTab === 'comments' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
                   transition: 'all 0.2s ease',
                 }}
               >
-                <span style={{ marginRight: 4, fontSize: 12 }}>❤️</span>
-                Posts
+                <span style={{ marginRight: 4, fontSize: 12 }}>💬</span>
+                Comments
               </button>
             </div>
           </>
         )}
 
             {/* Content */}
-            {activeReels.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 60, background: '#fff', borderRadius: 16, border: '1px solid var(--border)' }}>
-                No reels listed in this section today. Check back later!
-              </div>
-            ) : (
-              /* Single unified leaderboard list */
-              <div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 16,
-              flexWrap: 'wrap',
-              gap: 12
-            }}>
-              <h3 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 16,
-                fontWeight: 800,
-                color: 'var(--text-dim)',
-                letterSpacing: '0.01em',
+            <div>
+              {/* Header Title + Section Dropdown Menu */}
+              <div style={{
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: 8,
-                margin: 0
+                marginBottom: 16,
+                flexWrap: 'nowrap',
+                gap: 12,
+                width: '100%'
               }}>
-                <TrendingUp size={16} style={{ color: 'var(--accent)' }} /> 
-                {activeTab === 'trending' 
-                  ? 'India Trends' 
-                  : (activeSubTab === 'reels' ? 'Most Viewed Reel in India' : (activeSubTab === 'liked_reels' ? 'Most Liked Reels in India' : 'Most Liked Posts in India'))}
-              </h3>
-              {currentTime && activeTab === 'trending' && (
-                <div style={{
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  color: 'var(--text-muted)',
+                <h3 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: 'var(--text-dim)',
+                  letterSpacing: '0.01em',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6
+                  gap: 8,
+                  margin: 0
                 }}>
-                  <svg 
-                    viewBox="0 0 24 24" 
-                    width="15" 
-                    height="15" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2.5" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    style={{ color: 'var(--accent)', flexShrink: 0 }}
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    {/* Hour Hand */}
-                    <line x1="12" y1="12" x2="15" y2="12" />
-                    {/* Minute Hand */}
-                    <line x1="12" y1="12" x2="12" y2="6" className="minute-hand" />
-                  </svg>
-                  <span>{currentTime}</span>
+                  <TrendingUp size={16} style={{ color: 'var(--accent)' }} /> 
+                  {activeTab === 'trending' 
+                    ? 'India Trends' 
+                    : (activeSubTab === 'reels' ? (reelFilterMode === 'original' ? 'Original Most Viewed Reels' : 'All Most Viewed Reels') : (activeSubTab === 'liked_reels' ? 'Most Liked Reels in India' : (activeSubTab === 'posts' ? (postFilterMode === 'most_liked' ? 'Most Liked Posts in India' : 'All Posts in India') : 'Most Liked Comments in India')))}
+                </h3>
+
+                {/* Dropdown Menu for Most Viewed Reels: Original vs All */}
+                {activeTab === 'most_viewed' && activeSubTab === 'reels' && (
+                  <div style={{ position: 'relative', marginLeft: 'auto', flexShrink: 0 }}>
+                    <button
+                      onClick={() => setIsReelFilterDropdownOpen(!isReelFilterDropdownOpen)}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '100px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--surface)',
+                        color: 'var(--text)',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <span>{reelFilterMode === 'original' ? 'Original' : 'All'}</span>
+                      <ChevronDown size={13} style={{
+                        transform: isReelFilterDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                        color: 'var(--text-muted)'
+                      }} />
+                    </button>
+
+                    {isReelFilterDropdownOpen && (
+                      <>
+                        <div 
+                          onClick={() => setIsReelFilterDropdownOpen(false)}
+                          style={{
+                            position: 'fixed', inset: 0, zIndex: 99, background: 'transparent'
+                          }}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          right: 0,
+                          marginTop: 6,
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 12,
+                          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+                          zIndex: 100,
+                          minWidth: 150,
+                          overflow: 'hidden',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          padding: '4px 0',
+                        }}>
+                          {[
+                            { id: 'original', label: 'Original' },
+                            { id: 'all', label: 'All' },
+                          ].map((item) => {
+                            const isSelected = reelFilterMode === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => {
+                                  setReelFilterMode(item.id);
+                                  setIsReelFilterDropdownOpen(false);
+                                  safeStorage.setItem('trending_reel_filter_mode', item.id);
+                                }}
+                                style={{
+                                  padding: '8px 14px',
+                                  border: 'none',
+                                  background: isSelected ? 'var(--surface2)' : 'transparent',
+                                  color: isSelected ? 'var(--accent)' : 'var(--text)',
+                                  fontWeight: isSelected ? 700 : 500,
+                                  fontSize: 12.5,
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.15s ease'
+                                }}
+                              >
+                                {item.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Dropdown Menu for Most Liked Posts: Most Liked vs All Posts */}
+                {activeTab === 'most_viewed' && activeSubTab === 'posts' && (
+                  <div style={{ position: 'relative', marginLeft: 'auto', flexShrink: 0 }}>
+                    <button
+                      onClick={() => setIsPostFilterDropdownOpen(!isPostFilterDropdownOpen)}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '100px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--surface)',
+                        color: 'var(--text)',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <span>{postFilterMode === 'most_liked' ? 'Most Liked' : 'All Posts'}</span>
+                      <ChevronDown size={13} style={{
+                        transform: isPostFilterDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                        color: 'var(--text-muted)'
+                      }} />
+                    </button>
+
+                    {isPostFilterDropdownOpen && (
+                      <>
+                        <div 
+                          onClick={() => setIsPostFilterDropdownOpen(false)}
+                          style={{
+                            position: 'fixed', inset: 0, zIndex: 99, background: 'transparent'
+                          }}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          right: 0,
+                          marginTop: 6,
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 12,
+                          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+                          zIndex: 100,
+                          minWidth: 150,
+                          overflow: 'hidden',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          padding: '4px 0',
+                        }}>
+                          {[
+                            { id: 'most_liked', label: 'Most Liked' },
+                            { id: 'all', label: 'All Posts' },
+                          ].map((item) => {
+                            const isSelected = postFilterMode === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => {
+                                  setPostFilterMode(item.id);
+                                  setIsPostFilterDropdownOpen(false);
+                                  safeStorage.setItem('trending_post_filter_mode', item.id);
+                                }}
+                                style={{
+                                  padding: '8px 14px',
+                                  border: 'none',
+                                  background: isSelected ? 'var(--surface2)' : 'transparent',
+                                  color: isSelected ? 'var(--accent)' : 'var(--text)',
+                                  fontWeight: isSelected ? 700 : 500,
+                                  fontSize: 12.5,
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.15s ease'
+                                }}
+                              >
+                                {item.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {currentTime && activeTab === 'trending' && (
+                  <div style={{
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      width="15" 
+                      height="15" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      style={{ color: 'var(--accent)', flexShrink: 0 }}
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="12" x2="15" y2="12" />
+                      <line x1="12" y1="12" x2="12" y2="6" className="minute-hand" />
+                    </svg>
+                    <span>{currentTime}</span>
+                  </div>
+                )}
+              </div>
+
+              {activeReels.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '50px 20px', background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)' }}>
+                  {activeSubTab === 'posts' && postFilterMode === 'most_liked' 
+                    ? "No posts marked for 'Most Liked' section yet. Select 'All Posts' from the dropdown menu above or check 'Show in Most Liked' in Admin panel!" 
+                    : (activeSubTab === 'reels' && reelFilterMode === 'original'
+                        ? "No reels marked for 'Original' section yet. Select 'All' from the dropdown menu above or check 'Show in Original' in Admin panel!"
+                        : "No items listed in this section today. Check back later!")}
+                </div>
+              ) : (
+                /* Single unified leaderboard list */
+                <div style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 20,
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.02)',
+                }}>
+                  {activeReels.map((reel, idx) => {
+                    const absoluteRank = idx + 1
+
+                    return (
+                      <div key={reel.id}>
+                        <LeaderboardRow 
+                          reel={reel}
+                          absoluteRank={absoluteRank} 
+                          isMostViewed={activeTab === 'most_viewed'}
+                        />
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
-            
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 20,
-              overflow: 'hidden',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.02)',
-            }}>
-              {activeReels.map((reel, idx) => {
-                const absoluteRank = idx + 1
-
-                return (
-                  <div key={reel.id}>
-                    <LeaderboardRow 
-                      reel={reel}
-                      absoluteRank={absoluteRank} 
-                      isMostViewed={activeTab === 'most_viewed'}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-
-              </div>
-            )}
           </>
         )}
       </main>
@@ -946,14 +1181,16 @@ export async function getServerSideProps() {
       mostViewedResult, 
       celebritiesResult,
       indiaMostLikedResult,
-      mostLikedReelsResult
+      mostLikedReelsResult,
+      mostLikedCommentsResult
     ] = await Promise.all([
       supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
       supabase.from('viral_reels').select('*'),
       supabase.from('most_viewed_reels').select('*'),
       supabase.from('celebrities').select('name, slug, photo_url, followers_count').neq('hide_search', true),
       supabase.from('most_liked_posts').select('*'),
-      supabase.from('most_liked_reels').select('*')
+      supabase.from('most_liked_reels').select('*'),
+      supabase.from('most_liked_comments').select('*')
     ])
 
     if (settingsResult.error) throw settingsResult.error
@@ -1047,6 +1284,25 @@ export async function getServerSideProps() {
       }
     })
 
+    const rawCommentsData = (mostLikedCommentsResult && mostLikedCommentsResult.data) ? mostLikedCommentsResult.data : []
+    const sortedMostLikedComments = [...rawCommentsData].sort((a, b) => {
+      const countA = parseCountText(a.likes_text)
+      const countB = parseCountText(b.likes_text)
+      if (countA !== countB) return countB - countA
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+
+    const mappedMostLikedComments = sortedMostLikedComments.map(comment => {
+      const nameKey = (comment.creator_name || '').replace('@', '').toLowerCase().trim()
+      const match = celebrityMap[nameKey]
+      return {
+        ...comment,
+        creator_photo_url: comment.creator_photo_url || (match ? match.photo_url : null),
+        creator_slug: match ? match.slug : null,
+        celebrity_followers_count: match ? match.followers_count : null
+      }
+    })
+
     const currentDate = new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -1062,7 +1318,8 @@ export async function getServerSideProps() {
           viral_reels: mappedReels || [],
           most_viewed_reels: mappedMostViewed || [],
           india_most_liked_posts: mappedMostLiked || [],
-          most_liked_reels: mappedMostLikedReels || []
+          most_liked_reels: mappedMostLikedReels || [],
+          most_liked_comments: mappedMostLikedComments || []
         }
       }
     }
