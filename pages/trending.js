@@ -119,12 +119,12 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
           padding: '20px 22px',
         }}
       >
-        {/* Top Header: Rank, Avatar & Watch Button */}
+        {/* Top Header: Rank, Avatar, Creator Name & Watch Button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             <div className="row-rank-container" style={{ width: 'auto', alignSelf: 'center' }}>
-              <div className="row-rank-num" style={{ fontSize: 20 }}>
-                #{absoluteRank}
+              <div className="row-rank-num" style={{ fontSize: 17 }}>
+                {absoluteRank}
               </div>
             </div>
 
@@ -135,19 +135,23 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
                 ) : initials}
               </div>
             </div>
+
+            <div className="row-creator-name" style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
+            </div>
           </div>
 
-          <button className="btn row-watch-btn" style={{ alignSelf: 'center', margin: 0 }}>
+          <button className="btn row-watch-btn" style={{ alignSelf: 'center', margin: 0, flexShrink: 0 }}>
             <span>Watch</span>
             <Play size={10} fill="currentColor" />
           </button>
         </div>
 
-        {/* Middle: Wide Rectangle Box for Comment Image */}
+        {/* Middle: Reel Thumbnail */}
         {reel.photo_url ? (
           <div className="row-thumbnail-wide" style={{
             width: '100%',
-            maxHeight: 420,
+            maxHeight: 220,
             borderRadius: 14,
             background: '#09090b',
             overflow: 'hidden',
@@ -164,7 +168,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
               alt={reel.title || 'Comment Image'} 
               style={{ 
                 width: '100%', 
-                maxHeight: 400, 
+                maxHeight: 210, 
                 objectFit: 'contain',
                 borderRadius: 10,
                 display: 'block' 
@@ -174,15 +178,11 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
           </div>
         ) : null}
 
-        {/* Below Wide Rectangle Box: Title, ID, Like Count & Date */}
+        {/* Below Reel Thumbnail: Title, Likes & Date */}
         <div className="row-details-container" style={{ gap: 6, width: '100%' }}>
           <h4 className="row-title" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.4, margin: 0 }}>
             {reel.title}
           </h4>
-
-          <div className="row-creator-name" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--accent)' }}>
-            {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
-          </div>
 
           <div className="row-meta-container" style={{ gap: 12, marginTop: 2 }}>
             {reel.likes_text && (
@@ -214,7 +214,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
       {/* Rank & Trend badge */}
       <div className="row-rank-container">
         <div className="row-rank-num">
-          #{absoluteRank}
+          {absoluteRank}
         </div>
         
         {!isMostViewed && (
@@ -998,9 +998,9 @@ export default function TrendingPage({ initialData = null }) {
         }
         .leaderboard-row {
           display: flex;
-          align-items: flex-start;
-          padding: 20px 24px;
-          gap: 20px;
+          align-items: center;
+          padding: 14px 18px;
+          gap: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
           border-bottom: 1px solid var(--border);
@@ -1038,10 +1038,12 @@ export default function TrendingPage({ initialData = null }) {
           align-self: center;
         }
         .row-rank-num {
-          font-size: 20px;
-          font-weight: 800;
-          color: var(--text-muted);
-          font-family: var(--font-display);
+          font-size: 17px;
+          font-weight: 750;
+          color: var(--text);
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: -0.02em;
           line-height: 1;
         }
         .row-trend-container {
@@ -1083,8 +1085,8 @@ export default function TrendingPage({ initialData = null }) {
           height: 12px;
         }
         .row-avatar-container {
-          width: 48px;
-          height: 48px;
+          width: 42px;
+          height: 42px;
           border-radius: 50%;
           padding: 2px;
           background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
@@ -1105,12 +1107,12 @@ export default function TrendingPage({ initialData = null }) {
           justify-content: center;
           color: var(--text-muted);
           font-weight: 700;
-          font-size: 15px;
+          font-size: 14px;
         }
         .row-thumbnail {
-          width: 88px;
-          height: 132px;
-          border-radius: 12px;
+          width: 72px;
+          height: 108px;
+          border-radius: 10px;
           background: #09090b;
           overflow: hidden;
           position: relative;
@@ -1151,12 +1153,15 @@ export default function TrendingPage({ initialData = null }) {
         }
         .row-title {
           margin: 0;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 650;
           color: var(--text);
-          line-height: 1.4;
+          line-height: 1.35;
           word-break: break-word;
-          white-space: pre-wrap;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         .row-creator-name {
           font-size: 13px;

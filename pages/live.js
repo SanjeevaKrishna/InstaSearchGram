@@ -1036,13 +1036,15 @@ export default function LivePage({ initialLiveData = null }) {
                           textAlign: 'center'
                         }}>
                           <div style={{
-                            fontSize: 18,
-                            fontWeight: 800,
-                            color: 'var(--accent)',
-                            fontFamily: 'var(--font-display)',
+                            fontSize: 17,
+                            fontWeight: 750,
+                            color: 'var(--text)',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+                            fontVariantNumeric: 'tabular-nums',
+                            letterSpacing: '-0.02em',
                             lineHeight: 1
                           }}>
-                            #{rankToDisplay}
+                            {rankToDisplay}
                           </div>
                           
                           {(() => {
@@ -1324,15 +1326,17 @@ export default function LivePage({ initialLiveData = null }) {
                       >
                         {/* Rank Position */}
                         <div className="col-rank" style={{
-                          fontSize: 16,
-                          fontWeight: 800,
-                          color: 'var(--accent)',
-                          fontFamily: 'var(--font-display)',
+                          fontSize: 17,
+                          fontWeight: 750,
+                          color: 'var(--text)',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+                          fontVariantNumeric: 'tabular-nums',
+                          letterSpacing: '-0.02em',
                           width: 60,
                           textAlign: 'center',
                           flexShrink: 0
                         }}>
-                          #{rankToDisplay}
+                          {rankToDisplay}
                         </div>
 
                         {/* Profile Info (Avatar + Name) */}
