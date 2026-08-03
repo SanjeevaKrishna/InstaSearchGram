@@ -124,7 +124,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             <div className="row-rank-container" style={{ width: 'auto', alignSelf: 'center' }}>
               <div className="row-rank-num" style={{ fontSize: 17 }}>
-                {absoluteRank}
+                #{absoluteRank}
               </div>
             </div>
 
@@ -214,7 +214,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
       {/* Rank & Trend badge */}
       <div className="row-rank-container">
         <div className="row-rank-num">
-          {absoluteRank}
+          #{absoluteRank}
         </div>
         
         {!isMostViewed && (
@@ -253,10 +253,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
       {/* Video Cover Thumbnail (Portrait Aspect Ratio) */}
       <div className="row-thumbnail">
         {reel.photo_url ? (
-          <>
-            <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
-            <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: '9px', color: 'rgba(255,255,255,0.9)', background: 'rgba(0,0,0,0.6)', padding: '2px 4px', borderRadius: '4px', fontWeight: 600 }}>via Instagram</div>
-          </>
+          <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             <Film size={18} />

@@ -199,10 +199,7 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
                 }}
               >
                 {reel.photo_url ? (
-                  <>
-                    <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
-                    <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: '9px', color: 'rgba(255,255,255,0.9)', background: 'rgba(0,0,0,0.6)', padding: '2px 4px', borderRadius: '4px', fontWeight: 600 }}>via Instagram</div>
-                  </>
+                  <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
                     <Film size={18} />

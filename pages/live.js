@@ -1044,7 +1044,7 @@ export default function LivePage({ initialLiveData = null }) {
                             letterSpacing: '-0.02em',
                             lineHeight: 1
                           }}>
-                            {rankToDisplay}
+                            #{rankToDisplay}
                           </div>
                           
                           {(() => {
@@ -1336,7 +1336,7 @@ export default function LivePage({ initialLiveData = null }) {
                           textAlign: 'center',
                           flexShrink: 0
                         }}>
-                          {rankToDisplay}
+                          #{rankToDisplay}
                         </div>
 
                         {/* Profile Info (Avatar + Name) */}
