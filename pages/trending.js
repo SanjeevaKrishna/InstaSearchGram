@@ -45,7 +45,7 @@ const generateReelSlug = (reel) => {
   return `${parts || 'watch'}-${reel.id}`
 }
 
-function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
+function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
   const router = useRouter()
   const { trendType, trendVal } = getTrend(reel, absoluteRank - 1)
   const initials = (reel.creator_name || 'A').replace('@', '').substring(0, 1).toUpperCase()
@@ -103,6 +103,106 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed }) {
   }
 
   const followersDisplay = reel.followers_text || formatFollowers(reel.celebrity_followers_count)
+
+  if (isComment) {
+    return (
+      <div 
+        className="leaderboard-row leaderboard-comment-row"
+        onClick={() => {
+          router.push(`/reel/${generateReelSlug(reel)}`)
+        }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          gap: 14,
+          padding: '20px 22px',
+        }}
+      >
+        {/* Top Header: Rank, Avatar & Watch Button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="row-rank-container" style={{ width: 'auto', alignSelf: 'center' }}>
+              <div className="row-rank-num" style={{ fontSize: 20 }}>
+                #{absoluteRank}
+              </div>
+            </div>
+
+            <div className="row-avatar-container" style={{ width: 42, height: 42, flexShrink: 0 }}>
+              <div className="row-avatar-inner">
+                {reel.creator_photo_url ? (
+                  <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+                ) : initials}
+              </div>
+            </div>
+          </div>
+
+          <button className="btn row-watch-btn" style={{ alignSelf: 'center', margin: 0 }}>
+            <span>Watch</span>
+            <Play size={10} fill="currentColor" />
+          </button>
+        </div>
+
+        {/* Middle: Wide Rectangle Box for Comment Image */}
+        {reel.photo_url ? (
+          <div className="row-thumbnail-wide" style={{
+            width: '100%',
+            maxHeight: 420,
+            borderRadius: 14,
+            background: '#09090b',
+            overflow: 'hidden',
+            position: 'relative',
+            border: '1px solid var(--border)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px'
+          }}>
+            <img 
+              src={reel.photo_url} 
+              alt={reel.title || 'Comment Image'} 
+              style={{ 
+                width: '100%', 
+                maxHeight: 400, 
+                objectFit: 'contain',
+                borderRadius: 10,
+                display: 'block' 
+              }} 
+              onError={(e) => { e.target.style.display = 'none' }} 
+            />
+          </div>
+        ) : null}
+
+        {/* Below Wide Rectangle Box: Title, ID, Like Count & Date */}
+        <div className="row-details-container" style={{ gap: 6, width: '100%' }}>
+          <h4 className="row-title" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.4, margin: 0 }}>
+            {reel.title}
+          </h4>
+
+          <div className="row-creator-name" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--accent)' }}>
+            {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
+          </div>
+
+          <div className="row-meta-container" style={{ gap: 12, marginTop: 2 }}>
+            {reel.likes_text && (
+              <span className="row-meta-item">
+                <Heart size={13} style={{ color: '#ff2a5f', fill: '#ff2a5f', flexShrink: 0 }} />
+                <span style={{ background: 'linear-gradient(135deg, #ff2a5f 0%, #ff6b35 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 850, fontSize: 13 }}>
+                  {reel.likes_text} likes
+                </span>
+              </span>
+            )}
+            {timeAgo && (
+              <span className="row-meta-item" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
+                {timeAgo}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div 
@@ -852,6 +952,7 @@ export default function TrendingPage({ initialData = null }) {
                           reel={reel}
                           absoluteRank={absoluteRank} 
                           isMostViewed={activeTab === 'most_viewed'}
+                          isComment={activeSubTab === 'comments'}
                         />
                       </div>
                     )
@@ -921,6 +1022,12 @@ export default function TrendingPage({ initialData = null }) {
         }
         .leaderboard-row:hover .row-thumbnail img {
           transform: scale(1.05);
+        }
+        .row-thumbnail-wide img {
+          transition: transform 0.4s var(--spring);
+        }
+        .leaderboard-row:hover .row-thumbnail-wide img {
+          transform: scale(1.02);
         }
         .row-rank-container {
           display: flex;
