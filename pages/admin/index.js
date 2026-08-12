@@ -213,24 +213,29 @@ function CelebrityForm({ initial, onSave, onCancel }) {
     if (initial) {
       return {
         ...initial,
+        name: initial.name_manual || '',
+        instagram_handle: initial.instagram_handle || '',
+        photo_url: initial.photo_url || '',
+        description: initial.description_manual || '',
         order_index: initial.order_index !== undefined && initial.order_index !== null ? initial.order_index.toString() : '0',
-        total_reel_views: initial.total_reel_views !== undefined && initial.total_reel_views !== null ? initial.total_reel_views.toString() : '',
-        total_reel_likes: initial.total_reel_likes !== undefined && initial.total_reel_likes !== null ? initial.total_reel_likes.toString() : '',
-        total_post_likes: initial.total_post_likes !== undefined && initial.total_post_likes !== null ? initial.total_post_likes.toString() : '',
-        total_comments: initial.total_comments !== undefined && initial.total_comments !== null ? initial.total_comments.toString() : '',
+        followers_count: initial.followers_manual !== undefined && initial.followers_manual !== null ? initial.followers_manual.toString() : '',
+        posts_count: initial.posts_manual !== undefined && initial.posts_manual !== null ? initial.posts_manual.toString() : '',
+        total_reel_views: initial.total_reel_views_manual !== undefined && initial.total_reel_views_manual !== null ? initial.total_reel_views_manual.toString() : '',
+        total_reel_likes: initial.total_reel_likes_manual !== undefined && initial.total_reel_likes_manual !== null ? initial.total_reel_likes_manual.toString() : '',
+        total_post_likes: initial.total_post_likes_manual !== undefined && initial.total_post_likes_manual !== null ? initial.total_post_likes_manual.toString() : '',
+        total_comments: initial.total_comments_manual !== undefined && initial.total_comments_manual !== null ? initial.total_comments_manual.toString() : '',
+        average_views: initial.average_views_manual !== undefined && initial.average_views_manual !== null ? initial.average_views_manual.toString() : '',
+        average_reel_likes: initial.average_reel_likes_manual !== undefined && initial.average_reel_likes_manual !== null ? initial.average_reel_likes_manual.toString() : '',
+        average_post_likes: initial.average_post_likes_manual !== undefined && initial.average_post_likes_manual !== null ? initial.average_post_likes_manual.toString() : '',
+        followers_interaction: initial.followers_interaction_manual !== undefined && initial.followers_interaction_manual !== null ? initial.followers_interaction_manual.toString() : '',
+        most_likes: initial.most_likes_manual !== undefined && initial.most_likes_manual !== null ? initial.most_likes_manual.toString() : '',
+        most_liked_count: initial.most_liked_count_manual || '',
+        most_commented_count: initial.most_commented_count_manual || '',
+        most_viewed_count: initial.most_viewed_count_manual || '',
         total_shares: initial.total_shares !== undefined && initial.total_shares !== null ? initial.total_shares.toString() : '',
         total_reposts: initial.total_reposts !== undefined && initial.total_reposts !== null ? initial.total_reposts.toString() : '',
-        average_views: initial.average_views !== undefined && initial.average_views !== null ? initial.average_views.toString() : '',
-        average_reel_likes: initial.average_reel_likes !== undefined && initial.average_reel_likes !== null ? initial.average_reel_likes.toString() : '',
-        average_post_likes: initial.average_post_likes !== undefined && initial.average_post_likes !== null ? initial.average_post_likes.toString() : '',
-        followers_interaction: initial.followers_interaction !== undefined && initial.followers_interaction !== null ? initial.followers_interaction.toString() : '',
-        most_likes: initial.most_likes !== undefined && initial.most_likes !== null ? initial.most_likes.toString() : '',
         account_created_year: initial.account_created_year !== undefined && initial.account_created_year !== null ? initial.account_created_year.toString() : '',
         hide_search: !!initial.hide_search,
-        description: initial.description || '',
-        most_liked_count: initial.most_liked_count || '',
-        most_commented_count: initial.most_commented_count || '',
-        most_viewed_count: initial.most_viewed_count || ''
       }
     }
     return {
@@ -298,8 +303,14 @@ function CelebrityForm({ initial, onSave, onCancel }) {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
+      <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)', marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          <strong>Note:</strong> Leave any field blank to automatically use the scraped value. 
+          If you fill in a field, it will override the scraper.
+        </p>
+      </div>
       <div>
-        <label style={labelStyle}>Full Name *</label>
+        <label style={labelStyle}>Display Name Override (Scraped: {initial?.name_scraped || 'None'})</label>
         <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Virat Kohli" />
       </div>
       <div>
@@ -308,15 +319,15 @@ function CelebrityForm({ initial, onSave, onCancel }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Followers Count (number)</label>
+          <label style={labelStyle}>Followers Override (Scraped: {initial?.followers_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.followers_count} onChange={e => set('followers_count', e.target.value)} placeholder="e.g. 17000000" />
         </div>
         <div>
-          <label style={labelStyle}>Total Posts on Instagram</label>
+          <label style={labelStyle}>Posts Override (Scraped: {initial?.posts_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.posts_count} onChange={e => set('posts_count', e.target.value)} placeholder="e.g. 140" />
         </div>
         <div>
-          <label style={labelStyle}>Account Created Year</label>
+          <label style={labelStyle}>Account Created Year (Manual)</label>
           <input className="input-field" type="number" value={form.account_created_year} onChange={e => set('account_created_year', e.target.value)} placeholder="e.g. 2012" />
         </div>
       </div>
@@ -376,21 +387,21 @@ function CelebrityForm({ initial, onSave, onCancel }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Total Reel Views</label>
+          <label style={labelStyle}>Total Reel Views Override (Scraped: {initial?.total_reel_views_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.total_reel_views} onChange={e => set('total_reel_views', e.target.value)} placeholder="e.g. 5200000" />
         </div>
         <div>
-          <label style={labelStyle}>Total Reel Likes</label>
+          <label style={labelStyle}>Total Reel Likes Override (Scraped: {initial?.total_reel_likes_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.total_reel_likes} onChange={e => set('total_reel_likes', e.target.value)} placeholder="e.g. 150000" />
         </div>
         <div>
-          <label style={labelStyle}>Total Post Likes</label>
+          <label style={labelStyle}>Total Post Likes Override (Scraped: {initial?.total_post_likes_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.total_post_likes} onChange={e => set('total_post_likes', e.target.value)} placeholder="e.g. 80000" />
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Total Comments</label>
+          <label style={labelStyle}>Total Comments Override (Scraped: {initial?.total_comments_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.total_comments} onChange={e => set('total_comments', e.target.value)} placeholder="e.g. 12000" />
         </div>
         <div>
@@ -404,40 +415,43 @@ function CelebrityForm({ initial, onSave, onCancel }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Average Views</label>
+          <label style={labelStyle}>Average Views Override (Scraped: {initial?.average_views_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.average_views || ''} onChange={e => set('average_views', e.target.value)} placeholder="e.g. 1200000" />
         </div>
         <div>
-          <label style={labelStyle}>Average Reel Likes</label>
+          <label style={labelStyle}>Average Reel Likes Override (Scraped: {initial?.average_reel_likes_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.average_reel_likes || ''} onChange={e => set('average_reel_likes', e.target.value)} placeholder="e.g. 45000" />
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Average Post Likes</label>
+          <label style={labelStyle}>Average Post Likes Override (Scraped: {initial?.average_post_likes_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.average_post_likes || ''} onChange={e => set('average_post_likes', e.target.value)} placeholder="e.g. 25000" />
         </div>
         <div>
-          <label style={labelStyle}>Followers Interaction (%)</label>
+          <label style={labelStyle}>Followers Interaction Override (Scraped: {initial?.followers_interaction_scraped || '0'}%)</label>
           <input className="input-field" type="number" step="0.01" value={form.followers_interaction || ''} onChange={e => set('followers_interaction', e.target.value)} placeholder="e.g. 5.25" />
         </div>
         <div>
-          <label style={labelStyle}>Most Likes</label>
+          <label style={labelStyle}>Most Likes Override (Scraped: {initial?.most_likes_scraped || 'None'})</label>
           <input className="input-field" type="number" value={form.most_likes || ''} onChange={e => set('most_likes', e.target.value)} placeholder="e.g. 85000" />
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Most Liked Post Likes</label>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Posted: {initial?.most_liked_date_scraped || 'N/A'}</div>
+          <label style={labelStyle}>Most Liked Override (Scraped: {initial?.most_liked_count_scraped || 'None'})</label>
           <input className="input-field" type="text" value={form.most_liked_count || ''} onChange={e => set('most_liked_count', e.target.value)} placeholder="e.g. 1.2m or 500k" />
         </div>
         <div>
-          <label style={labelStyle}>Most Commented Post Comments</label>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Posted: {initial?.most_commented_date_scraped || 'N/A'}</div>
+          <label style={labelStyle}>Most Commented Override (Scraped: {initial?.most_commented_count_scraped || 'None'})</label>
           <input className="input-field" type="text" value={form.most_commented_count || ''} onChange={e => set('most_commented_count', e.target.value)} placeholder="e.g. 85k" />
         </div>
         <div>
-          <label style={labelStyle}>Most Viewed Reel Views</label>
-          <input className="input-field" type="text" value={form.most_viewed_count || ''} onChange={e => set('most_viewed_count', e.target.value)} placeholder="e.g. 15m" />
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Posted: {initial?.most_viewed_date_scraped || 'N/A'}</div>
+          <label style={labelStyle}>Most Viewed Override (Scraped: {initial?.most_viewed_count_scraped || 'None'})</label>
+          <input className="input-field" type="text" value={form.most_viewed_count || ''} onChange={e => set('most_viewed_count', e.target.value)} placeholder="e.g. 22m" />
         </div>
       </div>
       <div>
@@ -1796,6 +1810,79 @@ export default function AdminPanel() {
   const [filterCelId, setFilterCelId] = useState('')
   const [toast, setToast] = useState('')
   const [presetPostValues, setPresetPostValues] = useState(null)
+  const [refreshing, setRefreshing] = useState(null)
+
+  const [refreshProgress, setRefreshProgress] = useState(null)
+
+  const handleRefreshStats = async (cel) => {
+    if (!cel.instagram_handle) return alert('No Instagram handle set for this profile!');
+    if (!confirm(`Run deep scraper for @${cel.instagram_handle}? This can take 2-4 minutes for profiles with thousands of posts.`)) return;
+
+    // Ask for credentials on mobile/desktop to avoid hardcoding in env if they expire
+    let sessionId = localStorage.getItem('instagram_session_id') || '';
+    let csrfToken = localStorage.getItem('instagram_csrf_token') || '';
+
+    const newSessionId = prompt('Enter INSTAGRAM_SESSION_ID (or leave blank to use the server default):', sessionId);
+    if (newSessionId !== null && newSessionId.trim() !== '') {
+      sessionId = newSessionId.trim();
+      localStorage.setItem('instagram_session_id', sessionId);
+    } else {
+      sessionId = ''; // fall back to env
+    }
+
+    let newCsrfToken = null;
+    if (sessionId) {
+      newCsrfToken = prompt('Enter INSTAGRAM_CSRF_TOKEN:', csrfToken);
+      if (newCsrfToken !== null && newCsrfToken.trim() !== '') {
+        csrfToken = newCsrfToken.trim();
+        localStorage.setItem('instagram_csrf_token', csrfToken);
+      } else {
+        csrfToken = ''; // fall back to env
+      }
+    }
+    
+    setRefreshing(cel.id)
+    setRefreshProgress('Initializing...')
+    try {
+      const res = await adminFetch('/api/admin/refresh_stats', {
+        method: 'POST',
+        body: { celebrityId: cel.id, instagram_handle: cel.instagram_handle, sessionId, csrfToken }
+      })
+      
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop(); 
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === 'progress') {
+              const s = data.stats;
+              setRefreshProgress(`Scraping... ${s.processedItems}/${s.totalPosts || '?'} posts`);
+            } else if (data.type === 'complete') {
+              setCelebrities(prev => prev.map(c => c.id === cel.id ? { ...c, ...data.result.updates } : c));
+              alert(`Successfully refreshed stats for @${cel.instagram_handle}!`);
+            } else if (data.type === 'error') {
+              throw new Error(data.error);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      alert(`Scraper error: ${err.message}`)
+    } finally {
+      setRefreshing(null)
+      setRefreshProgress(null)
+    }
+  }
 
   const openPostFormForHighlight = async (cel, highlightKey) => {
     setTab('posts')
@@ -2453,6 +2540,7 @@ export default function AdminPanel() {
                       </div>
                     )
                   }
+
                   return filtered.map(cel => (
                     <div key={cel.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', padding: '16px 20px', borderRadius: 16, background: 'var(--surface)' }}>
                       {/* Row 1: Profile & Actions */}
@@ -2479,6 +2567,14 @@ export default function AdminPanel() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                          <button 
+                            className="btn btn-ghost" 
+                            style={{ padding: '6px 12px', fontSize: 12, background: 'rgba(255, 255, 255, 0.05)' }}
+                            onClick={() => handleRefreshStats(cel)}
+                            disabled={refreshing === cel.id}
+                          >
+                            {refreshing === cel.id ? (refreshProgress || '🔄 Scraping...') : '🔄 Refresh Stats'}
+                          </button>
                           <a href={`/celebrity/${cel.slug}`} target="_blank">
                             <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
                           </a>
