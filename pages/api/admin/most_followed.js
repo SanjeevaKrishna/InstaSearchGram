@@ -1,5 +1,6 @@
 import { getAdminClient } from '../../../lib/supabase'
 import { recalculateVotingRanks } from '../../../lib/voting'
+import { InstagramFollowersScraper } from '../../../lib/followersScraper'
 
 function verifyAdmin(req) {
   const auth = req.headers['x-admin-token']
@@ -69,7 +70,7 @@ export default async function handler(req, res) {
 
     // POST - add a new profile
     if (req.method === 'POST') {
-      const { name, photo_url, followers_text, order_index, category, language } = req.body
+      const { name, photo_url, followers_text, order_index, category, language, instagram_handle } = req.body
       if (!name) return res.status(400).json({ error: 'Name is required' })
 
       const calculatedFollowersCount = parseCountText(followers_text)
@@ -82,7 +83,8 @@ export default async function handler(req, res) {
         order_index: order_index ? Number(order_index) : 0,
         category: category || '',
         language: language || null,
-        votes: 0
+        votes: 0,
+        instagram_handle: instagram_handle || null
       }
 
       const { data, error } = await supabase
@@ -101,7 +103,7 @@ export default async function handler(req, res) {
 
     // PUT - update a profile or trigger auto-reordering
     if (req.method === 'PUT') {
-      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, action, votes } = req.body
+      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, instagram_handle, action, votes } = req.body
 
       // Sub-action: Reorder profiles by followers count descending
       if (action === 'reorder') {
@@ -177,6 +179,105 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true })
       }
 
+      // Sub-action: Scrape Instagram followers and update the count
+      if (action === 'scrape_followers') {
+        if (!id) return res.status(400).json({ error: 'ID is required' })
+
+        // 1. Fetch the profile to get the instagram_handle
+        const { data: profile, error: fetchErr } = await supabase
+          .from('most_followed')
+          .select('instagram_handle, name, follower_history')
+          .eq('id', id)
+          .single()
+
+        if (fetchErr || !profile) {
+          return res.status(404).json({ error: 'Profile not found' })
+        }
+
+        if (!profile.instagram_handle) {
+          return res.status(400).json({ error: 'Instagram handle is missing for this profile' })
+        }
+
+        // Retrieve cookies from live_settings database table first, fallback to .env.local
+        const { data: settingsData } = await supabase
+          .from('live_settings')
+          .select('instagram_session_id, instagram_csrf_token')
+          .eq('id', 1)
+          .maybeSingle()
+
+        const sessionId = settingsData?.instagram_session_id || process.env.INSTAGRAM_SESSION_ID || "";
+        const csrfToken = settingsData?.instagram_csrf_token || process.env.INSTAGRAM_CSRF_TOKEN || "";
+
+        // 2. Run scraper on server side
+        const scraper = new InstagramFollowersScraper(sessionId, csrfToken);
+        const scrapeData = await scraper.fetchFollowers(profile.instagram_handle);
+
+        // 3. Format the count text (e.g. 270M, 1.5M, 500K)
+        let formattedText = '';
+        const count = scrapeData.followersCount;
+        if (count >= 1000000000) {
+          formattedText = `${(count / 1000000000).toFixed(1).replace(/\.0$/, '')}B`;
+        } else if (count >= 1000000) {
+          formattedText = `${(count / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+        } else if (count >= 1000) {
+          formattedText = `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+        } else {
+          formattedText = count.toString();
+        }
+
+        // 4. Update followers count and append/update history in the DB
+        let history = [];
+        try {
+          history = Array.isArray(profile.follower_history) ? profile.follower_history : [];
+        } catch (e) {
+          history = [];
+        }
+
+        // Align current date to nearest Saturday
+        const getSaturdayDate = (dateVal = new Date()) => {
+          const result = new Date(dateVal);
+          const day = result.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+          const diff = 6 - day;
+          result.setDate(result.getDate() + diff);
+          return result.toISOString().split('T')[0];
+        };
+
+        const saturdayKey = getSaturdayDate();
+        const existingIdx = history.findIndex(h => h.date === saturdayKey);
+
+        if (existingIdx !== -1) {
+          history[existingIdx].count = count;
+        } else {
+          history.push({ date: saturdayKey, count: count });
+        }
+
+        // Sort history by date ascending
+        history.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Cap to last 52 entries (1 year of weekly records) to keep database storage footprint extremely small (free tier safety)
+        if (history.length > 52) {
+          history = history.slice(-52);
+        }
+
+        const { data: updatedProfile, error: updateErr } = await supabase
+          .from('most_followed')
+          .update({
+            followers_count: count,
+            followers_text: formattedText,
+            follower_history: history
+          })
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (updateErr) return res.status(500).json({ error: updateErr.message })
+
+        // Recalculate ranks instantly after updating count
+        await recalculateVotingRanks()
+
+        return res.status(200).json({ profile: updatedProfile })
+      }
+
       // Normal single record update
       if (!id) return res.status(400).json({ error: 'ID is required' })
 
@@ -189,7 +290,8 @@ export default async function handler(req, res) {
         followers_text: followers_text || '',
         order_index: order_index ? Number(order_index) : 0,
         category: category || '',
-        language: language || null
+        language: language || null,
+        instagram_handle: instagram_handle || null
       }
 
       const { data, error } = await supabase

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import PostCard from '../../components/PostCard'
 import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
@@ -913,7 +913,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
   };
 
   const [form, setForm] = useState(initial || {
-    name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0', language: ''
+    name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0', language: '', instagram_handle: ''
   })
   
   const [selectedCategories, setSelectedCategories] = useState(() => parseMultipleCategories(initial?.category))
@@ -938,6 +938,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           updated.followers_text = match.followers_text || ''
           updated.order_index = match.order_index?.toString() || '0'
           updated.language = match.language || ''
+          updated.instagram_handle = match.instagram_handle || ''
           
           const parsedCats = parseMultipleCategories(match.category)
           setSelectedCategories(parsedCats)
@@ -951,6 +952,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
             updated.followers_text = ''
             updated.order_index = '0'
             updated.language = ''
+            updated.instagram_handle = ''
             setNotice('')
             setSelectedCategories([{ tabCategory: 'Creators', describingTag: '' }])
             setSelectedLanguages([''])
@@ -998,7 +1000,8 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           id: initial?.id || form.id,
           order_index: form.order_index ? Number(form.order_index) : 0,
           category: combinedCategory,
-          language: combinedLanguage
+          language: combinedLanguage,
+          instagram_handle: form.instagram_handle ? form.instagram_handle.trim() : null
         },
       })
       const data = await res.json()
@@ -1033,6 +1036,15 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
             {notice}
           </div>
         )}
+      </div>
+      <div>
+        <label style={labelStyle}>Instagram Username / Handle (without @)</label>
+        <input 
+          className="input-field" 
+          value={form.instagram_handle || ''} 
+          onChange={e => set('instagram_handle', e.target.value)} 
+          placeholder="e.g. virat.kohli" 
+        />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
         <div>
@@ -1679,6 +1691,22 @@ export default function AdminPanel() {
   const [mostFollowed, setMostFollowed] = useState([])
   const [showMostFollowedForm, setShowMostFollowedForm] = useState(false)
   const [editingMostFollowed, setEditingMostFollowed] = useState(null)
+  const [updatingFollowersId, setUpdatingFollowersId] = useState(null)
+
+  // Batch scraper states
+  const [selectedBatchLang, setSelectedBatchLang] = useState('All')
+  const [selectedBatchCategory, setSelectedBatchCategory] = useState('')
+  const [batchUpdating, setBatchUpdating] = useState(false)
+  const [batchProgressCurrent, setBatchProgressCurrent] = useState(0)
+  const [batchProgressTotal, setBatchProgressTotal] = useState(0)
+  const [batchStatusMessage, setBatchStatusMessage] = useState('')
+  const [batchErrorLog, setBatchErrorLog] = useState('')
+  const abortBatchRef = useRef(false)
+
+  const [instagramSessionId, setInstagramSessionId] = useState('')
+  const [instagramCsrfToken, setInstagramCsrfToken] = useState('')
+  const [cookiesLocked, setCookiesLocked] = useState(true)
+  const [savingCookies, setSavingCookies] = useState(false)
 
   const [viralReels, setViralReels] = useState([])
   const [showViralReelsForm, setShowViralReelsForm] = useState(false)
@@ -2050,6 +2078,8 @@ export default function AdminPanel() {
       setLiveDate(dateData.settings?.live_date || '')
       setTrendingEnabled(dateData.settings?.trending_enabled !== undefined ? dateData.settings.trending_enabled : true)
       setShowSocialAudit(dateData.settings?.show_social_audit !== undefined ? dateData.settings.show_social_audit : true)
+      setInstagramSessionId(dateData.settings?.instagram_session_id || '')
+      setInstagramCsrfToken(dateData.settings?.instagram_csrf_token || '')
 
       if (tab === 'celebrities' || tab === 'posts') {
         const celRes = await adminFetch('/api/admin/celebrities')
@@ -2112,6 +2142,131 @@ export default function AdminPanel() {
     await adminFetch('/api/admin/most_followed', { method: 'DELETE', body: { id } })
     setMostFollowed(p => p.filter(x => x.id !== id))
     showToast('✅ Profile deleted')
+  }
+
+  const handleUpdateFollowers = async (id) => {
+    setUpdatingFollowersId(id)
+    try {
+      const res = await adminFetch('/api/admin/most_followed', {
+        method: 'PUT',
+        body: { id, action: 'scrape_followers' }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      
+      // Update local state with the new followers count
+      setMostFollowed(profiles => profiles.map(p => p.id === id ? data.profile : p))
+      showToast('✨ Followers count updated successfully!')
+    } catch (err) {
+      alert('Error updating followers: ' + err.message)
+    } finally {
+      setUpdatingFollowersId(null)
+    }
+  }
+
+  const getProfileCountForCategory = (lang, catName) => {
+    return mostFollowed.filter(profile => {
+      const matchesLang = !lang || lang === 'All' || profile.language === lang || (lang === 'Global' && !profile.language)
+      if (!matchesLang) return false
+      if (!profile.category) return false
+      
+      let matchesCat = false
+      profile.category.split(',').forEach(c => {
+        const trimmed = c.trim()
+        if (trimmed.includes(':')) {
+          const parts = trimmed.split(':')
+          if (parts[0] && parts[0].trim().toLowerCase() === catName.toLowerCase()) matchesCat = true
+        } else if (trimmed.toLowerCase() === catName.toLowerCase()) {
+          matchesCat = true
+        }
+      })
+      return matchesCat
+    }).length
+  }
+
+  const handleStartBatchUpdate = async () => {
+    const lang = selectedBatchLang
+    const cat = selectedBatchCategory
+    if (!cat) {
+      alert("Please select a category word first!")
+      return
+    }
+
+    const targets = mostFollowed.filter(profile => {
+      const matchesLang = !lang || lang === 'All' || profile.language === lang || (lang === 'Global' && !profile.language)
+      if (!matchesLang) return false
+      if (!profile.category) return false
+      
+      let matchesCat = false
+      profile.category.split(',').forEach(c => {
+        const trimmed = c.trim()
+        if (trimmed.includes(':')) {
+          const parts = trimmed.split(':')
+          if (parts[0] && parts[0].trim().toLowerCase() === cat.toLowerCase()) matchesCat = true
+        } else if (trimmed.toLowerCase() === cat.toLowerCase()) {
+          matchesCat = true
+        }
+      })
+      return matchesCat
+    })
+
+    if (targets.length === 0) {
+      alert("No profiles match the selected language and category.")
+      return
+    }
+
+    if (!confirm(`Are you sure you want to update ${targets.length} profiles in category "${cat}"? This will process them one by one with a 2.5-second delay to protect rate limits.`)) {
+      return
+    }
+
+    setBatchUpdating(true)
+    setBatchProgressCurrent(0)
+    setBatchProgressTotal(targets.length)
+    setBatchStatusMessage(`Starting batch update for ${targets.length} profiles...`)
+    setBatchErrorLog('')
+    abortBatchRef.current = false
+
+    for (let i = 0; i < targets.length; i++) {
+      if (abortBatchRef.current) {
+        setBatchStatusMessage(`🛑 Batch update stopped by user at ${i} / ${targets.length} profiles.`)
+        break
+      }
+
+      const profile = targets[i]
+      setBatchStatusMessage(`🔄 [${i + 1}/${targets.length}] Updating ${profile.name}...`)
+
+      if (!profile.instagram_handle) {
+        setBatchProgressCurrent(i + 1)
+        continue
+      }
+
+      try {
+        const res = await adminFetch('/api/admin/most_followed', {
+          method: 'PUT',
+          body: { id: profile.id, action: 'scrape_followers' }
+        })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error)
+
+        setMostFollowed(profiles => profiles.map(p => p.id === profile.id ? data.profile : p))
+      } catch (err) {
+        setBatchErrorLog(`Failed on profile "${profile.name}": ${err.message}`)
+        setBatchStatusMessage(`❌ Batch update halted due to error on "${profile.name}".`)
+        break
+      }
+
+      setBatchProgressCurrent(i + 1)
+
+      if (i < targets.length - 1 && !abortBatchRef.current) {
+        setBatchStatusMessage(`⏳ [${i + 1}/${targets.length}] Waiting 2.5 seconds to respect rate limits...`)
+        await new Promise(resolve => setTimeout(resolve, 2500))
+      }
+    }
+
+    if (!abortBatchRef.current && !batchErrorLog) {
+      setBatchStatusMessage(`✅ Batch update complete! All ${targets.length} profiles updated successfully.`)
+    }
+    setBatchUpdating(false)
   }
 
   const updateVotes = async (id, votesVal) => {
@@ -2186,6 +2341,30 @@ export default function AdminPanel() {
       alert('Error: ' + e.message)
     } finally {
       setSavingSettings(false)
+    }
+  }
+
+  const saveCookiesSettings = async () => {
+    setSavingCookies(true)
+    try {
+      const res = await adminFetch('/api/admin/live_settings', {
+        method: 'PUT',
+        body: { 
+          live_date: liveDate,
+          trending_enabled: trendingEnabled,
+          show_social_audit: showSocialAudit,
+          instagram_session_id: instagramSessionId,
+          instagram_csrf_token: instagramCsrfToken
+        }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      showToast('🔑 Scraper credentials updated successfully!')
+      setCookiesLocked(true)
+    } catch(e) {
+      alert('Error saving credentials: ' + e.message)
+    } finally {
+      setSavingCookies(false)
     }
   }
 
@@ -2438,6 +2617,75 @@ export default function AdminPanel() {
               )}
             </div>
 
+            {/* Instagram Scraper Sessions Credentials (global config) */}
+            <div className="card" style={{ marginBottom: 28, padding: '20px' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                🔑 Instagram Scraper Authentication Session
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.4 }}>
+                Enter your Instagram session cookies below. Once saved, these will be used globally by the scraper to bypass rate limits and login walls across all profiles.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 6 }}>Session ID (`sessionid`)</label>
+                  <input
+                    type={cookiesLocked ? "password" : "text"}
+                    className="input-field"
+                    value={instagramSessionId}
+                    onChange={e => setInstagramSessionId(e.target.value)}
+                    placeholder={cookiesLocked ? "••••••••••••••••••••" : "e.g. 26743302520%3AdlLiKYGJ..."}
+                    style={{ fontSize: 12 }}
+                    disabled={cookiesLocked}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 6 }}>CSRF Token (`csrftoken`)</label>
+                  <input
+                    type={cookiesLocked ? "password" : "text"}
+                    className="input-field"
+                    value={instagramCsrfToken}
+                    onChange={e => setInstagramCsrfToken(e.target.value)}
+                    placeholder={cookiesLocked ? "••••••••••••••••••••" : "e.g. 3pxgXMmL0NMR..."}
+                    style={{ fontSize: 12 }}
+                    disabled={cookiesLocked}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                {cookiesLocked ? (
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setCookiesLocked(false)}
+                    style={{ padding: '8px 16px', fontSize: 13 }}
+                  >
+                    🔓 Edit Credentials
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => {
+                        setCookiesLocked(true);
+                        // Reset to original values
+                        loadData();
+                      }}
+                      style={{ padding: '8px 16px', fontSize: 13 }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={saveCookiesSettings}
+                      disabled={savingCookies}
+                      style={{ padding: '8px 16px', fontSize: 13 }}
+                    >
+                      {savingCookies ? 'Saving...' : '💾 Save & Lock'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
             {(showCelForm || editingCel) && (
               <AdminModal
                 isOpen={showCelForm || !!editingCel}
@@ -2543,7 +2791,7 @@ export default function AdminPanel() {
 
                   return filtered.map(cel => (
                     <div key={cel.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', padding: '16px 20px', borderRadius: 16, background: 'var(--surface)' }}>
-                      {/* Row 1: Profile & Actions */}
+                      {/* Row 1: Profile */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16, width: '100%' }}>
                         <div style={{
                           width: 48, height: 48, borderRadius: '50%',
@@ -2566,70 +2814,72 @@ export default function AdminPanel() {
                             )}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                          <button 
-                            className="btn btn-ghost" 
-                            style={{ padding: '6px 12px', fontSize: 12, background: 'rgba(255, 255, 255, 0.05)' }}
-                            onClick={() => handleRefreshStats(cel)}
-                            disabled={refreshing === cel.id}
-                          >
-                            {refreshing === cel.id ? (refreshProgress || '🔄 Scraping...') : '🔄 Refresh Stats'}
-                          </button>
-                          <a href={`/celebrity/${cel.slug}`} target="_blank">
-                            <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
-                          </a>
-                          <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
-                            onClick={() => {
-                              setEditingCel({
-                                ...cel,
-                                followers_count: cel.followers_count?.toString() || '',
-                                posts_count: cel.posts_count?.toString() || '',
-                                order_index: cel.order_index?.toString() || '0',
-                                total_reel_views: cel.total_reel_views?.toString() || '',
-                                total_reel_likes: cel.total_reel_likes?.toString() || '',
-                                total_post_likes: cel.total_post_likes?.toString() || '',
-                                total_comments: cel.total_comments?.toString() || '',
-                                total_shares: cel.total_shares?.toString() || '',
-                                total_reposts: cel.total_reposts?.toString() || '',
-                                average_views: cel.average_views?.toString() || '',
-                                average_reel_likes: cel.average_reel_likes?.toString() || '',
-                                average_post_likes: cel.average_post_likes?.toString() || '',
-                                followers_interaction: cel.followers_interaction?.toString() || '',
-                                hide_search: !!cel.hide_search,
-                                tags: '',
-                                most_liked_count: cel.most_liked_count || '',
-                                most_commented_count: cel.most_commented_count || '',
-                                most_viewed_count: cel.most_viewed_count || ''
-                              });
-                              setShowCelForm(false);
-                            }}>
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => toggleHideSearch(cel)}
-                            style={{
-                              background: cel.hide_search ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
-                              border: cel.hide_search ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(244,67,54,0.3)',
-                              color: cel.hide_search ? '#4caf50' : '#f44336',
-                              borderRadius: 8,
-                              padding: '6px 12px',
-                              fontSize: 12,
-                              cursor: 'pointer',
-                              fontWeight: 600
-                            }}
-                          >
-                            {cel.hide_search ? '🟢 Enable Profile' : '🔴 Disable Profile'}
-                          </button>
-                          <button
-                            onClick={() => deleteCelebrity(cel.id)}
-                            style={{
-                              background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
-                              color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%' }}>
+                        <button 
+                          className="btn btn-ghost" 
+                          style={{ padding: '6px 12px', fontSize: 12, background: 'rgba(255, 255, 255, 0.05)' }}
+                          onClick={() => handleRefreshStats(cel)}
+                          disabled={refreshing === cel.id}
+                        >
+                          {refreshing === cel.id ? (refreshProgress || '🔄 Scraping...') : '🔄 Refresh Stats'}
+                        </button>
+                        <a href={`/celebrity/${cel.slug}`} target="_blank">
+                          <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>View</button>
+                        </a>
+                        <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
+                          onClick={() => {
+                            setEditingCel({
+                              ...cel,
+                              followers_count: cel.followers_count?.toString() || '',
+                              posts_count: cel.posts_count?.toString() || '',
+                              order_index: cel.order_index?.toString() || '0',
+                              total_reel_views: cel.total_reel_views?.toString() || '',
+                              total_reel_likes: cel.total_reel_likes?.toString() || '',
+                              total_post_likes: cel.total_post_likes?.toString() || '',
+                              total_comments: cel.total_comments?.toString() || '',
+                              total_shares: cel.total_shares?.toString() || '',
+                              total_reposts: cel.total_reposts?.toString() || '',
+                              average_views: cel.average_views?.toString() || '',
+                              average_reel_likes: cel.average_reel_likes?.toString() || '',
+                              average_post_likes: cel.average_post_likes?.toString() || '',
+                              followers_interaction: cel.followers_interaction?.toString() || '',
+                              hide_search: !!cel.hide_search,
+                              tags: '',
+                              most_liked_count: cel.most_liked_count || '',
+                              most_commented_count: cel.most_commented_count || '',
+                              most_viewed_count: cel.most_viewed_count || ''
+                            });
+                            setShowCelForm(false);
+                          }}>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => toggleHideSearch(cel)}
+                          style={{
+                            background: cel.hide_search ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
+                            border: cel.hide_search ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(244,67,54,0.3)',
+                            color: cel.hide_search ? '#4caf50' : '#f44336',
+                            borderRadius: 8,
+                            padding: '6px 12px',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          {cel.hide_search ? '🟢 Enable Profile' : '🔴 Disable Profile'}
+                        </button>
+                        <button
+                          onClick={() => deleteCelebrity(cel.id)}
+                          style={{
+                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.3)',
+                            color: '#ff5252', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
+                          }}
+                        >
+                          Delete
+                        </button>
                       </div>
 
                       {/* Row 2: Highlights Shortcuts */}
@@ -3068,12 +3318,180 @@ export default function AdminPanel() {
               </AdminModal>
             )}
 
+            {/* 🔄 Batch Scraper Control Center */}
+            <div className="card" style={{ marginBottom: 24, padding: '20px', background: 'var(--surface)' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                🔄 Batch Scraper Control Center
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.4 }}>
+                Select a language and a category filter pill below to update follower counts for that entire category in a single run. A 2.5-second safety delay will run between requests.
+              </p>
+
+              {/* Language Filters Row */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 8 }}>1. Select Language:</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {['All', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam', 'Global'].map(lang => {
+                    const isSelected = selectedBatchLang === lang;
+                    return (
+                      <button
+                        key={lang}
+                        className="btn"
+                        onClick={() => {
+                          if (batchUpdating) return;
+                          setSelectedBatchLang(lang);
+                          setSelectedBatchCategory(''); // Reset category when language changes
+                        }}
+                        style={{
+                          fontSize: 12,
+                          padding: '6px 12px',
+                          background: isSelected ? 'var(--accent)' : 'var(--surface2)',
+                          color: isSelected ? '#ffffff' : 'var(--text)',
+                          border: '1px solid ' + (isSelected ? 'var(--accent)' : 'var(--border)'),
+                          cursor: batchUpdating ? 'not-allowed' : 'pointer',
+                          opacity: batchUpdating ? 0.6 : 1
+                        }}
+                        disabled={batchUpdating}
+                      >
+                        {lang}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Category Pills Row */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 8 }}>2. Select Category Filter:</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {['Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers'].map(cat => {
+                    const isSelected = selectedBatchCategory === cat;
+                    const count = getProfileCountForCategory(selectedBatchLang, cat);
+                    return (
+                      <button
+                        key={cat}
+                        className="btn"
+                        onClick={() => {
+                          if (batchUpdating) return;
+                          setSelectedBatchCategory(cat);
+                        }}
+                        style={{
+                          fontSize: 11,
+                          padding: '5px 10px',
+                          background: isSelected ? 'var(--accent)' : 'var(--surface2)',
+                          color: isSelected ? '#ffffff' : 'var(--text)',
+                          border: '1px solid ' + (isSelected ? 'var(--accent)' : 'var(--border)'),
+                          cursor: batchUpdating ? 'not-allowed' : 'pointer',
+                          opacity: batchUpdating ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                        disabled={batchUpdating}
+                      >
+                        <span>{cat}</span>
+                        <span style={{
+                          background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--border)',
+                          color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                          padding: '1px 6px',
+                          borderRadius: 10,
+                          fontSize: 10
+                        }}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Run Control & Counter Display */}
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <div>
+                  {selectedBatchCategory ? (
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                      📋 {getProfileCountForCategory(selectedBatchLang, selectedBatchCategory)} profile(s) found in <span style={{ color: 'var(--accent)' }}>{selectedBatchLang} &rarr; {selectedBatchCategory}</span>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      Please select a category filter above to get started.
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  {batchUpdating ? (
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        abortBatchRef.current = true;
+                        setBatchStatusMessage('⏳ Abort request received. Halting batch on next step...');
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: 13,
+                        background: 'rgba(255,82,82,0.1)',
+                        border: '1px solid rgba(255,82,82,0.3)',
+                        color: '#ff5252'
+                      }}
+                    >
+                      🛑 Stop Update
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleStartBatchUpdate}
+                      disabled={!selectedBatchCategory || getProfileCountForCategory(selectedBatchLang, selectedBatchCategory) === 0}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: 13,
+                        opacity: (selectedBatchCategory && getProfileCountForCategory(selectedBatchLang, selectedBatchCategory) > 0) ? 1 : 0.6,
+                        cursor: (selectedBatchCategory && getProfileCountForCategory(selectedBatchLang, selectedBatchCategory) > 0) ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      🚀 Start Batch Update
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress Display */}
+              {(batchUpdating || batchStatusMessage) && (
+                <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: 14, border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
+                    <span style={{ color: 'var(--text)' }}>{batchStatusMessage}</span>
+                    {batchProgressTotal > 0 && (
+                      <span style={{ color: 'var(--text-muted)' }}>{batchProgressCurrent} of {batchProgressTotal} updated</span>
+                    )}
+                  </div>
+                  {batchProgressTotal > 0 && (
+                    <div style={{ width: '100%', height: 8, background: 'var(--border)', borderRadius: 4, overflow: 'hidden', marginBottom: 4 }}>
+                      <div
+                        style={{
+                          width: `${(batchProgressCurrent / batchProgressTotal) * 100}%`,
+                          height: '100%',
+                          background: 'var(--gradient)',
+                          borderRadius: 4,
+                          transition: 'width 0.3s ease'
+                        }}
+                      />
+                    </div>
+                  )}
+                  {batchErrorLog && (
+                    <div style={{ color: '#ff5252', fontSize: 12, fontWeight: 500, marginTop: 8, padding: 8, background: 'rgba(255,82,82,0.08)', borderRadius: 6, border: '1px solid rgba(255,82,82,0.15)' }}>
+                      ⚠️ {batchErrorLog}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div style={{ marginBottom: 16 }}>
               <input
                 className="input-field"
                 value={searchMostFollowed}
                 onChange={e => setSearchMostFollowed(e.target.value)}
-                placeholder="🔍 Search profiles by name or category..."
+                placeholder="🔍 Search profiles by name, handle or category..."
               />
             </div>
 
@@ -3082,10 +3500,12 @@ export default function AdminPanel() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(() => {
-                  const filtered = mostFollowed.filter(profile => 
-                    profile.name?.toLowerCase().includes(searchMostFollowed.toLowerCase()) ||
-                    profile.category?.toLowerCase().includes(searchMostFollowed.toLowerCase())
-                  )
+                  const filtered = mostFollowed.filter(profile => {
+                    const query = searchMostFollowed.toLowerCase();
+                    return profile.name?.toLowerCase().includes(query) ||
+                           profile.instagram_handle?.toLowerCase().includes(query) ||
+                           profile.category?.toLowerCase().includes(query);
+                  })
                   if (filtered.length === 0) {
                     return (
                       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
@@ -3124,12 +3544,34 @@ export default function AdminPanel() {
                               }
                               return trimmed;
                             }).join(', ');
-                          })()}</strong> &nbsp;·&nbsp; Language: <strong style={{ color: 'var(--text)' }}>{profile.language || 'None'}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
+                          })()}</strong> &nbsp;·&nbsp; Language: <strong style={{ color: 'var(--text)' }}>{profile.language || 'None'}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'} &nbsp;·&nbsp; Handle: <strong style={{ color: 'var(--text)' }}>{profile.instagram_handle ? `@${profile.instagram_handle}` : 'None'}</strong>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button 
+                          className="btn btn-ghost" 
+                          style={{ 
+                            padding: '6px 10px', 
+                            fontSize: 12,
+                            background: profile.instagram_handle ? 'rgba(79,172,254,0.1)' : 'rgba(0,0,0,0.03)', 
+                            border: '1px solid ' + (profile.instagram_handle ? 'rgba(79,172,254,0.3)' : 'var(--border)'),
+                            color: profile.instagram_handle ? 'var(--accent)' : 'var(--text-muted)',
+                            cursor: profile.instagram_handle ? 'pointer' : 'not-allowed',
+                            opacity: profile.instagram_handle ? 1 : 0.6
+                          }}
+                          onClick={() => {
+                            if (!profile.instagram_handle) {
+                              alert('Please edit this profile and add an Instagram handle first!');
+                              return;
+                            }
+                            handleUpdateFollowers(profile.id);
+                          }}
+                          disabled={updatingFollowersId === profile.id}
+                        >
+                          {updatingFollowersId === profile.id ? 'Updating...' : '🔄 Update'}
+                        </button>
                         <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                          onClick={() => { setEditingMostFollowed({ ...profile, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString(), category: profile.category || '', language: profile.language || '' }); setShowMostFollowedForm(false) }}>
+                          onClick={() => { setEditingMostFollowed({ ...profile, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString(), category: profile.category || '', language: profile.language || '', instagram_handle: profile.instagram_handle || '' }); setShowMostFollowedForm(false) }}>
                           Edit
                         </button>
                         <button
@@ -3164,7 +3606,7 @@ export default function AdminPanel() {
                 className="input-field"
                 value={searchMostFollowed}
                 onChange={e => setSearchMostFollowed(e.target.value)}
-                placeholder="🔍 Search profiles by name or category..."
+                placeholder="🔍 Search profiles by name, handle or category..."
               />
             </div>
 
@@ -3173,10 +3615,12 @@ export default function AdminPanel() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(() => {
-                  const filtered = mostFollowed.filter(profile => 
-                    profile.name?.toLowerCase().includes(searchMostFollowed.toLowerCase()) ||
-                    profile.category?.toLowerCase().includes(searchMostFollowed.toLowerCase())
-                  )
+                  const filtered = mostFollowed.filter(profile => {
+                    const query = searchMostFollowed.toLowerCase();
+                    return profile.name?.toLowerCase().includes(query) ||
+                           profile.instagram_handle?.toLowerCase().includes(query) ||
+                           profile.category?.toLowerCase().includes(query);
+                  })
                   const sortedFiltered = [...filtered].sort((a, b) => (b.votes || 0) - (a.votes || 0))
 
                   if (sortedFiltered.length === 0) {

@@ -1286,13 +1286,18 @@ export async function getServerSideProps(context) {
     // Fetch leaderboard data for rank calculations (highly robust, ignores case, spaces, and punctuation)
     const { data: leaderboardData } = await supabase
       .from('most_followed')
-      .select('name, followers_count')
+      .select('name, followers_count, instagram_handle')
       .order('followers_count', { ascending: false })
 
     let liveRank = null
     if (leaderboardData) {
-      const cleanCelName = celebrity.name.toLowerCase().replace(/[^a-z0-9]/g, '')
       const matchIndex = leaderboardData.findIndex(item => {
+        // 1. Match by unique instagram_handle first
+        if (item.instagram_handle && celebrity.instagram_handle) {
+          return item.instagram_handle.toLowerCase().trim() === celebrity.instagram_handle.toLowerCase().trim()
+        }
+        // 2. Fallback to robust name matching
+        const cleanCelName = celebrity.name.toLowerCase().replace(/[^a-z0-9]/g, '')
         const cleanItemName = item.name.toLowerCase().replace(/[^a-z0-9]/g, '')
         return cleanItemName === cleanCelName || cleanItemName.includes(cleanCelName)
       })
@@ -1303,8 +1308,13 @@ export async function getServerSideProps(context) {
 
     let compareLiveRank = null
     if (compareCelebrity && leaderboardData) {
-      const cleanCompName = compareCelebrity.name.toLowerCase().replace(/[^a-z0-9]/g, '')
       const matchIndex = leaderboardData.findIndex(item => {
+        // 1. Match by unique instagram_handle first
+        if (item.instagram_handle && compareCelebrity.instagram_handle) {
+          return item.instagram_handle.toLowerCase().trim() === compareCelebrity.instagram_handle.toLowerCase().trim()
+        }
+        // 2. Fallback to robust name matching
+        const cleanCompName = compareCelebrity.name.toLowerCase().replace(/[^a-z0-9]/g, '')
         const cleanItemName = item.name.toLowerCase().replace(/[^a-z0-9]/g, '')
         return cleanItemName === cleanCompName || cleanItemName.includes(cleanCompName)
       })

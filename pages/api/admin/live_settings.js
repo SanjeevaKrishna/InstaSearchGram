@@ -48,21 +48,30 @@ export default async function handler(req, res) {
 
     // POST/PUT - update settings (id = 1)
     if (req.method === 'POST' || req.method === 'PUT') {
-      const { live_date, trending_enabled, show_social_audit } = req.body
+      const { live_date, trending_enabled, show_social_audit, instagram_session_id, instagram_csrf_token } = req.body
 
       let finalLiveDate = (live_date || '').replace('||AUDIT_OFF', '')
       if (show_social_audit === false) {
         finalLiveDate += '||AUDIT_OFF'
       }
 
+      const upsertPayload = { 
+        id: 1, 
+        live_date: finalLiveDate, 
+        trending_enabled: trending_enabled !== undefined ? trending_enabled : true,
+        updated_at: new Date().toISOString() 
+      }
+
+      if (instagram_session_id !== undefined) {
+        upsertPayload.instagram_session_id = instagram_session_id || null
+      }
+      if (instagram_csrf_token !== undefined) {
+        upsertPayload.instagram_csrf_token = instagram_csrf_token || null
+      }
+
       const { data, error } = await supabase
         .from('live_settings')
-        .upsert({ 
-          id: 1, 
-          live_date: finalLiveDate, 
-          trending_enabled: trending_enabled !== undefined ? trending_enabled : true,
-          updated_at: new Date().toISOString() 
-        })
+        .upsert(upsertPayload)
         .select()
         .single()
 

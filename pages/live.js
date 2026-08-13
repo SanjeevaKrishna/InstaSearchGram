@@ -6,6 +6,25 @@ import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Pl
 import { supabase } from '../lib/supabase'
 import { safeStorage } from '../lib/storage'
 
+const InstagramIcon = ({ size = 24, strokeWidth = 2, style = {} }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={style}
+  >
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+  </svg>
+)
+
 const getOrdinal = (n) => {
   if (!n) return ''
   const s = ["th", "st", "nd", "rd"]
@@ -48,6 +67,14 @@ const parseCategoryAndTag = (rawCategory) => {
 
   return { tabCategory, describingTag };
 };
+
+const getProfileSlug = (profile) => {
+  if (profile.instagram_handle) {
+    // Replace dots with hyphens so Next.js doesn't treat them as file extensions (e.g. virat.kohli → virat-kohli)
+    return profile.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
+  }
+  return profile.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
+}
 
 const getProfileTrend = (profile, index) => {
   if (profile.created_at) {
@@ -876,7 +903,7 @@ export default function LivePage({ initialLiveData = null }) {
                 }} />
                 <input
                   type="text"
-                  placeholder="Search profiles by name..."
+                  placeholder="Search profiles by name or Instagram handle..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="input-field"
@@ -987,7 +1014,9 @@ export default function LivePage({ initialLiveData = null }) {
 
               // 3. Filter by search query for display
               const filtered = rankedCategoryList.filter(p => {
-                return p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+                const query = searchQuery.toLowerCase();
+                return p.name?.toLowerCase().includes(query) ||
+                       p.instagram_handle?.toLowerCase().includes(query);
               })
 
               if (filtered.length === 0) {
@@ -1013,8 +1042,8 @@ export default function LivePage({ initialLiveData = null }) {
                         <div
                           key={profile.id}
                           className="table-row table-row-hover"
-                        onClick={() => setSelectedProfile(profile)}
-                        style={{
+                          onClick={() => router.push(`/profile/${getProfileSlug(profile)}`)}
+                          style={{
                           display: 'flex',
                           alignItems: 'center',
                           padding: '12px 20px',
@@ -1143,6 +1172,7 @@ export default function LivePage({ initialLiveData = null }) {
                                 {profile.name}
                               </span>
                             </div>
+
                             {profile.category && (
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
                                 {profile.category.split(',').map((catStr, cIdx) => {
@@ -1225,7 +1255,7 @@ export default function LivePage({ initialLiveData = null }) {
                 }} />
                 <input
                   type="text"
-                  placeholder="Search profiles by name..."
+                  placeholder="Search profiles by name or Instagram handle..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="input-field"
@@ -1292,7 +1322,9 @@ export default function LivePage({ initialLiveData = null }) {
 
               // 4. Filter by search query for display
               const filtered = rankedVotingList.filter(p => {
-                return p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+                const query = searchQuery.toLowerCase();
+                return p.name?.toLowerCase().includes(query) ||
+                       p.instagram_handle?.toLowerCase().includes(query);
               })
 
               if (filtered.length === 0) {
@@ -1312,8 +1344,8 @@ export default function LivePage({ initialLiveData = null }) {
                         <div
                           key={profile.id}
                           className="table-row table-row-hover"
-                          onClick={() => setSelectedProfile(profile)}
-                        style={{
+                          onClick={() => router.push(`/profile/${getProfileSlug(profile)}`)}
+                          style={{
                           display: 'flex',
                           alignItems: 'center',
                           padding: '12px 20px',
@@ -1385,6 +1417,7 @@ export default function LivePage({ initialLiveData = null }) {
                             }}>
                               {profile.name}
                             </span>
+
                           </div>
                         </div>
 
@@ -1506,6 +1539,20 @@ export default function LivePage({ initialLiveData = null }) {
                       <span>Analytics</span>
                     </button>
                   )
+                )}
+
+                {/* Instagram button */}
+                {selectedProfile.instagram_handle && (
+                  <a 
+                    href={`https://instagram.com/${selectedProfile.instagram_handle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="vote-dialog-btn btn-instagram"
+                    onClick={() => setSelectedProfile(null)}
+                  >
+                    <InstagramIcon size={18} strokeWidth={2.5} />
+                    <span>Instagram</span>
+                  </a>
                 )}
               </div>
             </div>
@@ -1891,6 +1938,7 @@ export default function LivePage({ initialLiveData = null }) {
 
         .vote-dialog-buttons {
           display: flex;
+          flex-wrap: wrap;
           gap: 10px;
           justify-content: center;
           width: 100%;
@@ -1898,6 +1946,7 @@ export default function LivePage({ initialLiveData = null }) {
 
         .vote-dialog-btn {
           flex: 1;
+          min-width: 80px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -1949,6 +1998,16 @@ export default function LivePage({ initialLiveData = null }) {
         .vote-dialog-btn.btn-profile:hover {
           background: rgba(225, 48, 108, 0.08);
           border-color: rgba(225, 48, 108, 0.4);
+        }
+
+        .vote-dialog-btn.btn-instagram {
+          color: #bc1888;
+          border-color: rgba(188, 24, 136, 0.2);
+          text-decoration: none;
+        }
+        .vote-dialog-btn.btn-instagram:hover {
+          background: rgba(188, 24, 136, 0.08);
+          border-color: rgba(188, 24, 136, 0.4);
         }
 
         /* Confirmation Popup */
