@@ -180,7 +180,7 @@ export default function ProfilePage({ profile }) {
               {/* Stats Grid */}
               <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
                 <div style={{ padding: '14px 8px', background: 'rgba(99,102,241,0.07)', borderRadius: 14, border: '1px solid rgba(99,102,241,0.2)' }}>
-                  <div style={{ fontSize: 19, fontWeight: 800, color: '#818cf8', fontFamily: 'var(--font-display)', marginBottom: 3 }}>{profile.followers_text || formatNumber(profile.followers_count)}</div>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: '#818cf8', fontFamily: 'var(--font-display)', marginBottom: 3 }}>{profile.followers_count ? profile.followers_count.toLocaleString() : '—'}</div>
                   <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Followers</div>
                 </div>
                 <div style={{ padding: '14px 8px', background: monthlyGain > 0 ? 'rgba(168,85,247,0.08)' : monthlyGain < 0 ? 'rgba(249,115,22,0.08)' : 'var(--surface2)', borderRadius: 14, border: `1px solid ${monthlyGain > 0 ? 'rgba(168,85,247,0.25)' : monthlyGain < 0 ? 'rgba(249,115,22,0.25)' : 'var(--border)'}` }}>

@@ -591,7 +591,7 @@ export default function LivePage({ initialLiveData = null }) {
                 "@type": "ListItem",
                 "position": idx + 1,
                 "name": profile.name,
-                "description": `${profile.category?.split(':')[1] || 'Creator'} with ${profile.followers_text || 'millions of'} followers.`
+                "description": `${profile.category?.split(':')[1] || 'Creator'} with ${(profile.followers_text || 'millions of').toUpperCase()} followers.`
               }))
             })
           }}
@@ -1222,7 +1222,7 @@ export default function LivePage({ initialLiveData = null }) {
                           fontFamily: 'var(--font-body)',
                           flexShrink: 0,
                         }}>
-                          {profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(profile.followers_count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}
+                          {profile.followers_text?.trim() ? profile.followers_text.trim().toUpperCase() : (profile.followers_count >= 1000000 ? `${(Math.floor(profile.followers_count / 100000) / 10).toString().replace(/\.0$/, '')}M` : (profile.followers_count >= 1000 ? `${(Math.floor(profile.followers_count / 100) / 10).toString().replace(/\.0$/, '')}K` : profile.followers_count || '—'))}
                         </div>
                       </div>
                     </Fragment>

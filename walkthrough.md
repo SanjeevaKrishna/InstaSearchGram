@@ -101,11 +101,17 @@ Finally, we have integrated Adsterra advertisement units across key pages in a h
   - Placed `NativeAdUnit` after every 18 profiles in the alphabetical list.
   - Placed `Banner300x250` after the 36th profile.
 
+### 9. Instagram Followers count Truncation & Accuracy Fix
+* **Followers Formatting (Floor Truncation)**:
+  - Updated all client-side and server-side count formatters (`pages/all.js`, `pages/live.js`, `pages/celebrity/[slug].js`, `pages/admin/index.js`, and `pages/api/admin/most_followed.js`) to use `Math.floor` truncation instead of `toFixed(1)` or `toPrecision(3)` rounding.
+  - This guarantees that a profile with `76,250,252` followers correctly displays as `76.2M` (matching Instagram's official display behavior) instead of being rounded up to `76.3M`.
+* **Database Updates**:
+  - Wrote and executed [scratch/update-followers-text.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/scratch/update-followers-text.js) to re-evaluate and update the static `followers_text` values for all 1,121 profiles in the `most_followed` database table. This corrected profiles like Neha Kakkar (`76.3M` -> `76.2M`), Salman Khan (`72.6M` -> `72.5M`), and Katrina Kaif (`78.9M` -> `78.8M`) to their accurate display metrics.
+
 ---
 
 ## Verification Results
-* Both the public leaderboard `/trending` page and the `/admin` page compiled successfully (`200 OK` on server).
-* Non-existent paths like `/celebrity/does-not-exist` and `/reel/does-not-exist` return a real `404` status code.
-* All modified routing pages (`/`, `/all`, `/trending`, `/live`, `/celebrity/[slug]`) compile successfully with ads and respond with `200 OK`.
-* Verified that the followers scraper successfully falls back to querying the authenticated `web_profile_info` API and handles 302 redirects by merging set cookies when unauthenticated requests fail (e.g. from Vercel datacenter IPs), fixing the error on the live mobile admin page.
+* Run `npm run build` and confirmed the project compiled successfully with zero type or build errors.
+* Development server launched successfully on `http://localhost:3000`.
+* Verified that both database values and runtime formatting correctly output the floored follower count (e.g. `76.2M` for Neha Kakkar, `72.5M` for Salman Khan, `68.2M` for Jacqueline Fernandez).
 

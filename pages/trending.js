@@ -102,7 +102,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
     return roundedNum.toString()
   }
 
-  const followersDisplay = reel.followers_text || formatFollowers(reel.celebrity_followers_count)
+  const followersDisplay = (reel.followers_text || formatFollowers(reel.celebrity_followers_count))?.toUpperCase()
 
   if (isComment) {
     return (

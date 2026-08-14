@@ -40,9 +40,9 @@ function generateProfileNarrative(cel, liveRank, postsCount, posts = []) {
 
   const fmt = (n) => {
     if (!n) return null
-    if (n >= 1e9) return `${(n / 1e9).toFixed(1).replace(/\.0$/, '')}B`
-    if (n >= 1e6) return `${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M`
-    if (n >= 1e3) return `${(n / 1e3).toFixed(1).replace(/\.0$/, '')}K`
+    if (n >= 1e9) return `${(Math.floor(n / 1e8) / 10).toString().replace(/\.0$/, '')}B`
+    if (n >= 1e6) return `${(Math.floor(n / 1e5) / 10).toString().replace(/\.0$/, '')}M`
+    if (n >= 1e3) return `${(Math.floor(n / 1e2) / 10).toString().replace(/\.0$/, '')}K`
     return n.toString()
   }
 
@@ -194,19 +194,11 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
     const num = Number(n)
     if (isNaN(num)) return n.toString()
 
-    // Pre-round to 3 significant figures to handle rollovers (e.g. 999900 -> 1000000)
-    const roundedNum = Number(num.toPrecision(3))
-
-    const formatWithPrec = (value, suffix) => {
-      let formatted = Number(value.toPrecision(3)).toString()
-      return formatted + suffix
-    }
-
-    if (roundedNum >= 1e12) return formatWithPrec(roundedNum / 1e12, 'T')
-    if (roundedNum >= 1e9) return formatWithPrec(roundedNum / 1e9, 'B')
-    if (roundedNum >= 1e6) return formatWithPrec(roundedNum / 1e6, 'M')
-    if (roundedNum >= 1000) return formatWithPrec(roundedNum / 1000, 'K')
-    return roundedNum.toString()
+    if (num >= 1e12) return `${(Math.floor(num / 1e11) / 10).toString().replace(/\.0$/, '')}T`
+    if (num >= 1e9) return `${(Math.floor(num / 1e8) / 10).toString().replace(/\.0$/, '')}B`
+    if (num >= 1e6) return `${(Math.floor(num / 1e5) / 10).toString().replace(/\.0$/, '')}M`
+    if (num >= 1000) return `${(Math.floor(num / 100) / 10).toString().replace(/\.0$/, '')}K`
+    return num.toString()
   }
 
 
@@ -432,7 +424,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
-                  {formatCount(celebrity.followers_count)} followers
+                  {celebrity.followers_count ? formatCount(celebrity.followers_count) : '—'} followers
                 </span>
                 {celebrity.account_created_year && (
                   <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
@@ -484,7 +476,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
-                  {formatCount(compareCelebrity.followers_count)} followers
+                  {compareCelebrity.followers_count ? formatCount(compareCelebrity.followers_count) : '—'} followers
                 </span>
                 {compareCelebrity.account_created_year && (
                   <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
@@ -660,7 +652,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               {/* Followers · Posts · Joined — same info as All Profiles row */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 600 }}>
-                  <strong>{formatCount(celebrity.followers_count)}</strong> followers
+                  <strong>{celebrity.followers_count ? formatCount(celebrity.followers_count) : '—'}</strong> followers
                 </span>
                 <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
                   <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts

@@ -216,11 +216,11 @@ export default async function handler(req, res) {
         let formattedText = '';
         const count = scrapeData.followersCount;
         if (count >= 1000000000) {
-          formattedText = `${(count / 1000000000).toFixed(1).replace(/\.0$/, '')}B`;
+          formattedText = `${(Math.floor(count / 100000000) / 10).toString().replace(/\.0$/, '')}B`;
         } else if (count >= 1000000) {
-          formattedText = `${(count / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+          formattedText = `${(Math.floor(count / 100000) / 10).toString().replace(/\.0$/, '')}M`;
         } else if (count >= 1000) {
-          formattedText = `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+          formattedText = `${(Math.floor(count / 100) / 10).toString().replace(/\.0$/, '')}K`;
         } else {
           formattedText = count.toString();
         }
