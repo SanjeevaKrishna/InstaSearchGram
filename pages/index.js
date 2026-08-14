@@ -241,46 +241,6 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
               Popular <Flame size={18} style={{ color: '#ff6b35' }} />
             </h2>
             
-            <div style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              padding: '16px 20px',
-              marginBottom: 24,
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: 'var(--text-dim)',
-              textAlign: 'left',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <img 
-                  src="/logo.png" 
-                  alt="Spialr Logo" 
-                  style={{ 
-                    width: 22, 
-                    height: 22, 
-                    borderRadius: 5, 
-                    flexShrink: 0,
-                    border: '1px solid var(--border)'
-                  }} 
-                />
-                <span style={{ 
-                  fontWeight: 800, 
-                  fontSize: 15, 
-                  color: 'var(--text)',
-                  fontFamily: 'var(--font-display)',
-                  letterSpacing: '-0.02em'
-                }}>
-                  Spi<span style={{ color: 'var(--accent)' }}>alr</span>
-                </span>
-              </div>
-              <p style={{ margin: 0 }}>
-                Spialr tracks lifetime performance insights across verified creator profiles. Unlike other directories that rely on official APIs or automated scraping with 90-day limitations, <strong>our data is meticulously compiled manually</strong>. We hand-count likes, views, comments, and reposts across thousands of posts per profile to provide an unrestricted, lifetime view of digital influence.
-              </p>
-            </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {featured.map(c => <CelebrityCard key={c.id} celebrity={c} />)}
@@ -308,7 +268,7 @@ export async function getServerSideProps() {
         .neq('hide_search', true)
         .order('order_index', { ascending: true })
         .order('followers_count', { ascending: false })
-        .limit(12),
+        .limit(5),
       supabase
         .from('celebrities')
         .select('id', { count: 'exact', head: true })

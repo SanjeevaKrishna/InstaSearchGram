@@ -137,7 +137,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
             </div>
 
             <div className="row-creator-name" style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
+              {reel.creator_name ? reel.creator_name.replace(/^@/, '') : 'anonymous'}
             </div>
           </div>
 
@@ -268,15 +268,15 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
 
       {/* Title, Creator, Followers & Date Column */}
       <div className="row-details-container">
-        {/* Top: Video Caption (reel title) */}
+        {/* Top: Creator Name */}
+        <div className="row-creator-name" style={{ marginBottom: 4 }}>
+          {reel.creator_name ? reel.creator_name.replace(/^@/, '') : 'anonymous'}
+        </div>
+
+        {/* Below that: Video Caption (reel title) */}
         <h4 className="row-title">
           {reel.title}
         </h4>
-
-        {/* Below that: Creator Name */}
-        <div className="row-creator-name">
-          {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
-        </div>
 
         {/* Below that: Follower count / views / likes & Date beside each other */}
         <div className="row-meta-container">

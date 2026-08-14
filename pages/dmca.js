@@ -28,7 +28,11 @@ export default function DMCA() {
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>2. Designated Copyright Agent</h2>
           <p style={{ marginBottom: 16 }}>Please send all copyright notices to our designated agent via email at:</p>
-          <p style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 16, marginBottom: 24 }}>contact@spialr.com</p>
+          <p style={{ marginBottom: 24 }}>
+            <a href="mailto:contact@spialr.com" style={{ fontWeight: 600, color: 'var(--accent)', fontSize: 16, textDecoration: 'none' }}>
+              contact@spialr.com
+            </a>
+          </p>
 
           <h2 style={{ color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 10, marginTop: 30 }}>3. Response and Removal</h2>
           <p>Upon receiving a valid DMCA notification, Spialr will take immediate action to investigate and, if necessary, remove or disable access to the infringing material. We will also notify the user who posted or is associated with the material, allowing for counter-notifications under applicable laws.</p>

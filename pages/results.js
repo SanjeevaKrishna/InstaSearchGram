@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import PostCard from '../components/PostCard'
+import { supabase } from '../lib/supabase'
 import { safeStorage } from '../lib/storage'
 import { Lightbulb, Search, Heart, MessageSquare, Eye, Star } from 'lucide-react'
 

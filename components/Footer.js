@@ -1,6 +1,86 @@
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 
 export default function Footer() {
+  const router = useRouter()
+  const isHome = router.pathname === '/'
+
+  if (!isHome) {
+    return (
+      <footer style={{
+        background: 'transparent',
+        padding: '40px 24px 100px', // padding bottom has spacing for BottomNav
+        color: 'var(--text-muted)',
+        fontSize: 12,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        marginTop: 'auto',
+        borderTop: '1px solid var(--border-subtle, var(--border))'
+      }}>
+        <div style={{
+          maxWidth: 900,
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 16
+        }}>
+          {/* Minimal Instagram-like Links Row */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            gap: '8px 16px',
+            lineHeight: 1.6
+          }}>
+            <Link href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Home</Link>
+            <Link href="/all" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>All Profiles</Link>
+            <Link href="/trending" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Trending Reels</Link>
+            <Link href="/live" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Live Standings</Link>
+            <Link href="/converter" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Converter</Link>
+            <Link href="/about" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>About Us</Link>
+            <Link href="/methodology" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Methodology</Link>
+            <Link href="/contact" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Contact</Link>
+            <Link href="/request" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Request</Link>
+            <Link href="/privacy" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Privacy</Link>
+            <Link href="/terms" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Terms</Link>
+            <Link href="/disclaimer" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Disclaimer</Link>
+            <Link href="/dmca" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>DMCA</Link>
+          </div>
+
+          {/* Copyright Row */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 12,
+            color: 'var(--text-muted)',
+            fontSize: 11,
+            fontWeight: 500,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            <span>© {new Date().getFullYear()} Spialr</span>
+            <span>·</span>
+            <span>Support: <a href="mailto:contact@spialr.com" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>contact@spialr.com</a></span>
+          </div>
+
+          {/* Short Legal Disclaimer */}
+          <div style={{
+            fontSize: 10,
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+            lineHeight: 1.5,
+            maxWidth: 600,
+            opacity: 0.6,
+            marginTop: 8
+          }}>
+            Spialr is an independent analytics directory and search resource. We are not officially affiliated, associated, or connected with Meta Platforms, Inc. or Instagram.
+          </div>
+        </div>
+      </footer>
+    )
+  }
+
+  // Current rich footer for Home page
   return (
     <footer style={{
       background: 'var(--surface)',

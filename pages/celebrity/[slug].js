@@ -48,41 +48,7 @@ function generateProfileNarrative(cel, liveRank, postsCount, posts = []) {
 
   const parts = []
 
-  // ── Paragraph 1: opening — varies by follower tier ─────────────────────────
-  if (followers >= 250_000_000) {
-    parts.push(
-      `${name} is one of the most-followed individuals on Instagram globally, with ${fmt(followers)} followers placing them` +
-      (liveRank ? ` at rank #${liveRank} on Spialr's leaderboard` : ' in an extremely rare tier shared by only a handful of accounts worldwide') +
-      '. At this scale, even a single post reaches an audience larger than the population of most countries.'
-    )
-  } else if (followers >= 100_000_000) {
-    parts.push(
-      `With ${fmt(followers)} followers, ${name} ranks among India's most-followed Instagram personalities` +
-      (liveRank ? ` — currently #${liveRank} on Spialr's live follower leaderboard` : '') +
-      '. Accounts at this level have built long-term, cross-demographic audiences that extend well beyond a single niche or fan base.'
-    )
-  } else if (followers >= 50_000_000) {
-    parts.push(
-      `${name} has amassed ${fmt(followers)} followers on Instagram` +
-      (liveRank ? `, ranking #${liveRank} among the most-followed accounts tracked by Spialr` : '') +
-      '. This places them firmly in the top tier of Indian social media — a level reached by very few creators or public figures.'
-    )
-  } else if (followers >= 10_000_000) {
-    parts.push(
-      `Tracking ${fmt(followers)} followers` +
-      (handle ? ` under the handle ${handle}` : '') +
-      `, ${name} represents a significant presence in the Indian creator space` +
-      (liveRank ? ` and is ranked #${liveRank} on Spialr's follower index` : '') +
-      '. Accounts in this range typically span multiple content formats and command both organic and brand-driven engagement.'
-    )
-  } else {
-    parts.push(
-      `${name}` + (handle ? ` (${handle})` : '') +
-      ` currently holds ${fmt(followers) || 'a growing number of'} followers on Instagram` +
-      (liveRank ? `, placing them at #${liveRank} on Spialr's live rankings` : '') +
-      '. Profiles at this stage often show rapid audience growth as their content finds its audience.'
-    )
-  }
+
 
   // ── Paragraph 2: account age & posting context — varies by age ─────────────
   if (age && postsNum) {
@@ -736,62 +702,6 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
           </div>
         </div>
 
-        {/* ── Data-driven profile narrative ── */}
-        {(() => {
-          const narrative = generateProfileNarrative(celebrity, liveRank, postsCount, posts)
-          return (
-            <div
-              style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 14,
-                padding: '20px 22px',
-                marginBottom: 24,
-                lineHeight: 1.72,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <img 
-                  src="/logo.png" 
-                  alt="Spialr Logo" 
-                  style={{ 
-                    width: 22, 
-                    height: 22, 
-                    borderRadius: 5, 
-                    flexShrink: 0,
-                    border: '1px solid var(--border)'
-                  }} 
-                />
-                <span style={{ 
-                  fontWeight: 800, 
-                  fontSize: 15, 
-                  color: 'var(--text)',
-                  fontFamily: 'var(--font-display)',
-                  letterSpacing: '-0.02em'
-                }}>
-                  Spi<span style={{ color: 'var(--accent)' }}>alr</span>
-                </span>
-              </div>
-              
-              {narrative.map((para, i) => (
-                <p
-                  key={i}
-                  style={{
-                    margin: 0,
-                    fontSize: 14,
-                    color: i === narrative.length - 1 ? 'var(--text-muted)' : 'var(--text-dim)',
-                    fontFamily: 'Roboto, "Segoe UI", sans-serif',
-                  }}
-                >
-                  {para}
-                </p>
-              ))}
-            </div>
-          )
-        })()}
 
         {/* Account Insights (Premium Analytics Cards) */}
         {(celebrity.total_reel_views || celebrity.total_reel_likes || celebrity.total_post_likes || celebrity.total_comments || celebrity.total_shares || celebrity.total_reposts) ? (

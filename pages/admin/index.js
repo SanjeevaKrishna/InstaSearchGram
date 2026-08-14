@@ -3272,8 +3272,25 @@ export default function AdminPanel() {
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
               📅 Live Page Date
             </h3>
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: 12 }}>
               The date on the top-right corner of the <span style={{ color: 'var(--accent)', fontWeight: 700 }}>/live</span> page is now <strong>fully automated</strong> by calendar time. It dynamically displays the current local date to visitors.
+            </div>
+            <div style={{ 
+              fontSize: 13, 
+              padding: '12px 14px', 
+              background: 'rgba(245,158,11,0.08)', 
+              border: '1px dashed rgba(245,158,11,0.3)', 
+              borderRadius: '8px',
+              color: '#d97706',
+              lineHeight: 1.5,
+              display: 'flex',
+              gap: 8,
+              alignItems: 'flex-start'
+            }}>
+              <span style={{ fontSize: 16 }}>💡</span>
+              <div>
+                <strong>Scraping Tip:</strong> Both this admin panel and your live website share the <strong>exact same database</strong>. To protect your Instagram session and avoid rate limits (HTTP 429 errors) on Vercel, run scraping updates from your laptop's <strong>localhost</strong>. Updates will sync to your live site instantly!
+              </div>
             </div>
           </div>
         )}
