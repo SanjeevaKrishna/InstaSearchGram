@@ -107,3 +107,5 @@ Finally, we have integrated Adsterra advertisement units across key pages in a h
 * Both the public leaderboard `/trending` page and the `/admin` page compiled successfully (`200 OK` on server).
 * Non-existent paths like `/celebrity/does-not-exist` and `/reel/does-not-exist` return a real `404` status code.
 * All modified routing pages (`/`, `/all`, `/trending`, `/live`, `/celebrity/[slug]`) compile successfully with ads and respond with `200 OK`.
+* Verified that the followers scraper successfully falls back to querying the authenticated `web_profile_info` API and handles 302 redirects by merging set cookies when unauthenticated requests fail (e.g. from Vercel datacenter IPs), fixing the error on the live mobile admin page.
+
