@@ -1844,7 +1844,71 @@ export default function AdminPanel() {
 
   const handleRefreshStats = async (cel) => {
     if (!cel.instagram_handle) return alert('No Instagram handle set for this profile!');
-    if (!confirm(`Run deep scraper for @${cel.instagram_handle}? This can take 2-4 minutes for profiles with thousands of posts.`)) return;
+    
+    const handleKey = cel.instagram_handle.toLowerCase();
+    
+    // 1. Check for saved resume state in localStorage
+    let nextMaxId = null;
+    let initialStats = null;
+    let savedProgressRaw = localStorage.getItem(`pending_progress_${handleKey}`);
+    if (savedProgressRaw) {
+      try {
+        const saved = JSON.parse(savedProgressRaw);
+        if (confirm(`Found saved progress from previous paused run (${saved.stats?.processedItems || 0} posts scraped). Resume from there?`)) {
+          nextMaxId = saved.nextMaxId;
+          initialStats = saved.stats;
+        } else {
+          localStorage.removeItem(`pending_progress_${handleKey}`);
+        }
+      } catch (e) {
+        localStorage.removeItem(`pending_progress_${handleKey}`);
+      }
+    }
+
+    // 2. If NOT resuming, check for incremental date marker
+    let lastScrapedDate = null;
+    if (!nextMaxId) {
+      lastScrapedDate = localStorage.getItem(`last_scraped_date_${handleKey}`) || null;
+      if (lastScrapedDate) {
+        if (!confirm(`Run incremental scrape for @${cel.instagram_handle}? (Only fetches posts since ${new Date(lastScrapedDate).toLocaleDateString()} and adds to existing database totals - takes 2 seconds & keeps account safe).`)) {
+          // If they select No, they can run a full scrape
+          if (confirm('Run full scrape instead? (WARNING: Deep scraping > 200 posts will log you out / rate limit your account).')) {
+            lastScrapedDate = null;
+          } else {
+            return;
+          }
+        }
+      }
+    }
+
+    // 3. Prompt for post limit if NOT resuming AND not incremental
+    let postLimit = 100;
+    let maxPages = 3;
+    if (!nextMaxId && !lastScrapedDate) {
+      const postLimitInput = prompt(
+        `Scrape stats for @${cel.instagram_handle}.\n\n` +
+        `Enter max posts to scrape (e.g. 50, 100, 150, 500).\n` +
+        `• 100 is highly recommended & keeps your account safe!\n` +
+        `• Scraping > 200 posts can log out or flag your Instagram account.\n\n` +
+        `Enter limit (Default is 100):`,
+        '100'
+      );
+      if (postLimitInput === null) return; // user cancelled
+
+      if (postLimitInput.trim() !== '') {
+        const parsed = parseInt(postLimitInput, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          postLimit = parsed;
+        }
+      }
+      maxPages = Math.ceil(postLimit / 50);
+    } else if (lastScrapedDate) {
+      // Incremental updates only need 1 or 2 pages max
+      maxPages = 2;
+    } else {
+      // Resuming a full scrape continues up to 50 pages at a time
+      maxPages = 50;
+    }
 
     // Ask for credentials on mobile/desktop to avoid hardcoding in env if they expire
     let sessionId = localStorage.getItem('instagram_session_id') || '';
@@ -1871,10 +1935,21 @@ export default function AdminPanel() {
     
     setRefreshing(cel.id)
     setRefreshProgress('Initializing...')
+    
+    let lastReportedProgress = null;
     try {
       const res = await adminFetch('/api/admin/refresh_stats', {
         method: 'POST',
-        body: { celebrityId: cel.id, instagram_handle: cel.instagram_handle, sessionId, csrfToken }
+        body: { 
+          celebrityId: cel.id, 
+          instagram_handle: cel.instagram_handle, 
+          sessionId, 
+          csrfToken, 
+          maxPages,
+          nextMaxId,
+          initialStats,
+          lastScrapedDate
+        }
       })
       
       const reader = res.body.getReader();
@@ -1894,9 +1969,21 @@ export default function AdminPanel() {
             const data = JSON.parse(line.slice(6));
             if (data.type === 'progress') {
               const s = data.stats;
+              lastReportedProgress = s;
               setRefreshProgress(`Scraping... ${s.processedItems}/${s.totalPosts || '?'} posts`);
             } else if (data.type === 'complete') {
               setCelebrities(prev => prev.map(c => c.id === cel.id ? { ...c, ...data.result.updates } : c));
+              
+              // On success:
+              // 1. Remove pending progress
+              localStorage.removeItem(`pending_progress_${handleKey}`);
+              
+              // 2. Save the newest post date for incremental scraping next time
+              if (data.result.updates.most_liked_date || lastReportedProgress?.latestPostDate) {
+                const dateToSave = lastReportedProgress?.latestPostDate || data.result.updates.most_liked_date;
+                localStorage.setItem(`last_scraped_date_${handleKey}`, dateToSave);
+              }
+              
               alert(`Successfully refreshed stats for @${cel.instagram_handle}!`);
             } else if (data.type === 'error') {
               throw new Error(data.error);
@@ -1905,7 +1992,33 @@ export default function AdminPanel() {
         }
       }
     } catch (err) {
-      alert(`Scraper error: ${err.message}`)
+      // On error (e.g. Rate limit or Logout):
+      // If we have a cursor from our last progress update, save progress so we can resume!
+      if (lastReportedProgress && lastReportedProgress.nextMaxId) {
+        localStorage.setItem(`pending_progress_${handleKey}`, JSON.stringify({
+          nextMaxId: lastReportedProgress.nextMaxId,
+          stats: {
+            processedItems: lastReportedProgress.processedItems,
+            skippedPosts: lastReportedProgress.skippedPosts || 0,
+            totalReelViews: lastReportedProgress.totalReelViews,
+            totalReelLikes: lastReportedProgress.totalReelLikes,
+            totalPostLikes: lastReportedProgress.totalPostLikes,
+            totalComments: lastReportedProgress.totalComments,
+            topPostLikes: lastReportedProgress.topPostLikes?.count || 0,
+            topPostLikesDate: lastReportedProgress.topPostLikes?.date || null,
+            topPostComments: lastReportedProgress.topPostComments?.count || 0,
+            topPostCommentsDate: lastReportedProgress.topPostComments?.date || null,
+            topReelViews: lastReportedProgress.topReelViews?.count || 0,
+            topReelViewsDate: lastReportedProgress.topReelViews?.date || null,
+            latestItemsEngagement: lastReportedProgress.latestItemsEngagement || 0,
+            latestItemsCount: lastReportedProgress.latestItemsCount || 0,
+            latestPostDate: lastReportedProgress.latestPostDate || null
+          }
+        }));
+        alert(`Scraping paused due to error: ${err.message}.\n\nYour progress has been saved (${lastReportedProgress.processedItems} posts scraped). You can safely resume this scraping run later!`);
+      } else {
+        alert(`Scraper error: ${err.message}`)
+      }
     } finally {
       setRefreshing(null)
       setRefreshProgress(null)

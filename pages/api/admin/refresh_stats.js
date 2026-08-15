@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const { celebrityId, instagram_handle, sessionId, csrfToken } = req.body
+  const { celebrityId, instagram_handle, sessionId, csrfToken, maxPages, nextMaxId, initialStats, lastScrapedDate } = req.body
 
   if (!celebrityId || !instagram_handle) {
     return res.status(400).json({ error: 'celebrityId and instagram_handle are required' })
@@ -38,9 +38,13 @@ export default async function handler(req, res) {
       instagram_handle, 
       sessionId, 
       csrfToken,
+      maxPages ? parseInt(maxPages, 10) : 3,
       (stats) => {
         res.write(`data: ${JSON.stringify({ type: 'progress', stats })}\n\n`);
-      }
+      },
+      nextMaxId,
+      initialStats,
+      lastScrapedDate
     )
     res.write(`data: ${JSON.stringify({ type: 'complete', result })}\n\n`);
     res.end();
