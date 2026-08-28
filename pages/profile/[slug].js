@@ -105,9 +105,8 @@ export default function ProfilePage({ profile }) {
   const [liveFollowers, setLiveFollowers] = useState(0)
   const [changeDir, setChangeDir] = useState(null)
   const [isCountingUp, setIsCountingUp] = useState(true)
-  const [latestDbFollowers, setLatestDbFollowers] = useState(profile.followers_count || 0)
 
-  // 1. Initial Odometer Count-Up Animation & Background API Scrape
+  // 1. Initial Odometer Count-Up Animation
   useEffect(() => {
     if (!profile.followers_count) return
 
@@ -137,35 +136,15 @@ export default function ProfilePage({ profile }) {
 
     animationFrame = requestAnimationFrame(animate)
 
-    // Call live follower count API in the background (1-hour rate limit on server side)
-    fetch(`/api/refresh_live_followers?id=${profile.id}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.followersCount) {
-          setLatestDbFollowers(data.followersCount)
-        }
-      })
-      .catch(err => console.error("Error refreshing live followers in background:", err));
-
     return () => cancelAnimationFrame(animationFrame)
-  }, [profile.followers_count, profile.id])
+  }, [profile.followers_count])
 
   // 2. Continuous Micro-Fluctuation simulation (only after initial count-up finishes)
   useEffect(() => {
-    if (isCountingUp || !latestDbFollowers) return
+    if (isCountingUp || !profile.followers_count) return
 
-    // Immediately adjust to any new real-time followers retrieved in background
-    setLiveFollowers(prev => {
-      const diff = latestDbFollowers - prev;
-      if (diff > 0) {
-        setChangeDir('up');
-        setTimeout(() => setChangeDir(null), 800);
-      } else if (diff < 0) {
-        setChangeDir('down');
-        setTimeout(() => setChangeDir(null), 800);
-      }
-      return latestDbFollowers;
-    })
+    // Initialize display count to the database count when counting finishes
+    setLiveFollowers(profile.followers_count)
 
     const monthlyGainNum = monthlyGain || 0
     const gainPerSec = monthlyGainNum / (30 * 24 * 3600)
@@ -193,7 +172,7 @@ export default function ProfilePage({ profile }) {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isCountingUp, latestDbFollowers, monthlyGain])
+  }, [isCountingUp, profile.followers_count, monthlyGain])
 
   return (
     <>
@@ -359,18 +338,18 @@ export default function ProfilePage({ profile }) {
             marginBottom: 24, 
             overflow: 'hidden', 
             position: 'relative',
-            background: 'rgba(30, 27, 75, 0.4)', // Deep indigo glass base
-            border: '2px solid rgba(168, 85, 247, 0.3)', // Violet neon border
-            boxShadow: '0 8px 32px 0 rgba(168, 85, 247, 0.1), inset 0 0 16px rgba(168, 85, 247, 0.05)',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.65) 0%, rgba(30, 41, 59, 0.45) 100%)', // Sleek slate-glass base
+            border: '1px solid rgba(255, 255, 255, 0.08)', // Thin elegant white border
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 16px rgba(255, 255, 255, 0.02)',
             borderRadius: 24
           }}>
             {/* Background floating tech circles */}
-            <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: -30, left: -30, width: 110, height: 110, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(56,189,248,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: -30, left: -30, width: 110, height: 110, borderRadius: '50%', background: 'radial-gradient(circle, rgba(129,140,248,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24, position: 'relative', zIndex: 1 }}>
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', padding: '4px 10px', borderRadius: 100, fontSize: 10, fontWeight: 800, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', padding: '4px 10px', borderRadius: 100, fontSize: 10, fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                   <Sparkles size={11} /> AI Pulse Engine v2.0
                 </div>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, margin: 0, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 8, letterSpacing: '-0.02em' }}>
@@ -446,18 +425,18 @@ export default function ProfilePage({ profile }) {
 
                       if (day.increment > 0) {
                         barStyle = {
-                          background: 'linear-gradient(180deg, rgba(168,85,247,0.4) 0%, rgba(236,72,153,0.4) 100%)',
-                          border: '1.5px solid rgba(168,85,247,0.6)',
-                          boxShadow: '0 0 14px rgba(236,72,153,0.3)'
+                          background: 'linear-gradient(180deg, rgba(16,185,129,0.2) 0%, rgba(52,211,153,0.3) 100%)',
+                          border: '1px solid rgba(52,211,153,0.4)',
+                          boxShadow: '0 0 12px rgba(52,211,153,0.25)'
                         }
-                        incLabelColor = '#f472b6'
+                        incLabelColor = '#34d399'
                       } else if (day.increment < 0) {
                         barStyle = {
-                          background: 'linear-gradient(180deg, rgba(249,115,22,0.4) 0%, rgba(239,68,68,0.4) 100%)',
-                          border: '1.5px solid rgba(249,115,22,0.6)',
-                          boxShadow: '0 0 14px rgba(249,115,22,0.3)'
+                          background: 'linear-gradient(180deg, rgba(239,68,68,0.2) 0%, rgba(248,113,113,0.3) 100%)',
+                          border: '1px solid rgba(248,113,113,0.4)',
+                          boxShadow: '0 0 12px rgba(248,113,113,0.25)'
                         }
-                        incLabelColor = '#fb923c'
+                        incLabelColor = '#f87171'
                       }
 
                       return (
@@ -522,11 +501,11 @@ export default function ProfilePage({ profile }) {
                   {/* Playful Emojis Legend */}
                   <div style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f472b6', boxShadow: '0 0 8px #ec4899' }} />
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px #10b981' }} />
                       <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700 }}>🚀 Spark Growth</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fb923c', boxShadow: '0 0 8px #f97316' }} />
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f87171', boxShadow: '0 0 8px #ef4444' }} />
                       <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700 }}>🍊 Red Alert Drop</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

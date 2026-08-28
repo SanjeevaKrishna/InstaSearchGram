@@ -1704,6 +1704,10 @@ export default function AdminPanel() {
   const [batchErrorLog, setBatchErrorLog] = useState('')
   const abortBatchRef = useRef(false)
 
+  // "Scrape ALL accounts" server-side batch state
+  const [allScrapeRunning, setAllScrapeRunning] = useState(false)
+  const [allScrapeResult, setAllScrapeResult] = useState(null)
+
   const [instagramSessionId, setInstagramSessionId] = useState('')
   const [instagramCsrfToken, setInstagramCsrfToken] = useState('')
   const [cookiesLocked, setCookiesLocked] = useState(true)
@@ -2264,6 +2268,33 @@ export default function AdminPanel() {
       setBatchStatusMessage(`✅ Batch update complete! All ${targets.length} profiles updated successfully.`)
     }
     setBatchUpdating(false)
+  }
+
+  const handleScrapeAllAccounts = async () => {
+    const withHandles = mostFollowed.filter(p => p.instagram_handle && p.instagram_handle.trim() !== '')
+    const total = withHandles.length
+    const estMinutes = Math.ceil((total * 4) / 60)
+    if (!confirm(`🚀 Scrape ALL ${total} accounts with Instagram handles?\n\nThis runs on the server with a 4-second safety delay between each request.\n\nEstimated time: ~${estMinutes} minutes.\n\nDo NOT close this tab until it finishes!`)) return
+
+    setAllScrapeRunning(true)
+    setAllScrapeResult(null)
+
+    try {
+      const res = await adminFetch('/api/admin/batch_scrape_followers', { method: 'POST' })
+      const data = await res.json()
+      setAllScrapeResult(data)
+
+      if (data.updated > 0) {
+        // Refresh the profiles list to show updated counts
+        const loadRes = await adminFetch('/api/admin/most_followed')
+        const loadData = await loadRes.json()
+        setMostFollowed(loadData.profiles || [])
+      }
+    } catch (err) {
+      setAllScrapeResult({ error: err.message })
+    }
+
+    setAllScrapeRunning(false)
   }
 
   const updateVotes = async (id, votesVal) => {
@@ -3485,6 +3516,77 @@ export default function AdminPanel() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* 🌐 Scrape ALL Accounts — Server-Side Nightly Run */}
+            <div className="card" style={{ marginBottom: 24, padding: '20px', background: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16,185,129,0.2)' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6, color: '#34d399' }}>
+                🌐 Scrape ALL Accounts — Nightly Batch Run
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
+                Runs a full server-side sequential scrape for every account that has an Instagram handle. Uses a <strong>4-second delay</strong> between each request to stay safe. Run this once every night from your laptop. Do NOT close this tab while it runs!
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                {allScrapeRunning ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="spinner" style={{ width: 20, height: 20 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#34d399' }}>
+                      Running full scrape... Please keep this tab open.
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleScrapeAllAccounts}
+                    style={{
+                      padding: '10px 20px',
+                      fontSize: 14,
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      border: 'none',
+                      fontWeight: 700
+                    }}
+                  >
+                    🚀 Scrape All {mostFollowed.filter(p => p.instagram_handle).length} Accounts Now
+                  </button>
+                )}
+
+                {allScrapeResult && !allScrapeRunning && (
+                  <div style={{
+                    marginTop: 12,
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: 10,
+                    background: allScrapeResult.error ? 'rgba(255,82,82,0.08)' : 'rgba(16,185,129,0.08)',
+                    border: `1px solid ${allScrapeResult.error ? 'rgba(255,82,82,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                    fontSize: 13
+                  }}>
+                    {allScrapeResult.error ? (
+                      <span style={{ color: '#ff5252' }}>❌ Error: {allScrapeResult.error}</span>
+                    ) : (
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#34d399', marginBottom: 4 }}>
+                          ✅ Batch complete! {allScrapeResult.updated} updated · {allScrapeResult.failed} failed out of {allScrapeResult.total} total
+                        </div>
+                        {allScrapeResult.failures?.length > 0 && (
+                          <details style={{ marginTop: 8 }}>
+                            <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)' }}>
+                              View {allScrapeResult.failures.length} failed accounts
+                            </summary>
+                            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {allScrapeResult.failures.map((f, i) => (
+                                <div key={i} style={{ fontSize: 11, color: '#ff5252' }}>
+                                  @{f.handle}: {f.error}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div style={{ marginBottom: 16 }}>
