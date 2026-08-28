@@ -1692,6 +1692,7 @@ export default function AdminPanel() {
   const [showMostFollowedForm, setShowMostFollowedForm] = useState(false)
   const [editingMostFollowed, setEditingMostFollowed] = useState(null)
   const [updatingFollowersId, setUpdatingFollowersId] = useState(null)
+  const [tempHandles, setTempHandles] = useState({})
 
   // Batch scraper states
   const [selectedBatchLang, setSelectedBatchLang] = useState('All')
@@ -1842,187 +1843,9 @@ export default function AdminPanel() {
 
   const [refreshProgress, setRefreshProgress] = useState(null)
 
-  const handleRefreshStats = async (cel) => {
+  const handleRefreshStats = (cel) => {
     if (!cel.instagram_handle) return alert('No Instagram handle set for this profile!');
-    
-    const handleKey = cel.instagram_handle.toLowerCase();
-    
-    // 1. Check for saved resume state in localStorage
-    let nextMaxId = null;
-    let initialStats = null;
-    let savedProgressRaw = localStorage.getItem(`pending_progress_${handleKey}`);
-    if (savedProgressRaw) {
-      try {
-        const saved = JSON.parse(savedProgressRaw);
-        if (confirm(`Found saved progress from previous paused run (${saved.stats?.processedItems || 0} posts scraped). Resume from there?`)) {
-          nextMaxId = saved.nextMaxId;
-          initialStats = saved.stats;
-        } else {
-          localStorage.removeItem(`pending_progress_${handleKey}`);
-        }
-      } catch (e) {
-        localStorage.removeItem(`pending_progress_${handleKey}`);
-      }
-    }
-
-    // 2. If NOT resuming, check for incremental date marker
-    let lastScrapedDate = null;
-    if (!nextMaxId) {
-      lastScrapedDate = localStorage.getItem(`last_scraped_date_${handleKey}`) || null;
-      if (lastScrapedDate) {
-        if (!confirm(`Run incremental scrape for @${cel.instagram_handle}? (Only fetches posts since ${new Date(lastScrapedDate).toLocaleDateString()} and adds to existing database totals - takes 2 seconds & keeps account safe).`)) {
-          // If they select No, they can run a full scrape
-          if (confirm('Run full scrape instead? (WARNING: Deep scraping > 200 posts will log you out / rate limit your account).')) {
-            lastScrapedDate = null;
-          } else {
-            return;
-          }
-        }
-      }
-    }
-
-    // 3. Prompt for post limit if NOT resuming AND not incremental
-    let postLimit = 100;
-    let maxPages = 3;
-    if (!nextMaxId && !lastScrapedDate) {
-      const postLimitInput = prompt(
-        `Scrape stats for @${cel.instagram_handle}.\n\n` +
-        `Enter max posts to scrape (e.g. 50, 100, 150, 500).\n` +
-        `• 100 is highly recommended & keeps your account safe!\n` +
-        `• Scraping > 200 posts can log out or flag your Instagram account.\n\n` +
-        `Enter limit (Default is 100):`,
-        '100'
-      );
-      if (postLimitInput === null) return; // user cancelled
-
-      if (postLimitInput.trim() !== '') {
-        const parsed = parseInt(postLimitInput, 10);
-        if (!isNaN(parsed) && parsed > 0) {
-          postLimit = parsed;
-        }
-      }
-      maxPages = Math.ceil(postLimit / 50);
-    } else if (lastScrapedDate) {
-      // Incremental updates only need 1 or 2 pages max
-      maxPages = 2;
-    } else {
-      // Resuming a full scrape continues up to 50 pages at a time
-      maxPages = 50;
-    }
-
-    // Ask for credentials on mobile/desktop to avoid hardcoding in env if they expire
-    let sessionId = localStorage.getItem('instagram_session_id') || '';
-    let csrfToken = localStorage.getItem('instagram_csrf_token') || '';
-
-    const newSessionId = prompt('Enter INSTAGRAM_SESSION_ID (or leave blank to use the server default):', sessionId);
-    if (newSessionId !== null && newSessionId.trim() !== '') {
-      sessionId = newSessionId.trim();
-      localStorage.setItem('instagram_session_id', sessionId);
-    } else {
-      sessionId = ''; // fall back to env
-    }
-
-    let newCsrfToken = null;
-    if (sessionId) {
-      newCsrfToken = prompt('Enter INSTAGRAM_CSRF_TOKEN:', csrfToken);
-      if (newCsrfToken !== null && newCsrfToken.trim() !== '') {
-        csrfToken = newCsrfToken.trim();
-        localStorage.setItem('instagram_csrf_token', csrfToken);
-      } else {
-        csrfToken = ''; // fall back to env
-      }
-    }
-    
-    setRefreshing(cel.id)
-    setRefreshProgress('Initializing...')
-    
-    let lastReportedProgress = null;
-    try {
-      const res = await adminFetch('/api/admin/refresh_stats', {
-        method: 'POST',
-        body: { 
-          celebrityId: cel.id, 
-          instagram_handle: cel.instagram_handle, 
-          sessionId, 
-          csrfToken, 
-          maxPages,
-          nextMaxId,
-          initialStats,
-          lastScrapedDate
-        }
-      })
-      
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop(); 
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === 'progress') {
-              const s = data.stats;
-              lastReportedProgress = s;
-              setRefreshProgress(`Scraping... ${s.processedItems}/${s.totalPosts || '?'} posts`);
-            } else if (data.type === 'complete') {
-              setCelebrities(prev => prev.map(c => c.id === cel.id ? { ...c, ...data.result.updates } : c));
-              
-              // On success:
-              // 1. Remove pending progress
-              localStorage.removeItem(`pending_progress_${handleKey}`);
-              
-              // 2. Save the newest post date for incremental scraping next time
-              if (data.result.updates.most_liked_date || lastReportedProgress?.latestPostDate) {
-                const dateToSave = lastReportedProgress?.latestPostDate || data.result.updates.most_liked_date;
-                localStorage.setItem(`last_scraped_date_${handleKey}`, dateToSave);
-              }
-              
-              alert(`Successfully refreshed stats for @${cel.instagram_handle}!`);
-            } else if (data.type === 'error') {
-              throw new Error(data.error);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      // On error (e.g. Rate limit or Logout):
-      // If we have a cursor from our last progress update, save progress so we can resume!
-      if (lastReportedProgress && lastReportedProgress.nextMaxId) {
-        localStorage.setItem(`pending_progress_${handleKey}`, JSON.stringify({
-          nextMaxId: lastReportedProgress.nextMaxId,
-          stats: {
-            processedItems: lastReportedProgress.processedItems,
-            skippedPosts: lastReportedProgress.skippedPosts || 0,
-            totalReelViews: lastReportedProgress.totalReelViews,
-            totalReelLikes: lastReportedProgress.totalReelLikes,
-            totalPostLikes: lastReportedProgress.totalPostLikes,
-            totalComments: lastReportedProgress.totalComments,
-            topPostLikes: lastReportedProgress.topPostLikes?.count || 0,
-            topPostLikesDate: lastReportedProgress.topPostLikes?.date || null,
-            topPostComments: lastReportedProgress.topPostComments?.count || 0,
-            topPostCommentsDate: lastReportedProgress.topPostComments?.date || null,
-            topReelViews: lastReportedProgress.topReelViews?.count || 0,
-            topReelViewsDate: lastReportedProgress.topReelViews?.date || null,
-            latestItemsEngagement: lastReportedProgress.latestItemsEngagement || 0,
-            latestItemsCount: lastReportedProgress.latestItemsCount || 0,
-            latestPostDate: lastReportedProgress.latestPostDate || null
-          }
-        }));
-        alert(`Scraping paused due to error: ${err.message}.\n\nYour progress has been saved (${lastReportedProgress.processedItems} posts scraped). You can safely resume this scraping run later!`);
-      } else {
-        alert(`Scraper error: ${err.message}`)
-      }
-    } finally {
-      setRefreshing(null)
-      setRefreshProgress(null)
-    }
+    window.open(`/admin/scrape?id=${cel.id}&handle=${cel.instagram_handle}`, '_blank');
   }
 
   const openPostFormForHighlight = async (cel, highlightKey) => {
@@ -2272,6 +2095,67 @@ export default function AdminPanel() {
       showToast('✨ Followers count updated successfully!')
     } catch (err) {
       alert('Error updating followers: ' + err.message)
+    } finally {
+      setUpdatingFollowersId(null)
+    }
+  }
+
+  const handleSaveHandle = async (profile, index, shouldFetch = false) => {
+    const newHandle = tempHandles[profile.id] !== undefined ? tempHandles[profile.id].trim() : (profile.instagram_handle || '').trim()
+    
+    setUpdatingFollowersId(profile.id)
+    try {
+      // 1. Save the handle (using original profile data for other columns)
+      const saveRes = await adminFetch('/api/admin/most_followed', {
+        method: 'PUT',
+        body: {
+          id: profile.id,
+          name: profile.name,
+          photo_url: profile.photo_url,
+          followers_count: profile.followers_count,
+          followers_text: profile.followers_text,
+          order_index: profile.order_index,
+          category: profile.category,
+          language: profile.language,
+          instagram_handle: newHandle || null
+        }
+      })
+      const saveData = await saveRes.json()
+      if (saveData.error) throw new Error(saveData.error)
+      
+      // Update local profiles list
+      setMostFollowed(profiles => profiles.map(p => p.id === profile.id ? saveData.profile : p))
+      showToast('✅ Handle saved successfully!')
+
+      // 2. Fetch/Scrape if requested
+      if (shouldFetch) {
+        if (!newHandle) {
+          alert('Cannot fetch without an Instagram handle!')
+          setUpdatingFollowersId(null)
+          return
+        }
+        
+        const fetchRes = await adminFetch('/api/admin/most_followed', {
+          method: 'PUT',
+          body: { id: profile.id, action: 'scrape_followers' }
+        })
+        const fetchData = await fetchRes.json()
+        if (fetchData.error) throw new Error(fetchData.error)
+        
+        setMostFollowed(profiles => profiles.map(p => p.id === profile.id ? fetchData.profile : p))
+        showToast('✨ Followers count updated successfully!')
+
+        // Automatically move to the next profile!
+        setTimeout(() => {
+          const nextInput = document.getElementById(`handle-input-${index + 1}`)
+          if (nextInput) {
+            nextInput.focus()
+            nextInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 100)
+      }
+    } catch (err) {
+      alert('Error: ' + err.message)
     } finally {
       setUpdatingFollowersId(null)
     }
@@ -2736,33 +2620,20 @@ export default function AdminPanel() {
                 🔑 Instagram Scraper Authentication Session
               </h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.4 }}>
-                Enter your Instagram session cookies below. Once saved, these will be used globally by the scraper to bypass rate limits and login walls across all profiles.
+                Paste your full Instagram <strong>Cookie Header</strong> string below (copied from browser DevTools). This contains your session credentials and device IDs, which completely prevents Instagram from flagging your scraper as a bot.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 6 }}>Session ID (`sessionid`)</label>
-                  <input
-                    type={cookiesLocked ? "password" : "text"}
-                    className="input-field"
-                    value={instagramSessionId}
-                    onChange={e => setInstagramSessionId(e.target.value)}
-                    placeholder={cookiesLocked ? "••••••••••••••••••••" : "e.g. 26743302520%3AdlLiKYGJ..."}
-                    style={{ fontSize: 12 }}
-                    disabled={cookiesLocked}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 6 }}>CSRF Token (`csrftoken`)</label>
-                  <input
-                    type={cookiesLocked ? "password" : "text"}
-                    className="input-field"
-                    value={instagramCsrfToken}
-                    onChange={e => setInstagramCsrfToken(e.target.value)}
-                    placeholder={cookiesLocked ? "••••••••••••••••••••" : "e.g. 3pxgXMmL0NMR..."}
-                    style={{ fontSize: 12 }}
-                    disabled={cookiesLocked}
-                  />
-                </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', display: 'block', marginBottom: 6 }}>
+                  Full Instagram Cookie String
+                </label>
+                <textarea
+                  className="input-field"
+                  value={instagramSessionId}
+                  onChange={e => setInstagramSessionId(e.target.value)}
+                  placeholder={cookiesLocked ? "••••••••••••••••••••••••••••••••••••••••" : "Paste full Cookie string (e.g., mid=...; ig_did=...; csrftoken=...; sessionid=...)"}
+                  style={{ fontSize: 12, width: '100%', minHeight: 70, resize: 'vertical', fontFamily: 'monospace' }}
+                  disabled={cookiesLocked}
+                />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 {cookiesLocked ? (
@@ -3662,8 +3533,57 @@ export default function AdminPanel() {
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{profile.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 700, fontSize: 15 }}>{profile.name}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            (Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(Math.floor(profile.followers_count / 100000) / 10).toString().replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong>)
+                          </span>
+                        </div>
+
+                        {/* Inline ID / Handle Editor */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)' }}>Instagram ID:</span>
+                          <input
+                            id={`handle-input-${index}`}
+                            type="text"
+                            value={tempHandles[profile.id] !== undefined ? tempHandles[profile.id] : (profile.instagram_handle || '')}
+                            onChange={e => setTempHandles(prev => ({ ...prev, [profile.id]: e.target.value }))}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                handleSaveHandle(profile, index, true)
+                              }
+                            }}
+                            placeholder="e.g. virat.kohli"
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              border: '1px solid var(--border)',
+                              background: 'var(--surface2)',
+                              color: 'var(--text)',
+                              fontSize: 12,
+                              width: 160
+                            }}
+                            disabled={updatingFollowersId === profile.id}
+                          />
+                          <button
+                            className="btn"
+                            style={{ padding: '4px 8px', fontSize: 11, background: 'var(--surface2)', border: '1px solid var(--border)', height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => handleSaveHandle(profile, index, false)}
+                            disabled={updatingFollowersId === profile.id}
+                          >
+                            💾 Save
+                          </button>
+                          <button
+                            className="btn btn-primary"
+                            style={{ padding: '4px 8px', fontSize: 11, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => handleSaveHandle(profile, index, true)}
+                            disabled={updatingFollowersId === profile.id}
+                          >
+                            {updatingFollowersId === profile.id ? '⏳ Scraping...' : '🚀 Save & Fetch'}
+                          </button>
+                        </div>
+
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           Category: <strong style={{ color: 'var(--text)' }}>{(() => {
                             if (!profile.category) return 'None';
                             return profile.category.split(',').map(c => {
@@ -3674,32 +3594,10 @@ export default function AdminPanel() {
                               }
                               return trimmed;
                             }).join(', ');
-                          })()}</strong> &nbsp;·&nbsp; Language: <strong style={{ color: 'var(--text)' }}>{profile.language || 'None'}</strong> &nbsp;·&nbsp; Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(Math.floor(profile.followers_count / 100000) / 10).toString().replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'} &nbsp;·&nbsp; Handle: <strong style={{ color: 'var(--text)' }}>{profile.instagram_handle ? `@${profile.instagram_handle}` : 'None'}</strong>
+                          })()}</strong> &nbsp;·&nbsp; Language: <strong style={{ color: 'var(--text)' }}>{profile.language || 'None'}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <button 
-                          className="btn btn-ghost" 
-                          style={{ 
-                            padding: '6px 10px', 
-                            fontSize: 12,
-                            background: profile.instagram_handle ? 'rgba(79,172,254,0.1)' : 'rgba(0,0,0,0.03)', 
-                            border: '1px solid ' + (profile.instagram_handle ? 'rgba(79,172,254,0.3)' : 'var(--border)'),
-                            color: profile.instagram_handle ? 'var(--accent)' : 'var(--text-muted)',
-                            cursor: profile.instagram_handle ? 'pointer' : 'not-allowed',
-                            opacity: profile.instagram_handle ? 1 : 0.6
-                          }}
-                          onClick={() => {
-                            if (!profile.instagram_handle) {
-                              alert('Please edit this profile and add an Instagram handle first!');
-                              return;
-                            }
-                            handleUpdateFollowers(profile.id);
-                          }}
-                          disabled={updatingFollowersId === profile.id}
-                        >
-                          {updatingFollowersId === profile.id ? 'Updating...' : '🔄 Update'}
-                        </button>
                         <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
                           onClick={() => { setEditingMostFollowed({ ...profile, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString(), category: profile.category || '', language: profile.language || '', instagram_handle: profile.instagram_handle || '' }); setShowMostFollowedForm(false) }}>
                           Edit

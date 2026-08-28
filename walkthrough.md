@@ -33,6 +33,9 @@ Finally, we have integrated Adsterra advertisement units across key pages in a h
 * **[index.js (Admin)](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/admin/index.js):**
   - **Most Viewed Reels Tab**: Added a brand new sidebar tab for managing most viewed reels.
   - **Uploaded Date Calendar Picker**: Most Viewed Reels use a calendar date picker input in the form, whereas Trending Reels continue to use the dynamic hours-ago offset.
+  - The scraper tab will open with your cookies pre-populated.
+  - Click **Start Scraping**. It will scrape safely and super fast (2-5s scroll delays)! If it ever encounters a rate limit, the progress is saved, allowing you to resume with a fresh cookie string instantly. You can safely trigger the next chunk by clicking the **Resume Scrape (Run X of Y)** button.
+  - Once fully scraped, future updates can be run instantly via the **Daily Refresh** button!
 
 ### 5. Live (Most Followed) Section Spacing Optimization
 * **[pages/live.js](file:///c:/Users/Admin/Downloads/Spialr/instaSearch/pages/live.js):**

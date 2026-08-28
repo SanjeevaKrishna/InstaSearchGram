@@ -434,7 +434,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
                   {formatCount(celebrity.posts_count || postsCount)} posts
                 </span>
-                {liveRank && (
+                 {liveRank && compareLiveRank && (
                   <span style={{ fontSize: 11.5, color: '#e1306c', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
                     Ranked #{liveRank} Most Followed
                   </span>
@@ -486,7 +486,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
                   {formatCount(compareCelebrity.posts_count)} posts
                 </span>
-                {compareLiveRank && (
+                {liveRank && compareLiveRank && (
                   <span style={{ fontSize: 11.5, color: '#e1306c', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
                     Ranked #{compareLiveRank} Most Followed
                   </span>
