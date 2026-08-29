@@ -45,7 +45,7 @@ const generateReelSlug = (reel) => {
   return `${parts || 'watch'}-${reel.id}`
 }
 
-function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
+function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrending }) {
   const router = useRouter()
   const { trendType, trendVal } = getTrend(reel, absoluteRank - 1)
   const initials = (reel.creator_name || 'A').replace('@', '').substring(0, 1).toUpperCase()
@@ -104,10 +104,105 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
 
   const followersDisplay = (reel.followers_text || formatFollowers(reel.celebrity_followers_count))?.toUpperCase()
 
+  // 1. NATIVE INSTAGRAM COMMENT CARD DESIGN
   if (isComment) {
     return (
       <div 
-        className="leaderboard-row leaderboard-comment-row"
+        className="leaderboard-row leaderboard-instagram-comment-row"
+        onClick={() => {
+          if (reel.instagram_link) {
+            window.open(reel.instagram_link, '_blank')
+          } else {
+            router.push(`/reel/${generateReelSlug(reel)}`)
+          }
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 14,
+          padding: '16px 18px',
+          position: 'relative',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          background: 'transparent'
+        }}
+      >
+        {/* Left Rank */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 28, paddingTop: 4 }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+            #{absoluteRank}
+          </span>
+        </div>
+
+        {/* Commenter Avatar with Instagram Ring */}
+        <div className="row-avatar-container" style={{ width: 44, height: 44, flexShrink: 0 }}>
+          <div className="row-avatar-inner">
+            {reel.creator_photo_url ? (
+              <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+            ) : initials}
+          </div>
+        </div>
+
+        {/* Center: Username, Comment Content, Time & Reply */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 14, fontWeight: 750, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+              {reel.creator_name ? reel.creator_name.replace(/^@/, '') : 'instagram_user'}
+            </span>
+          </div>
+
+          <div style={{
+            fontSize: 14,
+            fontWeight: 450,
+            color: 'var(--text)',
+            lineHeight: 1.45,
+            wordBreak: 'break-word',
+            whiteSpace: 'pre-line'
+          }}>
+            {reel.title || reel.description}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, fontSize: 12, color: 'var(--text-muted)' }}>
+            <span>{timeAgo || '1d'}</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Reply</span>
+            {reel.instagram_link && (
+              <span style={{ fontWeight: 600, color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                Watch Reel <Play size={9} fill="currentColor" />
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Right End: Heart & Likes Count */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+          minWidth: 46,
+          paddingTop: 4,
+          flexShrink: 0
+        }}>
+          <Heart size={16} style={{ color: '#ff2a5f', fill: '#ff2a5f' }} />
+          <span style={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: 'var(--text)',
+            whiteSpace: 'nowrap'
+          }}>
+            {reel.likes_text || '—'}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // 2. BIG FULL-BLEED FEATURED CARD FOR LAST 24H TRENDING REELS
+  if (isTrending) {
+    return (
+      <div 
+        className="leaderboard-row leaderboard-featured-card"
         onClick={() => {
           router.push(`/reel/${generateReelSlug(reel)}`)
         }}
@@ -119,13 +214,35 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
           padding: '20px 22px',
         }}
       >
-        {/* Top Header: Rank, Avatar, Creator Name & Watch Button */}
+        {/* Top Header: Rank with Trend Badge, Avatar, Creator Name & Watch Button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-            <div className="row-rank-container" style={{ width: 'auto', alignSelf: 'center' }}>
-              <div className="row-rank-num" style={{ fontSize: 17 }}>
+            <div className="row-rank-container" style={{ width: 'auto', alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="row-rank-num" style={{ fontSize: 18, fontWeight: 800 }}>
                 #{absoluteRank}
               </div>
+              {!isMostViewed && (
+                <div className="row-trend-container" style={{ margin: 0 }}>
+                  {trendType === 'up' && (
+                    <span className="row-trend-badge trend-up">
+                      <ChevronUp className="trend-icon" strokeWidth={3} /> {trendVal}
+                    </span>
+                  )}
+                  {trendType === 'down' && (
+                    <span className="row-trend-badge trend-down">
+                      <ChevronDown className="trend-icon" strokeWidth={3} /> {trendVal}
+                    </span>
+                  )}
+                  {trendType === 'new' && (
+                    <span className="row-trend-badge trend-new">
+                      NEW
+                    </span>
+                  )}
+                  {trendType === 'stable' && (
+                    <Minus className="trend-icon trend-stable" strokeWidth={3} />
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="row-avatar-container" style={{ width: 42, height: 42, flexShrink: 0 }}>
@@ -147,50 +264,84 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment }) {
           </button>
         </div>
 
-        {/* Middle: Reel Thumbnail */}
+        {/* Middle: Full-Bleed Edge-to-Edge Reel Thumbnail (0 Black Borders!) */}
         {reel.photo_url ? (
           <div className="row-thumbnail-wide" style={{
             width: '100%',
-            maxHeight: 220,
+            aspectRatio: '16 / 10',
+            maxHeight: 380,
             borderRadius: 14,
-            background: '#09090b',
+            background: 'var(--surface2)',
             overflow: 'hidden',
             position: 'relative',
             border: '1px solid var(--border)',
             boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            padding: '6px'
+            justifyContent: 'center'
           }}>
             <img 
               src={reel.photo_url} 
-              alt={reel.title || 'Comment Image'} 
+              alt={reel.title || 'Trending Reel'} 
               style={{ 
                 width: '100%', 
-                maxHeight: 210, 
-                objectFit: 'contain',
-                borderRadius: 10,
+                height: '100%', 
+                objectFit: 'cover',
                 display: 'block' 
               }} 
               onError={(e) => { e.target.style.display = 'none' }} 
             />
+            <div className="play-overlay" style={{ opacity: 0.85 }}>
+              <div className="play-overlay-icon" style={{ width: 44, height: 44 }}>
+                <Play size={16} fill="currentColor" style={{ marginLeft: 2 }} />
+              </div>
+            </div>
           </div>
         ) : null}
 
-        {/* Below Reel Thumbnail: Title, Likes & Date */}
+        {/* Below Reel Thumbnail: Title, Views, Likes & Date */}
         <div className="row-details-container" style={{ gap: 6, width: '100%' }}>
-          <h4 className="row-title" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.4, margin: 0 }}>
+          <h4 className="row-title" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.4, margin: 0, color: 'var(--text)' }}>
             {reel.title}
           </h4>
 
-          <div className="row-meta-container" style={{ gap: 12, marginTop: 2 }}>
+          <div className="row-meta-container" style={{ gap: 10, marginTop: 4, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+            {reel.views_text && (
+              <span className="row-meta-item" style={{
+                background: 'rgba(99, 102, 241, 0.08)',
+                color: '#6366f1',
+                padding: '3px 8px',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4
+              }}>
+                <Eye size={12} style={{ color: '#6366f1' }} />
+                <span>{reel.views_text} views</span>
+              </span>
+            )}
             {reel.likes_text && (
-              <span className="row-meta-item">
-                <Heart size={13} style={{ color: '#ff2a5f', fill: '#ff2a5f', flexShrink: 0 }} />
-                <span style={{ background: 'linear-gradient(135deg, #ff2a5f 0%, #ff6b35 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 850, fontSize: 13 }}>
-                  {reel.likes_text} likes
-                </span>
+              <span className="row-meta-item" style={{
+                background: 'rgba(255, 42, 95, 0.08)',
+                color: '#ff2a5f',
+                padding: '3px 8px',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4
+              }}>
+                <Heart size={12} style={{ color: '#ff2a5f', fill: '#ff2a5f' }} />
+                <span>{reel.likes_text} likes</span>
+              </span>
+            )}
+            {!isMostViewed && followersDisplay && (
+              <span className="row-meta-item" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
+                <Users size={12} />
+                {followersDisplay}
               </span>
             )}
             {timeAgo && (
@@ -950,6 +1101,7 @@ export default function TrendingPage({ initialData = null }) {
                           absoluteRank={absoluteRank} 
                           isMostViewed={activeTab === 'most_viewed'}
                           isComment={activeSubTab === 'comments'}
+                          isTrending={activeTab === 'trending'}
                         />
                       </div>
                     )
@@ -1201,6 +1353,19 @@ export default function TrendingPage({ initialData = null }) {
           .leaderboard-row {
             padding: 12px 10px !important;
             gap: 8px !important;
+          }
+          .leaderboard-featured-card {
+            padding: 16px 14px !important;
+            gap: 12px !important;
+          }
+          .leaderboard-featured-card .row-thumbnail-wide {
+            aspect-ratio: 16 / 10 !important;
+            max-height: 280px !important;
+            border-radius: 12px !important;
+          }
+          .leaderboard-featured-card .row-title {
+            font-size: 15px !important;
+            line-height: 1.35 !important;
           }
           .row-rank-container {
             width: 28px !important;

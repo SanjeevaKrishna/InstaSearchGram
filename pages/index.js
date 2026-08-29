@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import Head from 'next/head'
+import Link from 'next/link'
 import CelebrityCard from '../components/CelebrityCard'
 import { Sparkles, Search, Flame } from 'lucide-react'
 import { supabase } from '../lib/supabase'

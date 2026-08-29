@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus, CornerUpLeft } from 'lucide-react'
+import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, Pause, RotateCcw, FastForward, Activity, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus, CornerUpLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { safeStorage } from '../lib/storage'
 
@@ -24,6 +24,29 @@ const InstagramIcon = ({ size = 24, strokeWidth = 2, style = {} }) => (
     <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
   </svg>
 )
+
+const GrowthTimelineIcon = ({ size = 20, color = '#ffffff' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.25" />
+    <circle cx="6" cy="6" r="2.2" />
+    <circle cx="18" cy="6" r="2.2" />
+    <circle cx="6" cy="18" r="2.2" />
+    <circle cx="18" cy="18" r="2.2" />
+    <line x1="8" y1="8" x2="10" y2="10" />
+    <line x1="16" y1="8" x2="14" y2="10" />
+    <line x1="8" y1="16" x2="10" y2="14" />
+    <line x1="16" y1="16" x2="14" y2="14" />
+  </svg>
+)
+
+const formatNumber = (num) => {
+  if (num === null || num === undefined) return '0'
+  const abs = Math.abs(Number(num) || 0)
+  if (abs >= 1000000000) return (abs / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B'
+  if (abs >= 1000000) return (abs / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+  if (abs >= 1000) return (abs / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+  return abs.toLocaleString('en-US')
+}
 
 const getOrdinal = (n) => {
   if (!n) return ''
@@ -98,6 +121,31 @@ const getProfileTrend = (profile, index) => {
   }
   return { trendType, trendVal }
 }
+
+const RACE_BAR_COLORS = [
+  '#9333ea', // Violet Purple (Vijay)
+  '#0d9488', // Teal/Cyan (Rajni)
+  '#d97706', // Amber Ochre (Mahesh Babu)
+  '#c2410c', // Rust Bronze (Prabhas)
+  '#0284c7', // Sky Cerulean (Pawan Kalyan)
+  '#b45309', // Terracotta Brown (Ajith)
+  '#4338ca', // Deep Indigo (Suriya)
+  '#059669', // Emerald Green (Allu Arjun)
+  '#047857', // Forest Jade (Jr NTR)
+  '#3b82f6', // Electric Blue (Ram Charan)
+  '#4b5563', // Slate Charcoal (Chiranjeevi)
+  '#db2777', // Pink Magenta (Karthi)
+  '#65a30d', // Olive Lime (Balakrishna)
+  '#0891b2', // Deep Cyan (Yash)
+  '#e11d48', // Crimson Red
+  '#ea580c', // Bright Orange
+  '#7c3aed', // Bright Violet
+  '#16a34a', // Grass Green
+  '#2563eb', // Royal Blue
+  '#ca8a04', // Sun Amber
+]
+
+const TIMELINE_PALETTE = RACE_BAR_COLORS
 
 const getCategoryStyle = (tabCategory) => {
   const cat = (tabCategory || '').toLowerCase().trim()
@@ -277,7 +325,72 @@ export default function LivePage({ initialLiveData = null }) {
   const [hoveredTab, setHoveredTab] = useState(null)
   const [selectedLanguage, setSelectedLanguage] = useState('All')
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
-  const [displayLimit, setDisplayLimit] = useState(50)
+  const [displayLimit, setDisplayLimit] = useState(100)
+
+  // Follower Growth Progressive Timeline States (Dynamic up to Today's date)
+  const [timelineMode, setTimelineMode] = useState(false)
+  const [timelineDateIndex, setTimelineDateIndex] = useState(0)
+  const [isTimelinePlaying, setIsTimelinePlaying] = useState(false)
+  const [timelineSpeed, setTimelineSpeed] = useState(1)
+  const [timelineZoom, setTimelineZoom] = useState(1.0)
+
+  // Dynamic Timeline Dates: Extracts actual recorded dates from database up to Today's date
+  const timelineDates = useMemo(() => {
+    const datesSet = new Set()
+    const profiles = liveData?.most_followed || initialLiveData?.most_followed || []
+    profiles.forEach(p => {
+      if (Array.isArray(p.follower_history)) {
+        p.follower_history.forEach(h => {
+          if (h && h.date && typeof h.date === 'string' && h.date >= '2026-08-28') {
+            datesSet.add(h.date)
+          }
+        })
+      }
+    })
+
+    const todayISO = new Date().toISOString().split('T')[0]
+    datesSet.add(todayISO)
+
+    const sortedISO = Array.from(datesSet).sort()
+    return sortedISO.map(iso => {
+      const [y, m, d] = iso.split('-')
+      const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
+      const label = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+      return {
+        iso,
+        label,
+        year: y
+      }
+    })
+  }, [liveData, initialLiveData])
+  // Sync timeline query param if navigated via ?timeline=true
+  useEffect(() => {
+    if (router.isReady && router.query.timeline === 'true') {
+      setTimelineMode(true)
+      setActiveTab('most_followed')
+      if (timelineDates.length > 0) {
+        setTimelineDateIndex(timelineDates.length - 1)
+      }
+    }
+  }, [router.isReady, router.query.timeline, timelineDates.length])
+
+  // Timeline Auto-play Loop
+  useEffect(() => {
+    let interval = null
+    if (isTimelinePlaying) {
+      interval = setInterval(() => {
+        setTimelineDateIndex(prev => {
+          if (prev >= timelineDates.length - 1) {
+            return 0
+          }
+          return prev + 1
+        })
+      }, 850 / timelineSpeed)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [isTimelinePlaying, timelineSpeed, timelineDates.length])
 
   const loaderRef = useRef(null)
 
@@ -289,10 +402,10 @@ export default function LivePage({ initialLiveData = null }) {
     const observer = new IntersectionObserver((entries) => {
       const firstEntry = entries[0]
       if (firstEntry.isIntersecting) {
-        setDisplayLimit(prev => prev + 50)
+        setDisplayLimit(prev => prev + 100)
       }
     }, {
-      rootMargin: '150px',
+      rootMargin: '300px',
       threshold: 0.1
     })
 
@@ -780,8 +893,8 @@ export default function LivePage({ initialLiveData = null }) {
               </button>
             </div>
 
-            {/* Language Filter Dropdown (aligned right side of the row) */}
-            {activeTab === 'most_followed' && !loading && !error && liveData && liveData.most_followed && liveData.most_followed.length > 0 && (
+            {/* Language Filter Dropdown (hidden in timelineMode) */}
+            {activeTab === 'most_followed' && !timelineMode && !loading && !error && liveData && liveData.most_followed && liveData.most_followed.length > 0 && (
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
@@ -887,6 +1000,23 @@ export default function LivePage({ initialLiveData = null }) {
           /* MOST FOLLOWED TAB */
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
+            {/* Helpful navigation tip placed cleanly above search bar */}
+            {!timelineMode && liveData.most_followed.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: '2px 4px 6px',
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--text-muted)',
+                letterSpacing: '-0.01em'
+              }}>
+                Click any profile for detailed analytics & daily follower growth
+              </div>
+            )}
+
             {/* Search Input */}
             {liveData.most_followed.length > 0 && (
               <div style={{
@@ -940,8 +1070,8 @@ export default function LivePage({ initialLiveData = null }) {
               </div>
             )}
 
-            {/* Category Filter */}
-            {liveData.most_followed.length > 0 && (() => {
+            {/* Category Filter (hidden in timelineMode) */}
+            {!timelineMode && liveData.most_followed.length > 0 && (() => {
               const categories = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers']
 
               return (
@@ -953,32 +1083,32 @@ export default function LivePage({ initialLiveData = null }) {
                   marginBottom: 12,
                   WebkitOverflowScrolling: 'touch',
                 }}>
-                  {categories.map((cat) => {
-                    const isActive = selectedCategory.toLowerCase() === cat.toLowerCase()
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: '100px',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          border: '1px solid',
-                          borderColor: isActive ? 'var(--accent)' : 'var(--border)',
-                          background: isActive ? 'var(--gradient-subtle)' : 'var(--surface)',
-                          color: isActive ? 'var(--accent)' : 'var(--text-dim)',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          transition: 'all 0.2s ease',
-                          boxShadow: isActive ? '0 2px 6px rgba(225, 48, 108, 0.1)' : 'none'
-                        }}
-                      >
-                        {cat}
-                      </button>
-                    )
-                  })}
-                </div>
+                    {categories.map((cat) => {
+                      const isActive = selectedCategory.toLowerCase() === cat.toLowerCase()
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '100px',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            border: '1px solid',
+                            borderColor: isActive ? 'var(--accent)' : 'var(--border)',
+                            background: isActive ? 'var(--gradient-subtle)' : 'var(--surface)',
+                            color: isActive ? 'var(--accent)' : 'var(--text-dim)',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s ease',
+                            boxShadow: isActive ? '0 2px 6px rgba(225, 48, 108, 0.1)' : 'none'
+                          }}
+                        >
+                          {cat}
+                        </button>
+                      )
+                    })}
+                  </div>
               )
             })()}
 
@@ -989,31 +1119,33 @@ export default function LivePage({ initialLiveData = null }) {
                 <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Check back later for update ranks.</p>
               </div>
             ) : (() => {
-              // 1. Filter by category and language first
-              const categoryFiltered = (liveData.most_followed || []).filter(p => {
-                let matchesCategory = false
-                if (selectedCategory.toLowerCase() === 'all') {
-                  matchesCategory = true
-                } else {
-                  matchesCategory = p.category && p.category.split(',').some(catStr => {
-                    const parsed = parseCategoryAndTag(catStr)
-                    return parsed.tabCategory.toLowerCase() === selectedCategory.toLowerCase()
+              // In Timeline Mode, show all profiles without category/language filters
+              const baseList = timelineMode 
+                ? (liveData.most_followed || [])
+                : (liveData.most_followed || []).filter(p => {
+                    let matchesCategory = false
+                    if (selectedCategory.toLowerCase() === 'all') {
+                      matchesCategory = true
+                    } else {
+                      matchesCategory = p.category && p.category.split(',').some(catStr => {
+                        const parsed = parseCategoryAndTag(catStr)
+                        return parsed.tabCategory.toLowerCase() === selectedCategory.toLowerCase()
+                      })
+                    }
+
+                    const matchesLanguage = selectedLanguage === 'All' || 
+                      (p.language && p.language.split(',').map(l => l.trim().toLowerCase()).includes(selectedLanguage.toLowerCase()))
+                    return matchesCategory && matchesLanguage
                   })
-                }
 
-                const matchesLanguage = selectedLanguage === 'All' || 
-                  (p.language && p.language.split(',').map(l => l.trim().toLowerCase()).includes(selectedLanguage.toLowerCase()))
-                return matchesCategory && matchesLanguage
-              })
-
-              // 2. Assign category-specific rankings
-              const rankedCategoryList = categoryFiltered.map((p, idx) => ({
+              // Assign rankings
+              const rankedList = baseList.map((p, idx) => ({
                 ...p,
                 categoryRank: idx + 1
               }))
 
-              // 3. Filter by search query for display
-              const filtered = rankedCategoryList.filter(p => {
+              // Filter by search query for display
+              const filtered = rankedList.filter(p => {
                 const query = searchQuery.toLowerCase();
                 return p.name?.toLowerCase().includes(query) ||
                        p.instagram_handle?.toLowerCase().includes(query);
@@ -1026,6 +1158,533 @@ export default function LivePage({ initialLiveData = null }) {
                   </div>
                 )
               }
+
+              if (timelineMode) {
+                const activeTimelineItem = timelineDates[timelineDateIndex] || timelineDates[timelineDates.length - 1] || { iso: '2026-08-29', label: '29 Aug', year: '2026' }
+                const activeDateISO = activeTimelineItem.iso
+                const activeDateStr = activeTimelineItem.label
+                const startDateStr = timelineDates[0]?.label || '29 Aug'
+                const endDateStr = timelineDates[timelineDates.length - 1]?.label || '29 Aug'
+
+                // Compute profile ranks and follower counts for the active timeline date
+                const timelineProfiles = filtered.map(p => {
+                  let count = p.followers_count || 0
+                  let prevCount = null
+
+                  if (Array.isArray(p.follower_history) && p.follower_history.length > 0) {
+                    const sortedHistory = [...p.follower_history].sort((a, b) => new Date(a.date) - new Date(b.date))
+                    const exactEntry = sortedHistory.find(h => h.date === activeDateISO)
+                    if (exactEntry) {
+                      count = exactEntry.count
+                    } else {
+                      const prior = sortedHistory.filter(h => h.date <= activeDateISO)
+                      if (prior.length > 0) {
+                        count = prior[prior.length - 1].count
+                      }
+                    }
+
+                    const currentIdx = sortedHistory.findIndex(h => h.date === activeDateISO)
+                    if (currentIdx > 0) {
+                      prevCount = sortedHistory[currentIdx - 1].count
+                    }
+                  }
+
+                  const dailyDelta = prevCount !== null ? (count - prevCount) : null
+
+                  return {
+                    ...p,
+                    countOnDate: count,
+                    dailyDelta
+                  }
+                }).sort((a, b) => (b.countOnDate || 0) - (a.countOnDate || 0))
+
+                const maxFollowersOnDate = timelineProfiles.length > 0 ? (timelineProfiles[0].countOnDate || 1) : 1
+
+                return (
+                  <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {/* WHITE RACE CANVAS (Matching User Reference Image) */}
+                    <div style={{
+                      background: '#ffffff',
+                      borderRadius: 24,
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 20px 60px rgba(0,0,0,0.06)',
+                      padding: '32px 24px 44px',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      {/* Top Header of Race Canvas */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 16,
+                        marginBottom: 26,
+                        borderBottom: '1px solid #f1f5f9',
+                        paddingBottom: 18
+                      }}>
+                        <div>
+                          <div style={{
+                            fontSize: 20,
+                            fontWeight: 900,
+                            letterSpacing: '0.04em',
+                            color: '#0f172a',
+                            fontFamily: 'var(--font-display)',
+                            textTransform: 'uppercase',
+                            lineHeight: 1.2
+                          }}>
+                            TOP INSTAGRAM PROFILES LIVE RACE
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b', marginTop: 4 }}>
+                            Linear Follower Momentum · {startDateStr} to {endDateStr} (Today)
+                          </div>
+                        </div>
+
+                        {/* Canvas Zoom Controls (Allows unconstrained zooming in and out) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', padding: '6px 12px', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: 12, fontWeight: 750, color: '#64748b' }}>Zoom Canvas:</span>
+                          <button
+                            onClick={() => setTimelineZoom(prev => Math.max(0.5, Number((prev - 0.25).toFixed(2))))}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 6,
+                              border: '1px solid #cbd5e1',
+                              background: '#ffffff',
+                              color: '#334155',
+                              fontSize: 14,
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Zoom Out"
+                          >
+                            −
+                          </button>
+                          <button
+                            onClick={() => setTimelineZoom(1.0)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 6,
+                              border: '1px solid #cbd5e1',
+                              background: timelineZoom === 1.0 ? '#6366f1' : '#ffffff',
+                              color: timelineZoom === 1.0 ? '#ffffff' : '#334155',
+                              fontSize: 11.5,
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                            title="Reset Zoom to 100%"
+                          >
+                            {Math.round(timelineZoom * 100)}%
+                          </button>
+                          <button
+                            onClick={() => setTimelineZoom(prev => Math.min(3.5, Number((prev + 0.25).toFixed(2))))}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 6,
+                              border: '1px solid #cbd5e1',
+                              background: '#ffffff',
+                              color: '#334155',
+                              fontSize: 14,
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Zoom In (Expand Canvas Width)"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Scrollable Horizontal Arena */}
+                      <div style={{ overflowX: 'auto', paddingBottom: 24 }}>
+                        <div style={{
+                          minWidth: `${Math.round(920 * timelineZoom)}px`,
+                          width: `${Math.round(100 * timelineZoom)}%`,
+                          position: 'relative',
+                          transition: 'width 0.2s ease, min-width 0.2s ease'
+                        }}>
+                          {/* Top Milestone Axis & Vertical Grid Lines */}
+                          {(() => {
+                            const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0].map(r => Math.round(maxFollowersOnDate * r))
+
+                            return (
+                              <div style={{ position: 'relative', marginLeft: 160, marginRight: 200, height: 26, marginBottom: 14 }}>
+                                {ticks.map((t, i) => {
+                                  const leftPct = (t / maxFollowersOnDate) * 100
+                                  return (
+                                    <div key={i} style={{ position: 'absolute', left: `${leftPct}%`, transform: 'translateX(-50%)', textAlign: 'center' }}>
+                                      <div style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', fontFamily: 'monospace' }}>
+                                        {t >= 1000000 ? `${(t / 1000000).toFixed(0)}M` : t >= 1000 ? `${(t / 1000).toFixed(0)}K` : t}
+                                      </div>
+                                      {/* Vertical dashed grid line spanning down entire list */}
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: 22,
+                                        left: '50%',
+                                        width: 1,
+                                        height: `${timelineProfiles.length * 42 + 20}px`,
+                                        borderLeft: '1px dashed #f1f5f9',
+                                        pointerEvents: 'none',
+                                        zIndex: 1
+                                      }} />
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )
+                          })()}
+
+                          {/* Profile Bar Rows (Linear Proportions + Avatars at Bar Tip) */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', zIndex: 2 }}>
+                            {timelineProfiles.map((profile, index) => {
+                              const count = profile.countOnDate || 0
+                              // Exact linear scale percentage relative to max
+                              const barPct = Math.max(1.5, (count / maxFollowersOnDate) * 100)
+                              const barColor = RACE_BAR_COLORS[index % RACE_BAR_COLORS.length]
+                              const delta = profile.dailyDelta
+
+                              return (
+                                <div
+                                  key={profile.id || profile.name}
+                                  onClick={() => router.push(`/profile/${getProfileSlug(profile)}`)}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    height: 34,
+                                    cursor: 'pointer',
+                                    borderRadius: 6,
+                                    transition: 'background 0.15s ease'
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(241,245,249,0.7)' }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                                >
+                                  {/* Left Column: Creator Name (Right-aligned, bold uppercase) */}
+                                  <div style={{
+                                    width: 155,
+                                    flexShrink: 0,
+                                    textAlign: 'right',
+                                    paddingRight: 14,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    <span style={{
+                                      fontSize: 12,
+                                      fontWeight: 900,
+                                      color: '#1e293b',
+                                      letterSpacing: '0.02em',
+                                      textTransform: 'uppercase',
+                                      fontFamily: 'var(--font-display)'
+                                    }}>
+                                      {profile.name}
+                                    </span>
+                                  </div>
+
+                                  {/* Center: The Colored Bar Track */}
+                                  <div style={{ flex: 1, position: 'relative', height: '100%', display: 'flex', alignItems: 'center', marginRight: 180 }}>
+                                    <div
+                                      style={{
+                                        width: `${barPct}%`,
+                                        height: 24,
+                                        background: barColor,
+                                        borderRadius: 4,
+                                        position: 'relative',
+                                        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                                      }}
+                                    >
+                                      {/* Circular Avatar overlapping the right tip of the bar */}
+                                      <div style={{
+                                        position: 'absolute',
+                                        right: -16,
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: '50%',
+                                        border: '2.5px solid #ffffff',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                                        overflow: 'hidden',
+                                        background: '#f8fafc',
+                                        zIndex: 5,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                      }}>
+                                        {profile.photo_url ? (
+                                          <img src={profile.photo_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                                        ) : (
+                                          <span style={{ fontSize: 11, fontWeight: 800, color: '#334155' }}>{profile.name?.charAt(0)}</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Number count & Delta Badge directly beside avatar */}
+                                    <div style={{
+                                      position: 'absolute',
+                                      left: `calc(${barPct}% + 22px)`,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                      whiteSpace: 'nowrap',
+                                      transition: 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                      zIndex: 4
+                                    }}>
+                                      <span style={{
+                                        fontSize: 13,
+                                        fontWeight: 850,
+                                        color: '#334155',
+                                        fontFamily: 'monospace',
+                                        letterSpacing: '-0.02em'
+                                      }}>
+                                        {count.toLocaleString('en-US')}
+                                      </span>
+
+                                      {delta !== null && delta !== 0 && (
+                                        <span style={{
+                                          fontSize: 10.5,
+                                          fontWeight: 800,
+                                          color: delta > 0 ? '#16a34a' : '#dc2626',
+                                          fontFamily: 'var(--font-display)'
+                                        }}>
+                                          ({delta > 0 ? `+${formatNumber(delta)}` : `-${formatNumber(Math.abs(delta))}`})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+
+                          {/* Giant Year / Date Watermark on Bottom Right (Matches Reference Image) */}
+                          <div style={{
+                            position: 'absolute',
+                            right: 24,
+                            bottom: 16,
+                            textAlign: 'right',
+                            pointerEvents: 'none',
+                            zIndex: 1
+                          }}>
+                            <div style={{
+                              fontSize: 64,
+                              fontWeight: 950,
+                              color: '#e2e8f0',
+                              lineHeight: 1,
+                              fontFamily: 'var(--font-display)',
+                              letterSpacing: '-0.04em'
+                            }}>
+                              {activeTimelineItem.year || '2026'}
+                            </div>
+                            <div style={{ fontSize: 14, fontWeight: 850, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>
+                              {activeDateStr}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* STICKY PROGRESSIVE TIMELINE SCRUBBER */}
+                    <div
+                      onWheel={(e) => {
+                        e.preventDefault()
+                        setTimelineDateIndex(prev => e.deltaY > 0 ? Math.max(0, prev - 1) : Math.min(timelineDates.length - 1, prev + 1))
+                      }}
+                      style={{
+                        position: 'sticky',
+                        bottom: 16,
+                        zIndex: 90,
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 20,
+                        padding: '16px 20px',
+                        boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12
+                      }}
+                    >
+                      {/* Controls Top Row: Symmetrical Layout with Play in the Middle */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                        {/* Left: Jump to Start Date */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <button
+                            onClick={() => {
+                              setIsTimelinePlaying(false)
+                              setTimelineDateIndex(0)
+                            }}
+                            title={`Jump to ${startDateStr}`}
+                            style={{
+                              padding: '7px 14px',
+                              borderRadius: 100,
+                              border: '1px solid var(--border)',
+                              background: timelineDateIndex === 0 ? 'rgba(99, 102, 241, 0.12)' : 'var(--surface2)',
+                              color: timelineDateIndex === 0 ? '#6366f1' : 'var(--text)',
+                              fontSize: 12,
+                              fontWeight: 750,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <RotateCcw size={12} />
+                            <span>{startDateStr}</span>
+                          </button>
+                        </div>
+
+                        {/* Middle: Centered Play / Pause Button */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <button
+                            onClick={() => setIsTimelinePlaying(!isTimelinePlaying)}
+                            style={{
+                              padding: '9px 24px',
+                              borderRadius: 100,
+                              border: 'none',
+                              background: isTimelinePlaying 
+                                ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
+                                : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%)',
+                              color: '#ffffff',
+                              fontSize: 13.5,
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              boxShadow: isTimelinePlaying 
+                                ? '0 6px 20px rgba(239, 68, 68, 0.35)' 
+                                : '0 6px 20px rgba(99, 102, 241, 0.35)',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {isTimelinePlaying ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}
+                            <span>{isTimelinePlaying ? 'Pause Timeline' : 'Play Timeline'}</span>
+                          </button>
+                        </div>
+
+                        {/* Right: Jump to Today (End Date) & Speed selector */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <button
+                            onClick={() => {
+                              setIsTimelinePlaying(false)
+                              setTimelineDateIndex(timelineDates.length - 1)
+                            }}
+                            title={`Jump to ${endDateStr} (Today)`}
+                            style={{
+                              padding: '7px 14px',
+                              borderRadius: 100,
+                              border: '1px solid var(--border)',
+                              background: timelineDateIndex === timelineDates.length - 1 ? 'rgba(99, 102, 241, 0.12)' : 'var(--surface2)',
+                              color: timelineDateIndex === timelineDates.length - 1 ? '#6366f1' : 'var(--text)',
+                              fontSize: 12,
+                              fontWeight: 750,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <span>{endDateStr}</span>
+                            <FastForward size={12} />
+                          </button>
+
+                          {/* Speed Selector */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'var(--surface2)', padding: '3px 5px', borderRadius: 8, border: '1px solid var(--border)' }}>
+                            {[1, 2, 4].map(s => (
+                              <button
+                                key={s}
+                                onClick={() => setTimelineSpeed(s)}
+                                style={{
+                                  padding: '3px 7px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  fontWeight: 750,
+                                  border: 'none',
+                                  background: timelineSpeed === s ? '#6366f1' : 'transparent',
+                                  color: timelineSpeed === s ? '#ffffff' : 'var(--text-muted)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                {s}x
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Dynamic Progressive Range Slider */}
+                      <div style={{ width: '100%' }}>
+                        <input
+                          type="range"
+                          min={0}
+                          max={Math.max(1, timelineDates.length - 1)}
+                          step={1}
+                          value={Math.min(timelineDateIndex, Math.max(0, timelineDates.length - 1))}
+                          onChange={e => {
+                            setIsTimelinePlaying(false)
+                            setTimelineDateIndex(parseInt(e.target.value, 10))
+                          }}
+                          style={{
+                            width: '100%',
+                            height: 6,
+                            borderRadius: 3,
+                            accentColor: '#6366f1',
+                            cursor: 'pointer'
+                          }}
+                        />
+
+                        {/* Quick Dynamic Date Chips */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginTop: 4,
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          color: 'var(--text-muted)',
+                          fontFamily: 'monospace'
+                        }}>
+                          {timelineDates.map((item, idx) => {
+                            const isSelected = (timelineDates[timelineDateIndex]?.iso || '') === item.iso
+                            return (
+                              <span
+                                key={item.iso}
+                                onClick={() => {
+                                  setIsTimelinePlaying(false)
+                                  setTimelineDateIndex(idx)
+                                }}
+                                style={{
+                                  cursor: 'pointer',
+                                  color: isSelected ? '#6366f1' : 'var(--text-muted)',
+                                  fontWeight: isSelected ? 900 : 600,
+                                  background: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                {item.label}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
               return (
                 <div style={{
                   border: 'none',
@@ -1734,6 +2393,54 @@ export default function LivePage({ initialLiveData = null }) {
             </div>
           </div>
         )}
+
+        {/* ── FLOATING 31 GROWTH TIMELINE ACTION BUTTON (ICON-ONLY AS IN USER SKETCH) ── */}
+        {activeTab === 'most_followed' && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: 84,
+              right: 20,
+              zIndex: 999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <button
+              onClick={() => setTimelineMode(!timelineMode)}
+              className="timeline-floating-fab"
+              title={timelineMode ? 'Close Timeline & return to normal list' : 'Open 31 Growth Timeline'}
+              style={{
+                width: 50,
+                height: 50,
+                padding: 0,
+                borderRadius: 16,
+                border: 'none',
+                background: timelineMode
+                  ? 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)'
+                  : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%)',
+                color: '#ffffff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: timelineMode
+                  ? '0 8px 30px rgba(49, 46, 129, 0.5), 0 0 0 2px rgba(99, 102, 241, 0.5)'
+                  : '0 8px 30px rgba(99, 102, 241, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.25) inset',
+                transform: 'translateY(0)',
+                transition: 'all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                userSelect: 'none',
+              }}
+            >
+              {timelineMode ? (
+                <X size={22} color="#ffffff" strokeWidth={2.5} />
+              ) : (
+                <GrowthTimelineIcon size={24} color="#ffffff" />
+              )}
+            </button>
+          </div>
+        )}
       </main>
 
       <style jsx global>{`
@@ -1754,6 +2461,15 @@ export default function LivePage({ initialLiveData = null }) {
         .live-badge-btn:active {
           transform: translateY(0px) scale(0.97);
           box-shadow: 0 2px 6px rgba(225, 48, 108, 0.1);
+        }
+
+        .timeline-floating-fab:hover {
+          transform: translateY(-3px) scale(1.03) !important;
+          box-shadow: 0 12px 36px rgba(99, 102, 241, 0.6) !important;
+        }
+
+        .timeline-floating-fab:active {
+          transform: translateY(0px) scale(0.96) !important;
         }
 
         .table-row-hover:hover {
@@ -2136,12 +2852,16 @@ export async function getServerSideProps() {
       profilesResult1, 
       profilesResult2, 
       profilesResult3, 
+      profilesResult4,
+      profilesResult5,
       reelsResult
     ] = await Promise.all([
       supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(3000, 3999),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(4000, 4999),
       supabase.from('viral_reels').select('*')
     ])
 
@@ -2149,6 +2869,8 @@ export async function getServerSideProps() {
     if (profilesResult1.error) throw profilesResult1.error
     if (profilesResult2.error) throw profilesResult2.error
     if (profilesResult3.error) throw profilesResult3.error
+    if (profilesResult4.error) throw profilesResult4.error
+    if (profilesResult5.error) throw profilesResult5.error
     if (reelsResult.error) throw reelsResult.error
 
     const settingsData = settingsResult.data
@@ -2158,6 +2880,8 @@ export async function getServerSideProps() {
     const profilesData = (profilesResult1.data || [])
       .concat(profilesResult2.data || [])
       .concat(profilesResult3.data || [])
+      .concat(profilesResult4.data || [])
+      .concat(profilesResult5.data || [])
 
     const sortedReels = (reelsData || []).sort((a, b) => {
       const rankA = a.order_index || 999999

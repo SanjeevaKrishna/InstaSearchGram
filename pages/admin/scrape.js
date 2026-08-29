@@ -385,6 +385,7 @@ export default function ScrapeConsole() {
     <>
       <Head>
         <title>Scraper Console | @{handle || 'Instagram'}</title>
+        <meta name="robots" content="noindex,nofollow" />
       </Head>
 
       <div style={{

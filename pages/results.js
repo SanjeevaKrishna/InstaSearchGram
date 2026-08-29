@@ -4,7 +4,7 @@ import Head from 'next/head'
 import PostCard from '../components/PostCard'
 import { supabase } from '../lib/supabase'
 import { safeStorage } from '../lib/storage'
-import { Lightbulb, Search, Heart, MessageSquare, Eye, Star } from 'lucide-react'
+import { Lightbulb, Search, Heart, MessageSquare, Eye, Star, ChevronDown } from 'lucide-react'
 
 
 export default function ResultsPage({ initialCelebrity = null, initialPosts = [], initialVotingInfo = null }) {
@@ -256,6 +256,21 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
 
   const generateFaqContent = () => {
     if (!celebrity || posts.length === 0) return null;
+    const faqs = [
+      {
+        q: 'Why is this specific post highlighted by Spialr?',
+        a: `Spialr tracks public engagement metrics for major profiles. This post is highlighted because it mathematically represents the highest score for the selected filter (${filterDesc}) across the celebrity's recorded uploads.`
+      },
+      {
+        q: 'How can creators use these insights?',
+        a: `By examining the hashtags, caption structures, and media formats of ${celebrity.name}'s top posts, other creators can identify successful patterns, hooks, and content structures to test on their own accounts.`
+      },
+      {
+        q: 'Are these statistics updated in real-time?',
+        a: `Social media metrics fluctuate constantly. Spialr updates engagement statistics periodically. To view the current real-time counts, likes, and comments, you can click the "Watch" button on the card to navigate directly to the official post on Instagram.`
+      }
+    ];
+
     return (
       <div style={{
         marginTop: 40,
@@ -276,33 +291,10 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
           ❓ Frequently Asked Questions
         </h3>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
-              Why is this specific post highlighted by Spialr?
-            </h4>
-            <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-              Spialr tracks public engagement metrics for major profiles. This post is highlighted because it mathematically represents the highest score for the selected filter ({filterDesc}) across the celebrity's recorded uploads.
-            </p>
-          </div>
-
-          <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
-              How can creators use these insights?
-            </h4>
-            <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-              By examining the hashtags, caption structures, and media formats of {celebrity.name}'s top posts, other creators can identify successful patterns, hooks, and content structures to test on their own accounts.
-            </p>
-          </div>
-
-          <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px 0' }}>
-              Are these statistics updated in real-time?
-            </h4>
-            <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-              Social media metrics fluctuate constantly. Spialr updates engagement statistics periodically. To view the current real-time counts, likes, and comments, you can click the "Watch" button on the card to navigate directly to the official post on Instagram.
-            </p>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {faqs.map((faq, idx) => (
+            <ResultsFAQItem key={idx} faq={faq} />
+          ))}
         </div>
       </div>
     );
@@ -690,4 +682,60 @@ export async function getServerSideProps(context) {
       }
     }
   }
+}
+
+function ResultsFAQItem({ faq }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{
+      background: 'var(--surface2)',
+      borderRadius: 12,
+      border: '1px solid var(--border)',
+      overflow: 'hidden',
+      transition: 'all 0.2s ease'
+    }}>
+      <button
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '14px 18px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          textAlign: 'left',
+          color: 'var(--text)',
+          fontSize: 14,
+          fontWeight: 700
+        }}
+      >
+        <span>{faq.q}</span>
+        <span style={{
+          color: 'var(--accent)',
+          display: 'inline-flex',
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s ease',
+          flexShrink: 0
+        }}>
+          <ChevronDown size={18} />
+        </span>
+      </button>
+      {open && (
+        <div style={{
+          padding: '0 18px 16px',
+          fontSize: 13,
+          color: 'var(--text-dim)',
+          lineHeight: 1.65,
+          borderTop: '1px solid var(--border)',
+          paddingTop: 12
+        }}>
+          {faq.a}
+        </div>
+      )}
+    </div>
+  )
 }

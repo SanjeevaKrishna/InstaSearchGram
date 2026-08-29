@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { convertImageToDotArt, loadImageFromFile } from '../lib/dotArt'
-import { Sparkles, Copy, Check, Upload, Image as ImageIcon } from 'lucide-react'
+import { Sparkles, Copy, Check, Upload, ChevronDown } from 'lucide-react'
 
 export default function Converter() {
   const router = useRouter()
@@ -13,7 +13,7 @@ export default function Converter() {
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
   const [dragActive, setDragActive] = useState(false)
-  const [selectedFormat, setSelectedFormat] = useState(null) // 'instagram', 'youtube', 'whatsapp'
+  const [selectedFormat, setSelectedFormat] = useState(null)
 
   // Settings
   const [invert, setInvert] = useState(false)
@@ -52,7 +52,7 @@ export default function Converter() {
     if (!img || !format) return
     setBusy(true)
     
-    // Instagram: 24 cols (48 dots) - adjusted for small screen mobile comments
+    // Instagram: 24 cols (48 dots) - adjusted for mobile comments
     // YouTube: 27 cols (54 dots)
     // Instagram DM: 22 cols (44 dots)
     // WhatsApp: 21 cols (42 dots)
@@ -75,7 +75,7 @@ export default function Converter() {
       invert: customOpts.hasOwnProperty('invert') ? customOpts.invert : invert,
       minInk: customOpts.hasOwnProperty('minInk') ? customOpts.minInk : minInk,
       outline: customOpts.hasOwnProperty('outline') ? customOpts.outline : outline,
-      contrast: 100, // High-quality Braille HD settings as the default
+      contrast: 100,
       brightness: 100,
       gamma: 3.0,
       threshold: 100,
@@ -109,15 +109,15 @@ export default function Converter() {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       } else {
-        const textArea = document.createElement("textarea")
+        const textArea = document.createElement('textarea')
         textArea.value = textToCopy
-        textArea.style.top = "0"
-        textArea.style.left = "0"
-        textArea.style.position = "fixed"
+        textArea.style.top = '0'
+        textArea.style.left = '0'
+        textArea.style.position = 'fixed'
         document.body.appendChild(textArea)
         textArea.focus()
         textArea.select()
-        document.execCommand("copy")
+        document.execCommand('copy')
         document.body.removeChild(textArea)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
@@ -145,14 +145,14 @@ export default function Converter() {
     if (selectedFormat) {
       runConversion(img, selectedFormat, { 
         clipboardCols: defaultCols
-      }, false) // Do not copy to clipboard on upload
+      }, false)
     }
   }
 
   const handleFormatSelect = (format) => {
     setSelectedFormat(format)
     if (image) {
-      runConversion(image, format, {}, true) // Copy to clipboard on format button click!
+      runConversion(image, format, {}, true)
     }
   }
 
@@ -166,13 +166,13 @@ export default function Converter() {
       setters[key](value)
     }
     if (image && selectedFormat) {
-      runConversion(image, selectedFormat, { [key]: value }, false) // Do not copy on setting change
+      runConversion(image, selectedFormat, { [key]: value }, false)
     }
   }
 
   const onDrag = (e) => {
     e.preventDefault()
-    setDragActive(e.type === "dragenter" || e.type === "dragover")
+    setDragActive(e.type === 'dragenter' || e.type === 'dragover')
   }
 
   const onDrop = (e) => {
@@ -189,7 +189,6 @@ export default function Converter() {
         <meta name="description" content="Generate beautiful Unicode Braille dot art optimized for Instagram, YouTube, and WhatsApp comments." />
       </Head>
 
-      
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 20px', minHeight: 'calc(100vh - 130px)' }}>
         {/* Back Button */}
         <div style={{ marginBottom: 24, textAlign: 'left' }}>
@@ -343,8 +342,6 @@ export default function Converter() {
             )}
           </div>
 
-
-
           {/* Format Copy Buttons */}
           <div style={{ marginTop: 24 }}>
             <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12 }}>
@@ -356,14 +353,6 @@ export default function Converter() {
               gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: 12,
             }}>
-              <button 
-                className={`btn ${selectedFormat === 'clipboard' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => handleFormatSelect('clipboard')}
-                disabled={!image}
-                style={{ width: '100%', padding: '14px 20px', borderRadius: 12 }}
-              >
-                Copy to Clipboard
-              </button>
               <button 
                 className={`btn ${selectedFormat === 'instagram' ? 'btn-primary' : 'btn-ghost'}`}
                 onClick={() => handleFormatSelect('instagram')}
@@ -381,6 +370,14 @@ export default function Converter() {
                 Copy to YouTube
               </button>
               <button 
+                className={`btn ${selectedFormat === 'instagram_dm' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => handleFormatSelect('instagram_dm')}
+                disabled={!image}
+                style={{ width: '100%', padding: '14px 20px', borderRadius: 12 }}
+              >
+                Copy to Instagram DM
+              </button>
+              <button 
                 className={`btn ${selectedFormat === 'whatsapp' ? 'btn-primary' : 'btn-ghost'}`}
                 onClick={() => handleFormatSelect('whatsapp')}
                 disabled={!image}
@@ -389,12 +386,12 @@ export default function Converter() {
                 Copy to WhatsApp
               </button>
               <button 
-                className={`btn ${selectedFormat === 'instagram_dm' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => handleFormatSelect('instagram_dm')}
+                className={`btn ${selectedFormat === 'clipboard' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => handleFormatSelect('clipboard')}
                 disabled={!image}
                 style={{ width: '100%', padding: '14px 20px', borderRadius: 12 }}
               >
-                Copy to Instagram DM
+                Copy to Clipboard
               </button>
             </div>
             {!image && (
@@ -419,14 +416,14 @@ export default function Converter() {
               <div style={{ textAlign: 'left' }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {selectedFormat === 'instagram' 
-                    ? 'Instagram Format' 
+                    ? 'Copy to Instagram Comments' 
                     : selectedFormat === 'youtube' 
-                      ? 'YouTube Format' 
-                      : selectedFormat === 'instagram_dm' 
-                        ? 'Instagram DM Format' 
-                        : selectedFormat === 'clipboard'
-                          ? 'Clipboard (Full Resolution) Format'
-                          : 'WhatsApp Format'}
+                      ? 'Copy to YouTube Comments' 
+                      : selectedFormat === 'whatsapp'
+                        ? 'Copy to WhatsApp Message'
+                        : selectedFormat === 'instagram_dm' 
+                          ? 'Copy to Instagram DM' 
+                          : 'Clipboard (Full Resolution) Format'}
                 </span>
                 {dims && (
                   <div style={{ fontSize: 11, color: '#8a8f80', marginTop: 2 }}>
@@ -601,34 +598,82 @@ export default function Converter() {
           }}>
             ❓ Frequently Asked Questions (FAQ)
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
-            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
-                Why does my text art look broken or misaligned?
-              </h4>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>
-                This usually happens because the output column count exceeds the character width of the comment box. Always use our predefined formatting selectors (e.g. <em>Instagram Format</em>) to ensure the column width is auto-restricted. Make sure the target application supports unicode characters.
-              </p>
-            </div>
-            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
-                What does the "Fix alignment spacing" setting do?
-              </h4>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>
-                Many platforms treat completely blank Braille characters (no dots) as normal spaces, causing them to collapse and break the graphic. Our "Fix alignment spacing" setting ensures empty spaces are replaced with spacing dots (<code>⠁</code>), maintaining horizontal alignments perfectly.
-              </p>
-            </div>
-            <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
-                Can I convert colored images?
-              </h4>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>
-                Yes! Our dot art engine automatically converts color channels into threshold values based on brightness, making it easy to create beautiful graphics from any color portrait or logo.
-              </p>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+            {[
+              {
+                q: 'Why does my text art look broken or misaligned?',
+                a: 'This usually happens because the output column count exceeds the character width of the comment box. Always use our predefined formatting selectors (e.g. Instagram Format) to ensure the column width is auto-restricted. Make sure the target application supports unicode characters.'
+              },
+              {
+                q: 'What does the "Fix alignment spacing" setting do?',
+                a: 'Many platforms treat completely blank Braille characters (no dots) as normal spaces, causing them to collapse and break the graphic. Our "Fix alignment spacing" setting ensures empty spaces are replaced with spacing dots (⠁), maintaining horizontal alignments perfectly.'
+              },
+              {
+                q: 'Can I convert colored images?',
+                a: 'Yes! Our dot art engine automatically converts color channels into threshold values based on brightness, making it easy to create beautiful graphics from any color portrait or logo.'
+              }
+            ].map((faq, idx) => (
+              <ConverterFAQItem key={idx} faq={faq} />
+            ))}
           </div>
         </div>
       </main>
     </>
+  )
+}
+
+function ConverterFAQItem({ faq }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{
+      background: 'var(--surface2)',
+      borderRadius: 12,
+      border: '1px solid var(--border)',
+      overflow: 'hidden',
+      transition: 'all 0.2s ease'
+    }}>
+      <button
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '14px 18px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          textAlign: 'left',
+          color: 'var(--text)',
+          fontSize: 14,
+          fontWeight: 700
+        }}
+      >
+        <span>{faq.q}</span>
+        <span style={{
+          color: 'var(--accent)',
+          display: 'inline-flex',
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s ease',
+          flexShrink: 0
+        }}>
+          <ChevronDown size={18} />
+        </span>
+      </button>
+      {open && (
+        <div style={{
+          padding: '0 18px 16px',
+          fontSize: 13,
+          color: 'var(--text-dim)',
+          lineHeight: 1.65,
+          borderTop: '1px solid var(--border)',
+          paddingTop: 12
+        }}>
+          {faq.a}
+        </div>
+      )}
+    </div>
   )
 }

@@ -85,12 +85,12 @@ function generateSiteMap(celebrities) {
        <changefreq>monthly</changefreq>
        <priority>0.6</priority>
      </url>
-     <url>
-       <loc>${EXTERNAL_DATA_URL}/converter</loc>
-       <lastmod>${getFileLastMod('converter.js')}</lastmod>
-       <changefreq>monthly</changefreq>
-       <priority>0.7</priority>
-     </url>
+      <url>
+        <loc>${EXTERNAL_DATA_URL}/converter</loc>
+        <lastmod>${getFileLastMod('converter.js')}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.8</priority>
+      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/methodology</loc>
        <lastmod>${getFileLastMod('methodology.js')}</lastmod>

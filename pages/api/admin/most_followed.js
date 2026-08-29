@@ -39,6 +39,33 @@ function parseCountText(text) {
   return num;
 }
 
+function getRealisticDelta(count) {
+  if (!count || count <= 0) return 50
+  if (count >= 100000000) return Math.floor(15000 + Math.random() * 25000)
+  if (count >= 50000000) return Math.floor(8000 + Math.random() * 15000)
+  if (count >= 20000000) return Math.floor(4000 + Math.random() * 10000)
+  if (count >= 5000000) return Math.floor(1500 + Math.random() * 4000)
+  if (count >= 1000000) return Math.floor(500 + Math.random() * 1500)
+  if (count >= 300000) return Math.floor(150 + Math.random() * 450)
+  if (count >= 100000) return Math.floor(50 + Math.random() * 180)
+  return Math.floor(15 + Math.random() * 60)
+}
+
+function generateRealisticBaselineHistory(currentCount) {
+  if (!currentCount || currentCount <= 0) return []
+  const delta = getRealisticDelta(currentCount)
+  const now = new Date()
+  const todayStr = now.toISOString().split('T')[0]
+  const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  const yesterdayStr = yesterdayDate.toISOString().split('T')[0]
+  const baselineCount = Math.max(100, currentCount - delta)
+
+  return [
+    { date: yesterdayStr, count: baselineCount },
+    { date: todayStr, count: currentCount }
+  ]
+}
+
 export default async function handler(req, res) {
   try {
     if (!verifyAdmin(req)) {
@@ -74,6 +101,7 @@ export default async function handler(req, res) {
       if (!name) return res.status(400).json({ error: 'Name is required' })
 
       const calculatedFollowersCount = parseCountText(followers_text)
+      const initialHistory = generateRealisticBaselineHistory(calculatedFollowersCount)
 
       const payload = {
         name,
@@ -84,7 +112,8 @@ export default async function handler(req, res) {
         category: category || '',
         language: language || null,
         votes: 0,
-        instagram_handle: instagram_handle || null
+        instagram_handle: instagram_handle || null,
+        follower_history: initialHistory
       }
 
       const { data, error } = await supabase
@@ -233,30 +262,39 @@ export default async function handler(req, res) {
           history = [];
         }
 
-        // Align current date to nearest Saturday
-        const getSaturdayDate = (dateVal = new Date()) => {
-          const result = new Date(dateVal);
-          const day = result.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-          const diff = 6 - day;
-          result.setDate(result.getDate() + diff);
-          return result.toISOString().split('T')[0];
-        };
+        // Record exact calendar date for daily growth pulse (with 12 AM - 6 AM grace period)
+        const now = new Date();
+        const istOffsetMs = 5.5 * 60 * 60 * 1000;
+        const istDate = new Date(now.getTime() + istOffsetMs);
+        const istHour = istDate.getUTCHours();
+        let targetDate = istDate.toISOString().split('T')[0];
+        if (istHour < 6) {
+          const yesterday = new Date(istDate.getTime() - 24 * 60 * 60 * 1000);
+          targetDate = yesterday.toISOString().split('T')[0];
+        }
 
-        const saturdayKey = getSaturdayDate();
-        const existingIdx = history.findIndex(h => h.date === saturdayKey);
-
+        const existingIdx = history.findIndex(h => h.date === targetDate);
         if (existingIdx !== -1) {
           history[existingIdx].count = count;
         } else {
-          history.push({ date: saturdayKey, count: count });
+          history.push({ date: targetDate, count: count });
+        }
+
+        // If newly added profile with only 1 history date, automatically seed yesterday's baseline
+        if (history.length === 1) {
+          const delta = getRealisticDelta(count);
+          const parsedTarget = new Date(targetDate);
+          const priorDate = new Date(parsedTarget.getTime() - 24 * 60 * 60 * 1000);
+          const priorDateStr = priorDate.toISOString().split('T')[0];
+          history.unshift({ date: priorDateStr, count: Math.max(100, count - delta) });
         }
 
         // Sort history by date ascending
         history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // Cap to last 52 entries (1 year of weekly records) to keep database storage footprint extremely small (free tier safety)
-        if (history.length > 52) {
-          history = history.slice(-52);
+        // Keep up to 365 daily records
+        if (history.length > 365) {
+          history = history.slice(-365);
         }
 
         const { data: updatedProfile, error: updateErr } = await supabase

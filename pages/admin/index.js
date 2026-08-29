@@ -18,6 +18,12 @@ function adminFetch(url, options = {}) {
       ...(options.headers || {}),
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
+  }).then(res => {
+    if (res.status === 401 && typeof window !== 'undefined') {
+      clearToken()
+      window.dispatchEvent(new Event('admin_unauthorized'))
+    }
+    return res
   })
 }
 
@@ -1242,6 +1248,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
 }
 
 function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/viral_reels' }) {
+  const isComment = apiEndpoint.includes('most_liked_comments')
   const isMostViewed = apiEndpoint.includes('most_viewed')
   const isMostLiked = apiEndpoint.includes('most_liked')
 
@@ -1293,20 +1300,53 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
     }
   })
   const [saving, setSaving] = useState(false)
+  const [fetchingReel, setFetchingReel] = useState(false)
   const [error, setError] = useState('')
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  const handleAutoFetchReel = async () => {
+    if (!form.instagram_link) return
+    setFetchingReel(true)
+    setError('')
+    try {
+      const res = await adminFetch('/api/admin/fetch_reel_info', {
+        method: 'POST',
+        body: { instagram_link: form.instagram_link }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      if (data.reel) {
+        if (!isComment && data.reel.title && (!form.title || form.title.startsWith('Reel'))) set('title', data.reel.title)
+        if (data.reel.viewsText && !isComment) set('views_text', data.reel.viewsText)
+        if (data.reel.creatorName && !form.creator_name) set('creator_name', data.reel.creatorName)
+        if (data.reel.creatorPhotoUrl && !form.creator_photo_url) set('creator_photo_url', data.reel.creatorPhotoUrl)
+        if (data.reel.thumbnailUrl && !form.photo_url && !isComment) set('photo_url', data.reel.thumbnailUrl)
+        if (data.reel.takenAt) {
+          const diffMs = Date.now() - new Date(data.reel.takenAt).getTime()
+          const diffHours = Math.max(0, Math.round(diffMs / (1000 * 60 * 60)))
+          set('hours_ago', `${diffHours} hours ago`)
+          set('uploaded_date', data.reel.takenAt.split('T')[0])
+          set('created_at', data.reel.takenAt)
+        }
+      }
+    } catch (err) {
+      setError(`Auto-fetch failed: ${err.message}`)
+    } finally {
+      setFetchingReel(false)
+    }
+  }
+
   const handleSave = async () => {
-    if (!form.title.trim()) return setError('Title is required')
+    if (!form.title.trim()) return setError(isComment ? 'Comment text is required' : 'Title is required')
     if (!form.instagram_link.trim()) return setError('Instagram link is required')
-    if (isMostViewed || isMostLiked) {
-      const viewsVal = (form.views_text || '').trim().toUpperCase();
+    if (isMostViewed || isMostLiked || isComment) {
+      const viewsVal = (form.views_text || form.likes_text || '').trim().toUpperCase();
       if (!viewsVal) {
-        return setError(`${isMostLiked ? 'Likes' : 'Views'} count is required`);
+        return setError(`Likes count is required (e.g. 150K, 200K)`);
       }
       if (!/^[0-9]+(\.[0-9]+)?[KMB]$/.test(viewsVal)) {
-        return setError(`${isMostLiked ? 'Likes' : 'Views'} count must be a number followed by K, M, or B (e.g., 45M, 500K)`);
+        return setError(`Likes/views count must be a number followed by K, M, or B (e.g., 150K, 200K, 1.2M)`);
       }
       
       const followersVal = (form.followers_text || '').trim().toUpperCase();
@@ -1317,13 +1357,13 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
     setSaving(true)
     setError('')
     try {
-      const calculatedCreatedAt = isMostViewed || isMostLiked
-        ? new Date(form.uploaded_date + 'T12:00:00').toISOString() 
-        : (() => {
+      const calculatedCreatedAt = (isMostViewed || isMostLiked || isComment)
+        ? (form.uploaded_date ? new Date(form.uploaded_date + 'T12:00:00').toISOString() : (form.created_at || new Date().toISOString()))
+        : (form.created_at ? form.created_at : (() => {
             const match = (form.hours_ago || '').match(/\d+/)
             const hours = match ? parseInt(match[0], 10) : 0
             return new Date(Date.now() - (hours * 60 * 60 * 1000)).toISOString()
-          })()
+          })())
 
       const res = await adminFetch(apiEndpoint, {
         method: (initial && !initial.isCopy) ? 'PUT' : 'POST',
@@ -1340,13 +1380,13 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
           show_in_all_posts: form.show_in_all_posts !== undefined ? !!form.show_in_all_posts : true,
           show_in_original: form.show_in_original !== undefined ? !!form.show_in_original : false,
           show_in_all_reels: form.show_in_all_reels !== undefined ? !!form.show_in_all_reels : true,
-          ...(isMostLiked ? { likes_text: form.views_text || '' } : { views_text: form.views_text || '' }),
+          ...(isMostLiked || isComment ? { likes_text: form.views_text || form.likes_text || '' } : { views_text: form.views_text || '' }),
           created_at: calculatedCreatedAt
         },
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      onSave(data.reel || data.post)
+      onSave(data.reel || data.post || data.comment)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -1422,34 +1462,83 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <div>
-        <label style={labelStyle}>Reel Title / Caption *</label>
-        <input className="input-field" value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Virat Kohli historic knock..." />
-      </div>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: (isMostViewed || isMostLiked) ? '1fr' : '1fr 1fr', gap: 12 }}>
+      {isComment ? (
         <div>
-          <label style={labelStyle}>Creator Name</label>
-          <input className="input-field" value={form.creator_name || ''} onChange={e => set('creator_name', e.target.value)} placeholder="e.g. Virat Kohli" />
+          <label style={labelStyle}>💬 Comment Text *</label>
+          <textarea 
+            className="input-field" 
+            rows={3} 
+            value={form.title} 
+            onChange={e => set('title', e.target.value)} 
+            placeholder="Type the actual Instagram comment here... e.g. What an unbelievable match! Pure masterclass 🔥🏏" 
+            style={{ resize: 'vertical' }}
+          />
         </div>
-        {!(isMostViewed || isMostLiked) && (
-          <div>
-            <label style={labelStyle}>Rank (e.g. 1 for 1st, 2 for 2nd)</label>
-            <input className="input-field" type="number" value={form.order_index || ''} onChange={e => set('order_index', e.target.value)} placeholder="e.g. 1 or 2" />
-          </div>
-        )}
+      ) : (
+        <div>
+          <label style={labelStyle}>Reel Title / Caption *</label>
+          <input className="input-field" value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Virat Kohli historic knock..." />
+        </div>
+      )}
+      
+      <div style={{ display: 'grid', gridTemplateColumns: (isMostViewed || isMostLiked || isComment) ? '1fr 1fr' : '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>{isComment ? '👤 Commenter Name / Username *' : 'Creator Name'}</label>
+          <input className="input-field" value={form.creator_name || ''} onChange={e => set('creator_name', e.target.value)} placeholder={isComment ? "e.g. sachintendulkar" : "e.g. Virat Kohli"} />
+        </div>
+        <div>
+          <label style={labelStyle}>
+            {isComment ? '❤️ Likes Count * (e.g. 150K, 200K)' : (isMostLiked ? 'Likes Count (e.g. 1.2M, 500K)' : 'Views Count (e.g. 1.2M, 500K)')}
+          </label>
+          <input 
+            className="input-field" 
+            value={form.views_text || ''} 
+            onChange={e => {
+              const val = e.target.value;
+              const cleaned = val.replace(/[^0-9.kmbKMB]/g, '');
+              if (/^[0-9]*\.?[0-9]*[kmbKMB]?$/.test(cleaned) || cleaned === '') {
+                set('views_text', cleaned.toUpperCase());
+              }
+            }} 
+            placeholder={isComment ? "e.g. 150K" : (isMostLiked ? "e.g. 500K" : "e.g. 1.2M")} 
+          />
+        </div>
       </div>
 
       <div>
-        <label style={labelStyle}>Instagram URL *</label>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>{isComment ? '🔗 Instagram Reel / Post URL *' : 'Instagram URL *'}</label>
+          {form.instagram_link && (
+            <button
+              type="button"
+              onClick={handleAutoFetchReel}
+              disabled={fetchingReel}
+              style={{
+                background: 'linear-gradient(135deg, #a855f7, #6366f1)',
+                color: 'white',
+                border: 'none',
+                padding: '3px 10px',
+                borderRadius: 6,
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              {fetchingReel ? '⏳ Fetching...' : '⚡ Auto-Fetch Data'}
+            </button>
+          )}
+        </div>
         <input className="input-field" value={form.instagram_link} onChange={e => set('instagram_link', e.target.value)} placeholder="e.g. https://instagram.com/reel/..." />
       </div>
 
       <div>
-        <label style={labelStyle}>Creator Profile Photo</label>
+        <label style={labelStyle}>{isComment ? 'Commenter Profile Avatar' : 'Creator Profile Photo'}</label>
         {form.creator_photo_url ? (
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <img src={form.creator_photo_url} alt="Creator avatar" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
+            <img src={form.creator_photo_url} alt="Creator avatar" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
             <button className="btn btn-ghost" onClick={() => set('creator_photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
           </div>
         ) : (
@@ -1479,110 +1568,53 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
                 }
               }
             }} />
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select a circular avatar image to upload securely</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select a circular profile photo for the commenter</div>
           </div>
         )}
       </div>
 
-      <div>
-        <label style={labelStyle}>Reel Thumbnail Photo</label>
-        {form.photo_url ? (
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <img src={form.photo_url} alt="Thumbnail" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
-            <button className="btn btn-ghost" onClick={() => set('photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
-          </div>
-        ) : (
-          <div>
-            <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
-              const file = e.target.files[0]
-              if (!file) return
-              setSaving(true)
-              setError('')
-              const reader = new FileReader()
-              reader.readAsDataURL(file)
-              reader.onload = async () => {
-                try {
-                  const res = await adminFetch('/api/admin/upload', {
-                    method: 'POST',
-                    body: { image: reader.result }
-                  })
-                  const text = await res.text()
-                  let data
-                  try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error`) }
-                  if (data.url) set('photo_url', data.url)
-                  else throw new Error(data.error || 'Upload failed')
-                } catch(err) {
-                  setError(err.message || 'Failed to upload image')
-                } finally {
-                  setSaving(false)
-                }
-              }
-            }} />
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select a thumbnail image to upload securely</div>
-          </div>
-        )}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+      {!isComment && (
         <div>
-          <label style={labelStyle}>Followers Count (e.g. 270M, 10K)</label>
-          <input 
-            className="input-field" 
-            value={form.followers_text || ''} 
-            onChange={e => {
-              const val = e.target.value;
-              if (isMostViewed || isMostLiked) {
-                const cleaned = val.replace(/[^0-9.kmbKMB]/g, '');
-                if (/^[0-9]*\.?[0-9]*[kmbKMB]?$/.test(cleaned) || cleaned === '') {
-                  set('followers_text', cleaned.toUpperCase());
-                }
-              } else {
-                set('followers_text', val);
-              }
-            }} 
-            placeholder="e.g. 270M" 
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>
-            {isMostLiked ? 'Likes Count (e.g. 1.2M, 500K)' : 'Views Count (e.g. 1.2M, 500K)'}
-          </label>
-          <input 
-            className="input-field" 
-            value={form.views_text || ''} 
-            onChange={e => {
-              const val = e.target.value;
-              if (isMostViewed || isMostLiked) {
-                const cleaned = val.replace(/[^0-9.kmbKMB]/g, '');
-                if (/^[0-9]*\.?[0-9]*[kmbKMB]?$/.test(cleaned) || cleaned === '') {
-                  set('views_text', cleaned.toUpperCase());
-                }
-              } else {
-                set('views_text', val);
-              }
-            }} 
-            placeholder={isMostLiked ? "e.g. 500K" : "e.g. 1.2M"} 
-          />
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-        <div>
-          {isMostViewed || isMostLiked ? (
-            <>
-              <label style={labelStyle}>Uploaded Date</label>
-              <input className="input-field" type="date" value={form.uploaded_date} onChange={e => set('uploaded_date', e.target.value)} />
-            </>
+          <label style={labelStyle}>Reel Thumbnail Photo</label>
+          {form.photo_url ? (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <img src={form.photo_url} alt="Thumbnail" style={{ width: 100, height: 60, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)' }} />
+              <button className="btn btn-ghost" onClick={() => set('photo_url', '')} style={{ color: '#ff5252' }}>Remove</button>
+            </div>
           ) : (
-            <>
-              <label style={labelStyle}>Time Added (e.g. 1 hour ago, 5 hours ago)</label>
-              <input className="input-field" value={form.hours_ago || ''} onChange={e => set('hours_ago', e.target.value)} placeholder="e.g. 5 hours ago" />
-            </>
+            <div>
+              <input type="file" accept="image/*" className="input-field" style={{ padding: '8px' }} onChange={async (e) => {
+                const file = e.target.files[0]
+                if (!file) return
+                setSaving(true)
+                setError('')
+                const reader = new FileReader()
+                reader.readAsDataURL(file)
+                reader.onload = async () => {
+                  try {
+                    const res = await adminFetch('/api/admin/upload', {
+                      method: 'POST',
+                      body: { image: reader.result }
+                    })
+                    const text = await res.text()
+                    let data
+                    try { data = JSON.parse(text) } catch(e) { throw new Error(`Server Error`) }
+                    if (data.url) set('photo_url', data.url)
+                    else throw new Error(data.error || 'Upload failed')
+                  } catch(err) {
+                    setError(err.message || 'Failed to upload image')
+                  } finally {
+                    setSaving(false)
+                  }
+                }
+              }} />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select a thumbnail image to upload securely</div>
+            </div>
           )}
         </div>
-      </div>
+      )}
 
-      {(isMostViewed || isMostLiked) && (
+      {(isMostViewed || isMostLiked) && !isComment && (
         <>
           <div>
             <label style={labelStyle}>Reel Description (2–4 sentences)</label>
@@ -1706,7 +1738,17 @@ export default function AdminPanel() {
 
   // "Scrape ALL accounts" server-side batch state
   const [allScrapeRunning, setAllScrapeRunning] = useState(false)
+  const [allScrapeProgress, setAllScrapeProgress] = useState({ current: 0, total: 0, percent: 0, currentName: '', currentHandle: '', status: '', updated: 0, failed: 0 })
+  const [allScrapeLogs, setAllScrapeLogs] = useState([])
   const [allScrapeResult, setAllScrapeResult] = useState(null)
+  const allScrapeAbortRef = useRef(null)
+
+  // Trending Reels batch scraper state
+  const [trendingScrapeRunning, setTrendingScrapeRunning] = useState(false)
+  const [trendingScrapeProgress, setTrendingScrapeProgress] = useState({ current: 0, total: 0, percent: 0, currentTitle: '', status: '', updated: 0, failed: 0 })
+  const [trendingScrapeLogs, setTrendingScrapeLogs] = useState([])
+  const [trendingScrapeResult, setTrendingScrapeResult] = useState(null)
+  const trendingScrapeAbortRef = useRef(null)
 
   const [instagramSessionId, setInstagramSessionId] = useState('')
   const [instagramCsrfToken, setInstagramCsrfToken] = useState('')
@@ -2002,6 +2044,10 @@ export default function AdminPanel() {
   useEffect(() => {
     // Check if already logged in
     if (getToken()) setAuthed(true)
+
+    const handleUnauthorized = () => setAuthed(false)
+    window.addEventListener('admin_unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('admin_unauthorized', handleUnauthorized)
   }, [])
 
   useEffect(() => {
@@ -2014,67 +2060,92 @@ export default function AdminPanel() {
     try {
       // Load live date settings
       const dateRes = await adminFetch('/api/admin/live_settings')
-      const dateData = await dateRes.json()
-      setLiveDate(dateData.settings?.live_date || '')
-      setTrendingEnabled(dateData.settings?.trending_enabled !== undefined ? dateData.settings.trending_enabled : true)
-      setShowSocialAudit(dateData.settings?.show_social_audit !== undefined ? dateData.settings.show_social_audit : true)
-      setInstagramSessionId(dateData.settings?.instagram_session_id || '')
-      setInstagramCsrfToken(dateData.settings?.instagram_csrf_token || '')
+      if (dateRes.ok) {
+        const dateData = await dateRes.json()
+        setLiveDate(dateData.settings?.live_date || '')
+        setTrendingEnabled(dateData.settings?.trending_enabled !== undefined ? dateData.settings.trending_enabled : true)
+        setShowSocialAudit(dateData.settings?.show_social_audit !== undefined ? dateData.settings.show_social_audit : true)
+        setInstagramSessionId(dateData.settings?.instagram_session_id || '')
+        setInstagramCsrfToken(dateData.settings?.instagram_csrf_token || '')
+      }
 
       if (tab === 'celebrities' || tab === 'posts') {
         const celRes = await adminFetch('/api/admin/celebrities')
-        const celData = await celRes.json()
-        setCelebrities(celData.celebrities || [])
+        if (celRes.ok) {
+          const celData = await celRes.json()
+          setCelebrities(celData.celebrities || [])
+        }
       }
       if (tab === 'posts') {
         const url = filterCelId ? `/api/admin/posts?celebrity_id=${filterCelId}` : '/api/admin/posts'
         const postRes = await adminFetch(url)
-        const postData = await postRes.json()
-        setPosts(postData.posts || [])
+        if (postRes.ok) {
+          const postData = await postRes.json()
+          setPosts(postData.posts || [])
+        }
       }
       if (tab === 'most_followed') {
         const res = await adminFetch('/api/admin/most_followed')
-        const data = await res.json()
-        setMostFollowed(data.profiles || [])
+        if (res.ok) {
+          const data = await res.json()
+          setMostFollowed(data.profiles || [])
+        }
       }
       if (tab === 'voting_management') {
         const res = await adminFetch('/api/admin/most_followed')
-        const data = await res.json()
-        setMostFollowed(data.profiles || [])
+        if (res.ok) {
+          const data = await res.json()
+          setMostFollowed(data.profiles || [])
+        }
       }
       if (tab === 'visitors') {
         const res = await adminFetch('/api/admin/visits')
-        const data = await res.json()
-        setVisits(data.visits || [])
+        if (res.ok) {
+          const data = await res.json()
+          setVisits(data.visits || [])
+        }
       }
 
       if (tab === 'reels') {
         const res = await adminFetch('/api/admin/viral_reels')
-        const data = await res.json()
-        setViralReels(data.reels || [])
+        if (res.ok) {
+          const data = await res.json()
+          setViralReels(data.reels || [])
+        }
       }
       if (tab === 'most_viewed_reels') {
         const res = await adminFetch('/api/admin/most_viewed_reels')
-        const data = await res.json()
-        setMostViewedReels(data.reels || [])
+        if (res.ok) {
+          const data = await res.json()
+          setMostViewedReels(data.reels || [])
+        }
       }
       if (tab === 'most_liked_posts') {
         const res = await adminFetch('/api/admin/most_liked_posts')
-        const data = await res.json()
-        setMostLikedPosts(data.posts || [])
+        if (res.ok) {
+          const data = await res.json()
+          setMostLikedPosts(data.posts || [])
+        }
       }
       if (tab === 'most_liked_reels') {
         const res = await adminFetch('/api/admin/most_liked_reels')
-        const data = await res.json()
-        setMostLikedReels(data.reels || [])
+        if (res.ok) {
+          const data = await res.json()
+          setMostLikedReels(data.reels || [])
+        }
       }
       if (tab === 'most_liked_comments') {
         const res = await adminFetch('/api/admin/most_liked_comments')
-        const data = await res.json()
-        setMostLikedComments(data.comments || data.reels || [])
+        if (res.ok) {
+          const data = await res.json()
+          setMostLikedComments(data.comments || data.reels || [])
+        }
       }
-    } catch {}
-    setLoadingData(false)
+    } catch (err) {
+      console.error('Failed to load admin data:', err)
+    } finally {
+      setLoadingData(false)
+    }
   }
 
   const deleteMostFollowed = async (id) => {
@@ -2273,28 +2344,227 @@ export default function AdminPanel() {
   const handleScrapeAllAccounts = async () => {
     const withHandles = mostFollowed.filter(p => p.instagram_handle && p.instagram_handle.trim() !== '')
     const total = withHandles.length
-    const estMinutes = Math.ceil((total * 4) / 60)
-    if (!confirm(`🚀 Scrape ALL ${total} accounts with Instagram handles?\n\nThis runs on the server with a 4-second safety delay between each request.\n\nEstimated time: ~${estMinutes} minutes.\n\nDo NOT close this tab until it finishes!`)) return
+    const estMinutes = Math.ceil((total * 3.5) / 60)
+    if (!confirm(`🚀 Scrape ALL ${total} accounts with Instagram handles?\n\nThis runs sequentially with a 3.5-second safety delay between each account to prevent rate limits.\n\nEstimated time: ~${estMinutes} minutes.\n\nDo NOT close this tab until it finishes!`)) return
 
     setAllScrapeRunning(true)
     setAllScrapeResult(null)
+    setAllScrapeLogs([])
+    setAllScrapeProgress({ current: 0, total, percent: 0, currentName: '', currentHandle: '', status: 'Starting batch scrape...', updated: 0, failed: 0 })
+    allScrapeAbortRef.current = new AbortController()
 
     try {
-      const res = await adminFetch('/api/admin/batch_scrape_followers', { method: 'POST' })
-      const data = await res.json()
-      setAllScrapeResult(data)
+      const token = getToken()
+      const res = await fetch('/api/admin/batch_scrape_followers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': token || ''
+        },
+        signal: allScrapeAbortRef.current.signal
+      })
 
-      if (data.updated > 0) {
-        // Refresh the profiles list to show updated counts
-        const loadRes = await adminFetch('/api/admin/most_followed')
-        const loadData = await loadRes.json()
-        setMostFollowed(loadData.profiles || [])
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`)
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop()
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.type === 'start') {
+                setAllScrapeProgress(prev => ({ ...prev, total: data.total }))
+              } else if (data.type === 'progress') {
+                setAllScrapeProgress({
+                  current: data.current,
+                  total: data.total,
+                  percent: data.percent,
+                  currentName: data.name,
+                  currentHandle: data.handle,
+                  status: data.status,
+                  updated: data.updated,
+                  failed: data.failed
+                })
+                setAllScrapeLogs(prev => [
+                  ...prev.slice(-40),
+                  {
+                    timestamp: new Date().toLocaleTimeString(),
+                    handle: data.handle,
+                    name: data.name,
+                    status: data.status,
+                    text: data.formattedText,
+                    error: data.error
+                  }
+                ])
+              } else if (data.type === 'complete') {
+                setAllScrapeResult(data)
+                setAllScrapeRunning(false)
+                showToast(`🎉 Batch scrape complete! ${data.updated} updated, ${data.failed} failed.`)
+                // Refresh table to show updated counts immediately
+                const loadRes = await adminFetch('/api/admin/most_followed')
+                const loadData = await loadRes.json()
+                setMostFollowed(loadData.profiles || [])
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE line:', e)
+            }
+          }
+        }
       }
     } catch (err) {
-      setAllScrapeResult({ error: err.message })
+      if (err.name === 'AbortError') {
+        showToast('Batch scraping stopped by admin.')
+      } else {
+        setAllScrapeResult({ error: err.message })
+      }
+      setAllScrapeRunning(false)
+    }
+  }
+
+  const handleAbortAllScrape = () => {
+    if (allScrapeAbortRef.current) {
+      allScrapeAbortRef.current.abort()
+    }
+    setAllScrapeRunning(false)
+  }
+
+  const handleRefreshTrendingReels = async (targetTable = 'viral_reels') => {
+    let list = viralReels
+    let sectionName = 'Trending Reels'
+    let metricName = 'engagement stats (views, likes, comments)'
+    let endpoint = '/api/admin/viral_reels'
+    let setFunc = setViralReels
+
+    if (targetTable === 'most_viewed_reels') {
+      list = mostViewedReels
+      sectionName = 'Most Viewed Reels'
+      metricName = 'views & stats'
+      endpoint = '/api/admin/most_viewed_reels'
+      setFunc = setMostViewedReels
+    } else if (targetTable === 'most_liked_reels') {
+      list = mostLikedReels
+      sectionName = 'Most Liked Reels'
+      metricName = 'likes & stats'
+      endpoint = '/api/admin/most_liked_reels'
+      setFunc = setMostLikedReels
+    } else if (targetTable === 'most_liked_posts') {
+      list = mostLikedPosts
+      sectionName = 'Most Liked Posts'
+      metricName = 'likes & stats'
+      endpoint = '/api/admin/most_liked_posts'
+      setFunc = setMostLikedPosts
     }
 
-    setAllScrapeRunning(false)
+    const total = list.length
+    if (total === 0) {
+      alert(`No items found in ${sectionName} to refresh.`)
+      return
+    }
+    if (!confirm(`⚡ Refresh latest ${metricName} and auto-rank all ${total} items in ${sectionName}?\n\nThis runs sequentially with a safety delay to protect against rate limits.`)) return
+
+    setTrendingScrapeRunning(true)
+    setTrendingScrapeResult(null)
+    setTrendingScrapeLogs([])
+    setTrendingScrapeProgress({ current: 0, total, percent: 0, currentTitle: '', status: `Starting ${sectionName} scraper...`, updated: 0, failed: 0 })
+    trendingScrapeAbortRef.current = new AbortController()
+
+    try {
+      const token = getToken()
+      const res = await fetch('/api/admin/refresh_trending_reels', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': token || ''
+        },
+        body: JSON.stringify({ table: targetTable }),
+        signal: trendingScrapeAbortRef.current.signal
+      })
+
+      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`)
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop()
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.type === 'start') {
+                setTrendingScrapeProgress(prev => ({ ...prev, total: data.total }))
+              } else if (data.type === 'progress') {
+                setTrendingScrapeProgress({
+                  current: data.current,
+                  total: data.total,
+                  percent: data.percent,
+                  currentTitle: data.title,
+                  status: data.status,
+                  updated: data.updated,
+                  failed: data.failed
+                })
+                setTrendingScrapeLogs(prev => [
+                  ...prev.slice(-30),
+                  {
+                    timestamp: new Date().toLocaleTimeString(),
+                    title: data.title,
+                    creator: data.creator,
+                    viewsText: data.viewsText,
+                    likesText: data.likesText,
+                    status: data.status,
+                    error: data.error
+                  }
+                ])
+              } else if (data.type === 'complete') {
+                setTrendingScrapeResult(data)
+                setTrendingScrapeRunning(false)
+                showToast(`🎉 ${sectionName} refreshed & reordered! ${data.updated} updated.`)
+                
+                // Refresh table data
+                const loadRes = await adminFetch(endpoint)
+                const loadData = await loadRes.json()
+                setFunc(loadData.reels || loadData.posts || [])
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE line:', e)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        showToast(`${sectionName} scraper stopped by admin.`)
+      } else {
+        setTrendingScrapeResult({ error: err.message })
+      }
+      setTrendingScrapeRunning(false)
+    }
+  }
+
+  const handleAbortTrendingScrape = () => {
+    if (trendingScrapeAbortRef.current) {
+      trendingScrapeAbortRef.current.abort()
+    }
+    setTrendingScrapeRunning(false)
   }
 
   const updateVotes = async (id, votesVal) => {
@@ -2510,12 +2780,125 @@ export default function AdminPanel() {
       {/* Toast */}
       {toast && (
         <div style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 999,
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
           background: '#e8f5e9', border: '1px solid #4caf50',
           color: '#2e7d32', padding: '12px 20px',
-          borderRadius: 10, fontSize: 14, fontWeight: 500,
+          borderRadius: 10, fontSize: 14, fontWeight: 700,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
         }}>
           {toast}
+        </div>
+      )}
+
+      {/* 🚀 Persistent Background Batch Scraper Widget (Visible across all tabs) */}
+      {allScrapeRunning && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          left: 24,
+          zIndex: 9998,
+          background: 'rgba(15, 23, 42, 0.95)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(16, 185, 129, 0.4)',
+          borderRadius: 16,
+          padding: '14px 18px',
+          color: '#ffffff',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.4), 0 0 20px rgba(16, 185, 129, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          maxWidth: 460,
+          width: 'calc(100% - 48px)'
+        }}>
+          <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#f8fafc' }}>
+                Batch Scraping ({allScrapeProgress.current}/{allScrapeProgress.total})
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 900, color: '#34d399' }}>
+                {allScrapeProgress.percent}%
+              </span>
+            </div>
+            <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ width: `${allScrapeProgress.percent}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #06b6d4)', transition: 'width 0.3s ease' }} />
+            </div>
+            <div style={{ fontSize: 10, color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Processing: <strong style={{ color: '#38bdf8' }}>@{allScrapeProgress.currentHandle || '...'}</strong> &nbsp;·&nbsp; ✅ {allScrapeProgress.updated} &nbsp;·&nbsp; ❌ {allScrapeProgress.failed}
+            </div>
+          </div>
+          <button
+            onClick={handleAbortAllScrape}
+            style={{
+              background: 'rgba(239, 68, 68, 0.25)',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
+              color: '#f87171',
+              padding: '6px 12px',
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 800,
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
+          >
+            Stop
+          </button>
+        </div>
+      )}
+
+      {/* ⚡ Persistent Trending Reels Batch Scraper Widget */}
+      {trendingScrapeRunning && (
+        <div style={{
+          position: 'fixed',
+          bottom: allScrapeRunning ? 100 : 24,
+          left: 24,
+          zIndex: 9998,
+          background: 'rgba(15, 23, 42, 0.95)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(168, 85, 247, 0.4)',
+          borderRadius: 16,
+          padding: '14px 18px',
+          color: '#ffffff',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.4), 0 0 20px rgba(168, 85, 247, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          maxWidth: 460,
+          width: 'calc(100% - 48px)'
+        }}>
+          <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#a855f7', boxShadow: '0 0 10px #a855f7', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#f8fafc' }}>
+                Trending Reels Scraper ({trendingScrapeProgress.current}/{trendingScrapeProgress.total})
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 900, color: '#c084fc' }}>
+                {trendingScrapeProgress.percent}%
+              </span>
+            </div>
+            <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ width: `${trendingScrapeProgress.percent}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #ec4899)', transition: 'width 0.3s ease' }} />
+            </div>
+            <div style={{ fontSize: 10, color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Scraping: <strong style={{ color: '#e879f9' }}>{trendingScrapeProgress.currentTitle || '...'}</strong> &nbsp;·&nbsp; ✅ {trendingScrapeProgress.updated} &nbsp;·&nbsp; ❌ {trendingScrapeProgress.failed}
+            </div>
+          </div>
+          <button
+            onClick={handleAbortTrendingScrape}
+            style={{
+              background: 'rgba(239, 68, 68, 0.25)',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
+              color: '#f87171',
+              padding: '6px 12px',
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 800,
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
+          >
+            Stop
+          </button>
         </div>
       )}
 
@@ -3519,74 +3902,158 @@ export default function AdminPanel() {
             </div>
 
             {/* 🌐 Scrape ALL Accounts — Server-Side Nightly Run */}
-            <div className="card" style={{ marginBottom: 24, padding: '20px', background: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6, color: '#34d399' }}>
-                🌐 Scrape ALL Accounts — Nightly Batch Run
-              </h3>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
-                Runs a full server-side sequential scrape for every account that has an Instagram handle. Uses a <strong>4-second delay</strong> between each request to stay safe. Run this once every night from your laptop. Do NOT close this tab while it runs!
+            <div className="card" style={{ marginBottom: 24, padding: '24px', background: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 8 }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: '#059669' }}>
+                  🌐 Scrape ALL Accounts — Nightly Batch Run
+                </h3>
+                {allScrapeRunning && (
+                  <button
+                    onClick={handleAbortAllScrape}
+                    style={{
+                      background: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ⏹️ Stop Batch
+                  </button>
+                )}
+              </div>
+              
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.5 }}>
+                Runs a sequential scrape for every account with an Instagram handle. Uses a <strong>3.5-second safety delay</strong> between each request. Broken or invalid usernames are gracefully skipped without stopping the batch.
               </p>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                {allScrapeRunning ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div className="spinner" style={{ width: 20, height: 20 }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#34d399' }}>
-                      Running full scrape... Please keep this tab open.
+              {allScrapeRunning ? (
+                <div style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: 16, padding: '18px 20px', boxShadow: '0 4px 14px rgba(0,0,0,0.05)' }}>
+                  {/* Progress Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="spinner" style={{ width: 18, height: 18 }} />
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#09090b' }}>
+                        Scraping in progress... [{allScrapeProgress.current} / {allScrapeProgress.total}]
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 900, color: '#059669', fontFamily: 'var(--font-display)' }}>
+                      {allScrapeProgress.percent}%
                     </span>
                   </div>
-                ) : (
+
+                  {/* Progress Bar */}
+                  <div style={{ width: '100%', height: 12, background: '#f4f4f5', borderRadius: 6, overflow: 'hidden', marginBottom: 14 }}>
+                    <div style={{ width: `${allScrapeProgress.percent}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #06b6d4)', transition: 'width 0.3s ease' }} />
+                  </div>
+
+                  {/* Real-time Status Badges */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, fontSize: 12, marginBottom: 14 }}>
+                    <div style={{ color: '#09090b', fontWeight: 600 }}>
+                      Currently processing: <strong style={{ color: '#0284c7' }}>@{allScrapeProgress.currentHandle || '...'}</strong> {allScrapeProgress.currentName ? `(${allScrapeProgress.currentName})` : ''}
+                    </div>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <span style={{ color: '#059669', fontWeight: 700 }}>✅ {allScrapeProgress.updated} Updated</span>
+                      <span style={{ color: '#dc2626', fontWeight: 700 }}>❌ {allScrapeProgress.failed} Skipped</span>
+                    </div>
+                  </div>
+
+                  {/* Live Mini Log Feed */}
+                  {allScrapeLogs.length > 0 && (
+                    <div style={{ maxHeight: 130, overflowY: 'auto', background: '#fafafa', border: '1px solid #f4f4f5', borderRadius: 10, padding: '8px 12px', fontSize: 11, fontFamily: 'monospace' }}>
+                      {allScrapeLogs.slice(-6).map((l, idx) => (
+                        <div key={idx} style={{ color: l.status === 'success' ? '#059669' : '#dc2626', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ color: '#a1a1aa' }}>[{l.timestamp}]</span>
+                          <span>{l.status === 'success' ? `✅ @${l.handle} -> ${l.text}` : `⚠️ @${l.handle} skipped: ${l.error}`}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <button
                     className="btn btn-primary"
                     onClick={handleScrapeAllAccounts}
                     style={{
-                      padding: '10px 20px',
+                      padding: '12px 24px',
                       fontSize: 14,
                       background: 'linear-gradient(135deg, #10b981, #059669)',
                       border: 'none',
-                      fontWeight: 700
+                      borderRadius: 12,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
                     }}
                   >
                     🚀 Scrape All {mostFollowed.filter(p => p.instagram_handle).length} Accounts Now
                   </button>
-                )}
+                </div>
+              )}
 
-                {allScrapeResult && !allScrapeRunning && (
-                  <div style={{
-                    marginTop: 12,
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: 10,
-                    background: allScrapeResult.error ? 'rgba(255,82,82,0.08)' : 'rgba(16,185,129,0.08)',
-                    border: `1px solid ${allScrapeResult.error ? 'rgba(255,82,82,0.25)' : 'rgba(16,185,129,0.25)'}`,
-                    fontSize: 13
-                  }}>
-                    {allScrapeResult.error ? (
-                      <span style={{ color: '#ff5252' }}>❌ Error: {allScrapeResult.error}</span>
-                    ) : (
-                      <div>
-                        <div style={{ fontWeight: 700, color: '#34d399', marginBottom: 4 }}>
-                          ✅ Batch complete! {allScrapeResult.updated} updated · {allScrapeResult.failed} failed out of {allScrapeResult.total} total
-                        </div>
-                        {allScrapeResult.failures?.length > 0 && (
-                          <details style={{ marginTop: 8 }}>
-                            <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)' }}>
-                              View {allScrapeResult.failures.length} failed accounts
-                            </summary>
-                            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              {allScrapeResult.failures.map((f, i) => (
-                                <div key={i} style={{ fontSize: 11, color: '#ff5252' }}>
-                                  @{f.handle}: {f.error}
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        )}
+              {/* Completion Result Card */}
+              {allScrapeResult && !allScrapeRunning && (
+                <div style={{
+                  marginTop: 18,
+                  width: '100%',
+                  padding: '16px 20px',
+                  borderRadius: 14,
+                  background: allScrapeResult.error ? '#fef2f2' : '#f0fdf4',
+                  border: `1px solid ${allScrapeResult.error ? '#fecaca' : '#bbf7d0'}`,
+                  fontSize: 13
+                }}>
+                  {allScrapeResult.error ? (
+                    <div style={{ color: '#dc2626', fontWeight: 700 }}>❌ Error: {allScrapeResult.error}</div>
+                  ) : (
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#059669', fontSize: 14, marginBottom: 6 }}>
+                        🎉 Nightly Batch Complete! {allScrapeResult.updated} accounts updated, {allScrapeResult.failed} failed out of {allScrapeResult.total} total.
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                      
+                      {allScrapeResult.failures?.length > 0 ? (
+                        <div style={{ marginTop: 14, background: '#ffffff', border: '1px solid #fee2e2', borderRadius: 12, padding: '14px 16px' }}>
+                          <div style={{ color: '#dc2626', fontWeight: 800, fontSize: 13, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            ⚠️ Unscraped / Skipped Accounts ({allScrapeResult.failures.length}):
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
+                            {allScrapeResult.failures.map((f, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fee2e2' }}>
+                                <div>
+                                  <span style={{ fontWeight: 800, color: '#09090b', marginRight: 6 }}>{f.name}</span>
+                                  <code style={{ color: '#dc2626', fontWeight: 700 }}>@{f.handle}</code>
+                                  <div style={{ fontSize: 11, color: '#71717a', marginTop: 2 }}>{f.error}</div>
+                                </div>
+                                <button
+                                  onClick={() => handleEdit(mostFollowed.find(p => p.id === f.id) || f)}
+                                  style={{
+                                    background: '#ffffff',
+                                    border: '1px solid #fecaca',
+                                    color: '#dc2626',
+                                    padding: '4px 10px',
+                                    borderRadius: 6,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Edit Handle
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ color: '#059669', fontSize: 12, fontWeight: 600, marginTop: 4 }}>
+                          ✨ 100% Success! All accounts scraped cleanly without errors.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -3871,11 +4338,36 @@ export default function AdminPanel() {
         {/* ── TRENDING REELS TAB ────────────────────────────────────────── */}
         {tab === 'reels' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
-                Trending Reels ({viralReels.length})
-              </h2>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
+                  Trending Reels ({viralReels.length})
+                </h2>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  Live 24-hour trending leaderboard with automatic rank momentum calculation
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleRefreshTrendingReels('viral_reels')}
+                  disabled={trendingScrapeRunning}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #a855f7, #6366f1)',
+                    color: '#ffffff',
+                    cursor: trendingScrapeRunning ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(168, 85, 247, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  {trendingScrapeRunning ? '⏳ Scraping in Progress...' : '⚡ Refresh & Auto-Rank Reels'}
+                </button>
                 <button
                   className={`btn ${reorderMode ? 'btn-success' : 'btn-ghost'}`}
                   onClick={() => setReorderMode(!reorderMode)}
@@ -3887,7 +4379,7 @@ export default function AdminPanel() {
                     color: reorderMode ? '#28a745' : 'var(--text)'
                   }}
                 >
-                  {reorderMode ? '🔒 Done Reordering' : '🔧 Reorder Positions'}
+                  {reorderMode ? '🔒 Done Reordering' : '🔧 Manual Reorder'}
                 </button>
                 {!showViralReelsForm && !editingViralReels && (
                   <button className="btn btn-primary" onClick={() => setShowViralReelsForm(true)}>
@@ -3896,6 +4388,33 @@ export default function AdminPanel() {
                 )}
               </div>
             </div>
+
+            {/* Trending Scrape Live Card */}
+            {(trendingScrapeRunning || trendingScrapeResult) && (
+              <div className="card" style={{
+                marginBottom: 20,
+                padding: '16px 20px',
+                borderRadius: 14,
+                border: '1px solid var(--border)',
+                background: 'var(--surface2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontWeight: 800, fontSize: 14 }}>
+                    {trendingScrapeRunning ? '⚡ Refreshing & Auto-Ranking Reels...' : '🎉 Refresh Complete!'}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#a855f7' }}>
+                    {trendingScrapeProgress.current} / {trendingScrapeProgress.total} ({trendingScrapeProgress.percent}%)
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: 8, background: 'rgba(0,0,0,0.1)', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                  <div style={{ width: `${trendingScrapeProgress.percent}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #6366f1)', transition: 'width 0.3s ease' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+                  <span style={{ color: '#10b981', fontWeight: 700 }}>✅ {trendingScrapeProgress.updated} Updated</span>
+                  <span style={{ color: '#ef4444', fontWeight: 700 }}>❌ {trendingScrapeProgress.failed} Skipped</span>
+                </div>
+              </div>
+            )}
 
             {(showViralReelsForm || editingViralReels) && (
               <AdminModal
@@ -4065,11 +4584,49 @@ export default function AdminPanel() {
         {/* ── MOST VIEWED REELS TAB ────────────────────────────────────────── */}
         {tab === 'most_viewed_reels' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
-                Most Viewed Reels ({mostViewedReels.length})
-              </h2>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
+                  Most Viewed Reels ({mostViewedReels.length})
+                </h2>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  All-time highest viewed reels ranked automatically by real-time view count
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleRefreshTrendingReels('most_viewed_reels')}
+                  disabled={trendingScrapeRunning}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #3b82f6)',
+                    color: '#ffffff',
+                    cursor: trendingScrapeRunning ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  {trendingScrapeRunning ? '⏳ Scraping in Progress...' : '⚡ Refresh & Auto-Rank Views'}
+                </button>
+                <button
+                  className={`btn ${reorderMode ? 'btn-success' : 'btn-ghost'}`}
+                  onClick={() => setReorderMode(!reorderMode)}
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    border: reorderMode ? '1px solid #28a745' : '1px solid var(--border)',
+                    background: reorderMode ? 'rgba(40, 167, 69, 0.1)' : 'transparent',
+                    color: reorderMode ? '#28a745' : 'var(--text)'
+                  }}
+                >
+                  {reorderMode ? '🔒 Done Reordering' : '🔧 Manual Reorder'}
+                </button>
                 {!showMostViewedReelsForm && !editingMostViewedReels && (
                   <button className="btn btn-primary" onClick={() => setShowMostViewedReelsForm(true)}>
                     + Add Reel
@@ -4279,11 +4836,49 @@ export default function AdminPanel() {
         {/* ── MOST LIKED POSTS TAB ────────────────────────────────────────── */}
         {tab === 'most_liked_posts' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
-                Most Liked Posts ({mostLikedPosts.length})
-              </h2>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
+                  Most Liked Posts ({mostLikedPosts.length})
+                </h2>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  All-time highest liked Instagram posts ranked automatically by real-time like count
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleRefreshTrendingReels('most_liked_posts')}
+                  disabled={trendingScrapeRunning}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #ff2a5f, #ff6b35)',
+                    color: '#ffffff',
+                    cursor: trendingScrapeRunning ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(255, 42, 95, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  {trendingScrapeRunning ? '⏳ Scraping in Progress...' : '⚡ Refresh & Auto-Rank Likes'}
+                </button>
+                <button
+                  className={`btn ${reorderMode ? 'btn-success' : 'btn-ghost'}`}
+                  onClick={() => setReorderMode(!reorderMode)}
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    border: reorderMode ? '1px solid #28a745' : '1px solid var(--border)',
+                    background: reorderMode ? 'rgba(40, 167, 69, 0.1)' : 'transparent',
+                    color: reorderMode ? '#28a745' : 'var(--text)'
+                  }}
+                >
+                  {reorderMode ? '🔒 Done Reordering' : '🔧 Manual Reorder'}
+                </button>
                 {!showMostLikedPostsForm && !editingMostLikedPosts && (
                   <button className="btn btn-primary" onClick={() => setShowMostLikedPostsForm(true)}>
                     + Add Post
@@ -4645,37 +5240,58 @@ export default function AdminPanel() {
                           </div>
                         )}
 
-                        {item.photo_url ? (
-                          <img src={item.photo_url} alt="" style={{ width: 90, height: 50, borderRadius: 8, objectFit: 'cover', background: 'var(--surface2)', pointerEvents: 'none' }} />
-                        ) : (
-                          <div style={{ width: 90, height: 50, borderRadius: 8, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, pointerEvents: 'none' }}>💬</div>
-                        )}
+                        {/* Commenter Avatar */}
+                        <div className="row-avatar-container" style={{ width: 42, height: 42, flexShrink: 0 }}>
+                          <div className="row-avatar-inner">
+                            {item.creator_photo_url ? (
+                              <img src={item.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : '💬'}
+                          </div>
+                        </div>
                         
-                        <div style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
-                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.title}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Rank: #{globalIdx + 1}</span>
-                            &nbsp;·&nbsp;
-                            {item.creator_photo_url && (
-                              <img src={item.creator_photo_url} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />
+                        {/* Comment Details */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <span style={{ color: 'var(--accent)', fontWeight: 800, fontSize: 13 }}>#{globalIdx + 1}</span>
+                            <span style={{ fontWeight: 750, fontSize: 14, color: 'var(--text)' }}>
+                              {item.creator_name ? item.creator_name.replace(/^@/, '') : '@anonymous'}
+                            </span>
+                            {item.created_at && (
+                              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                · {new Date(item.created_at).toLocaleDateString()}
+                              </span>
                             )}
-                            <span>Creator: <strong>{item.creator_name || '@anonymous'}</strong></span>
-                            {item.likes_text && (
-                              <>
-                                &nbsp;·&nbsp;
-                                <span>Likes: <strong>{item.likes_text}</strong></span>
-                              </>
+                          </div>
+                          <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.45, wordBreak: 'break-word', whiteSpace: 'pre-line', marginBottom: 6 }}>
+                            {item.title || item.description}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              background: 'rgba(255, 42, 95, 0.08)',
+                              color: '#ff2a5f',
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              fontSize: 11.5,
+                              fontWeight: 800
+                            }}>
+                              ❤️ {item.likes_text || '0'} likes
+                            </span>
+                            {item.instagram_link && (
+                              <a href={item.instagram_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+                                View Reel ↗
+                              </a>
                             )}
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <a href={item.instagram_link} target="_blank" rel="noopener noreferrer">
-                            <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}>View Link</button>
-                          </a>
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignSelf: 'center' }}>
                           <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
                             onClick={() => { setEditingMostLikedComments(item); setShowMostLikedCommentsForm(false) }}>
-                            Edit
+                            ✏️ Edit Likes / Text
                           </button>
                           <button
                             onClick={() => deleteMostLikedComment(item.id)}
@@ -4699,11 +5315,49 @@ export default function AdminPanel() {
         {/* ── MOST LIKED REELS TAB ────────────────────────────────────────── */}
         {tab === 'most_liked_reels' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
-                Most Liked Reels ({mostLikedReels.length})
-              </h2>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
+                  Most Liked Reels ({mostLikedReels.length})
+                </h2>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  All-time highest liked Instagram reels ranked automatically by real-time like count
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleRefreshTrendingReels('most_liked_reels')}
+                  disabled={trendingScrapeRunning}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #ff2a5f, #a855f7)',
+                    color: '#ffffff',
+                    cursor: trendingScrapeRunning ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(255, 42, 95, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  {trendingScrapeRunning ? '⏳ Scraping in Progress...' : '⚡ Refresh & Auto-Rank Likes'}
+                </button>
+                <button
+                  className={`btn ${reorderMode ? 'btn-success' : 'btn-ghost'}`}
+                  onClick={() => setReorderMode(!reorderMode)}
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    border: reorderMode ? '1px solid #28a745' : '1px solid var(--border)',
+                    background: reorderMode ? 'rgba(40, 167, 69, 0.1)' : 'transparent',
+                    color: reorderMode ? '#28a745' : 'var(--text)'
+                  }}
+                >
+                  {reorderMode ? '🔒 Done Reordering' : '🔧 Manual Reorder'}
+                </button>
                 {!showMostLikedReelsForm && !editingMostLikedReels && (
                   <button className="btn btn-primary" onClick={() => setShowMostLikedReelsForm(true)}>
                     + Add Reel

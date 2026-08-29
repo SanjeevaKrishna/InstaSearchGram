@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Logo from './Logo'
-import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, MessageSquare, Flame } from 'lucide-react'
+import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, MessageSquare, Flame, Sparkles } from 'lucide-react'
 
 export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -66,7 +66,6 @@ export default function Navbar() {
               <Link href="/live">
                 <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Live</button>
               </Link>
-
             </div>
 
             {/* Menu Dropdown */}
@@ -140,6 +139,9 @@ export default function Navbar() {
                   </Link>
                   <Link href="/live" className="dropdown-item" onClick={closeDropdown}>
                     <Flame size={14} style={{ marginRight: 8 }} /> Live
+                  </Link>
+                  <Link href="/converter" className="dropdown-item" onClick={closeDropdown}>
+                    <Sparkles size={14} style={{ marginRight: 8, color: 'var(--accent)' }} /> Dot Art Converter
                   </Link>
 
 

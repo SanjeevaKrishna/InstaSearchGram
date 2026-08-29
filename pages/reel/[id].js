@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import BottomNav from '../../components/BottomNav'
-import { ArrowLeft, Calendar, Users, ExternalLink, Heart, Eye, Film, Play } from 'lucide-react'
+import { ArrowLeft, Calendar, Users, ExternalLink, Heart, Eye, Film, Play, ChevronDown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 export default function ReelDetailPage({ initialReel, moreFromCreator = [], topCategoryReels = [], celebrityProfile }) {
@@ -461,23 +461,19 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               }}>
                 ❓ Frequently Asked Questions
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-                  <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
-                    What category does this reel belong to?
-                  </h4>
-                  <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                    This reel is benchmarked inside the <strong>{reel.category_name}</strong> category on Spialr, which tracks and charts top-performing creators in this niche.
-                  </p>
-                </div>
-                <div style={{ background: 'var(--surface2)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-                  <h4 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px 0' }}>
-                    How can I view the actual reel on Instagram?
-                  </h4>
-                  <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                    You can click the <strong>"Watch Reel on Instagram"</strong> button on this page, which will open a secure link directly to the official post on the Instagram platform.
-                  </p>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  {
+                    q: 'What category does this reel belong to?',
+                    a: `This reel is benchmarked inside the ${reel.category_name || 'Trending'} category on Spialr, which tracks and charts top-performing creators in this niche.`
+                  },
+                  {
+                    q: 'How can I view the actual reel on Instagram?',
+                    a: 'You can click the "Watch Reel on Instagram" button on this page, which will open a secure link directly to the official post on the Instagram platform.'
+                  }
+                ].map((faq, idx) => (
+                  <ReelFAQItem key={idx} faq={faq} />
+                ))}
               </div>
             </div>
 
@@ -878,4 +874,60 @@ export async function getServerSideProps(context) {
       notFound: true
     }
   }
+}
+
+function ReelFAQItem({ faq }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{
+      background: 'var(--surface2)',
+      borderRadius: 12,
+      border: '1px solid var(--border)',
+      overflow: 'hidden',
+      transition: 'all 0.2s ease'
+    }}>
+      <button
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '14px 18px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          textAlign: 'left',
+          color: 'var(--text)',
+          fontSize: 14,
+          fontWeight: 700
+        }}
+      >
+        <span>{faq.q}</span>
+        <span style={{
+          color: 'var(--accent)',
+          display: 'inline-flex',
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s ease',
+          flexShrink: 0
+        }}>
+          <ChevronDown size={18} />
+        </span>
+      </button>
+      {open && (
+        <div style={{
+          padding: '0 18px 16px',
+          fontSize: 13,
+          color: 'var(--text-dim)',
+          lineHeight: 1.65,
+          borderTop: '1px solid var(--border)',
+          paddingTop: 12
+        }}>
+          {faq.a}
+        </div>
+      )}
+    </div>
+  )
 }

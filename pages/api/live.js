@@ -48,12 +48,14 @@ export default async function handler(req, res) {
       return res.status(200).json(liveCache.data)
     }
 
-    // Fetch live settings, 3 pages of most followed (supporting up to 3000 rows in parallel), viral reels, most viewed reels and celebrities concurrently
+    // Fetch live settings, 5 pages of most followed (supporting up to 5000 rows in parallel), viral reels, most viewed reels and celebrities concurrently
     const [
       settingsResult, 
       profilesResult1, 
       profilesResult2, 
       profilesResult3, 
+      profilesResult4,
+      profilesResult5,
       reelsResult, 
       mostViewedResult, 
       celebritiesResult,
@@ -65,6 +67,8 @@ export default async function handler(req, res) {
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(3000, 3999),
+      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(4000, 4999),
       supabase.from('viral_reels').select('*'),
       supabase.from('most_viewed_reels').select('*'),
       supabase.from('celebrities').select('name, slug, photo_url, followers_count').neq('hide_search', true),
@@ -77,6 +81,8 @@ export default async function handler(req, res) {
     if (profilesResult1.error) throw profilesResult1.error
     if (profilesResult2.error) throw profilesResult2.error
     if (profilesResult3.error) throw profilesResult3.error
+    if (profilesResult4.error) throw profilesResult4.error
+    if (profilesResult5.error) throw profilesResult5.error
     if (reelsResult.error) throw reelsResult.error
     if (mostViewedResult.error) throw mostViewedResult.error
     if (celebritiesResult.error) throw celebritiesResult.error
@@ -100,6 +106,8 @@ export default async function handler(req, res) {
     const profilesData = (profilesResult1.data || [])
       .concat(profilesResult2.data || [])
       .concat(profilesResult3.data || [])
+      .concat(profilesResult4.data || [])
+      .concat(profilesResult5.data || [])
       .map(profile => ({
         ...profile,
         celebritySlug: profile.name ? (celebrityMap[profile.name.toLowerCase().trim()]?.slug || null) : null
