@@ -50,6 +50,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
         <meta name="description" content={`Discover ${featured.length > 0 ? profileCount : 'verified'} top Instagram accounts ordered by followers count. Search and find Instagram posts, reels, and trending profiles in India and globally — without endless scrolling.`} />
         <meta name="keywords" content="top 100 instagram accounts in india, most followed instagram accounts, top instagram creators, spialr, instagram follower rankings, famous instagram profiles, search instagram reels, list of top instagram accounts" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="canonical" href="https://spialr.com" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.png" type="image/png" />
       </Head>

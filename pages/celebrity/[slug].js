@@ -149,7 +149,7 @@ function generateProfileNarrative(cel, liveRank, postsCount, posts = []) {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null }) {
+export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null, liveProfileSlug = null }) {
   const router = useRouter()
   const { slug, compare } = router.query
 
@@ -538,11 +538,28 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
   return (
     <>
       <Head>
-        <title>{`${celebrity.name?.trim()} Instagram Stats & Follower Count — Spialr`}</title>
+        <title>{`${celebrity.name?.trim()} (@${celebrity.instagram_handle || ''}) Instagram Followers, Live Stats & Analytics | Spialr`}</title>
         <meta
           name="description"
-          content={`${celebrity.name} has ${formatCount(celebrity.followers_count)} Instagram followers${celebrity.account_created_year ? `, active since ${celebrity.account_created_year}` : ''}${celebrity.posts_count ? ` with ${formatCount(celebrity.posts_count)} posts` : ''}. View live follower rankings, reel stats, post analytics and more on Spialr.`}
+          content={`Check ${celebrity.name}'s real-time Instagram follower count (${formatCount(celebrity.followers_count)}), engagement rate, average reel views, post performance, and live growth rankings on Spialr.`}
         />
+        <meta
+          name="keywords"
+          content={`${celebrity.name}, ${celebrity.name} instagram followers, ${celebrity.name} instagram followers count, ${celebrity.name} followers on instagram, ${celebrity.name} insta followers, ${celebrity.instagram_handle || ''} followers, live instagram follower count, instagram stats, spialr`}
+        />
+        <link rel="canonical" href={`https://spialr.com/celebrity/${celebrity.slug}`} />
+        <meta property="og:type" content="profile" />
+        <meta property="og:title" content={`${celebrity.name?.trim()} (@${celebrity.instagram_handle || ''}) Instagram Followers, Live Stats & Analytics | Spialr`} />
+        <meta property="og:description" content={`Check ${celebrity.name}'s real-time Instagram follower count (${formatCount(celebrity.followers_count)}), engagement rate, average reel views, and growth rankings on Spialr.`} />
+        <meta property="og:image" content={celebrity.photo_url || 'https://spialr.com/og-image.jpg'} />
+        <meta property="og:url" content={`https://spialr.com/celebrity/${celebrity.slug}`} />
+        <meta property="og:site_name" content="Spialr" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${celebrity.name} Instagram Followers & Analytics | Spialr`} />
+        <meta name="twitter:description" content={`Real-time Instagram followers, reel analytics, and engagement metrics for ${celebrity.name}.`} />
+        <meta name="twitter:image" content={celebrity.photo_url || 'https://spialr.com/og-image.jpg'} />
+
+        {/* Structured Data: Person Schema */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -550,13 +567,75 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               "@context": "https://schema.org",
               "@type": "Person",
               "name": celebrity.name,
+              "alternateName": celebrity.instagram_handle ? `@${celebrity.instagram_handle}` : celebrity.name,
               "url": `https://spialr.com/celebrity/${celebrity.slug}`,
               "image": celebrity.photo_url || '',
+              "sameAs": celebrity.instagram_handle ? `https://www.instagram.com/${celebrity.instagram_handle}/` : undefined,
               "interactionStatistic": [
                 {
                   "@type": "InteractionCounter",
                   "interactionType": "https://schema.org/FollowAction",
                   "userInteractionCount": celebrity.followers_count
+                }
+              ]
+            })
+          }}
+        />
+
+        {/* Structured Data: FAQPage Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": `How many followers does ${celebrity.name} have on Instagram?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `As of today, ${celebrity.name} (@${celebrity.instagram_handle || ''}) has ${formatCount(celebrity.followers_count)} followers on Instagram. You can track real-time follower numbers, daily changes, and 31-day growth analytics on Spialr.`
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": `What are ${celebrity.name}'s average Instagram reel views and engagement?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `${celebrity.name} averages approximately ${formatCount(celebrity.average_views || 0)} views per reel with a follower interaction rate of ${Number(celebrity.followers_interaction || 0).toFixed(2)}%, analyzed on Spialr.`
+                  }
+                }
+              ]
+            })
+          }}
+        />
+
+        {/* Structured Data: BreadcrumbList Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                {
+                  "@type": "ListItem",
+                  "position": 1,
+                  "name": "Home",
+                  "item": "https://spialr.com"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": "Celebrities",
+                  "item": "https://spialr.com/all"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 3,
+                  "name": `${celebrity.name}`,
+                  "item": `https://spialr.com/celebrity/${celebrity.slug}`
                 }
               ]
             })
@@ -693,7 +772,6 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             </button>
           </div>
         </div>
-
 
         {/* Account Insights (Premium Analytics Cards) */}
         {(celebrity.total_reel_views || celebrity.total_reel_likes || celebrity.total_post_likes || celebrity.total_comments || celebrity.total_shares || celebrity.total_reposts) ? (
@@ -988,6 +1066,63 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                 </>
               )}
 
+              {/* Live Follower Tracker & 31-Day Growth Feature Card (Only shown if creator exists in live most_followed) */}
+              {liveProfileSlug && (
+                <div style={{
+                  marginTop: 12,
+                  marginBottom: 24,
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(217, 70, 239, 0.08) 100%)',
+                  border: '1px solid rgba(99, 102, 241, 0.35)',
+                  borderRadius: 20,
+                  padding: '20px 22px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 16,
+                  boxShadow: '0 8px 24px rgba(99, 102, 241, 0.08)'
+                }}>
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
+                      <span style={{ fontSize: 11, fontWeight: 900, color: '#818cf8', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                        LIVE REAL-TIME FOLLOWER TRACKER
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+                      Track {celebrity.name}'s Real-Time Followers & 31-Day Growth
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
+                      Explore live odometer counter, daily gain/loss breakdown, and milestone projections.
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => router.push(`/profile/${liveProfileSlug}`)}
+                    style={{
+                      padding: '10px 20px',
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #d946ef)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 12,
+                      fontSize: 13,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.2s ease',
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+                    onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                  >
+                    <span>Open Live Analytics →</span>
+                  </button>
+                </div>
+              )}
+
             </div>
           </div>
         )}
@@ -1192,6 +1327,7 @@ export async function getServerSideProps(context) {
       .order('followers_count', { ascending: false })
 
     let liveRank = null
+    let liveProfileSlug = null
     if (leaderboardData) {
       const matchIndex = leaderboardData.findIndex(item => {
         // 1. Match by unique instagram_handle first
@@ -1205,6 +1341,10 @@ export async function getServerSideProps(context) {
       })
       if (matchIndex !== -1) {
         liveRank = matchIndex + 1
+        const matchedItem = leaderboardData[matchIndex]
+        liveProfileSlug = matchedItem.instagram_handle
+          ? matchedItem.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
+          : matchedItem.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
       }
     }
 
@@ -1241,6 +1381,7 @@ export async function getServerSideProps(context) {
         otherCelebrities: otherCelebrities || [],
         liveRank,
         compareLiveRank,
+        liveProfileSlug,
       }
     }
   } catch (err) {

@@ -2,7 +2,24 @@ import { useState, useEffect, useMemo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { CornerUpLeft, TrendingUp, Info, Flame, AlertTriangle, Sparkles } from 'lucide-react'
+import {
+  CornerUpLeft,
+  TrendingUp,
+  TrendingDown,
+  Info,
+  Flame,
+  Snowflake,
+  AlertTriangle,
+  Sparkles,
+  Zap,
+  Calendar,
+  BarChart3,
+  Activity,
+  ArrowLeftRight,
+  Rocket,
+  HeartCrack,
+  CheckCircle2
+} from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 const InstagramIcon = ({ size = 24, style = {} }) => (
@@ -107,7 +124,7 @@ const getFollowerStats = (history = [], currentCount = 0) => {
   return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted }
 }
 
-export default function ProfilePage({ profile }) {
+export default function ProfilePage({ profile, slug }) {
   const router = useRouter()
   const [tooltip, setTooltip] = useState(null)
   const [selectedPeriod, setSelectedPeriod] = useState('last30')
@@ -305,17 +322,135 @@ export default function ProfilePage({ profile }) {
   return (
     <>
       <Head>
-        <title>{`${profile.name} Instagram Follower Count & Growth Stats - Spialr`}</title>
-        <meta name="description" content={`Track live follower count, weekly growth calendar, and community votes of ${profile.name} (${profile.instagram_handle ? `@${profile.instagram_handle}` : 'Instagram profile'}) on Spialr.`} />
-        <meta name="keywords" content={`${profile.name}, ${profile.instagram_handle || ''}, instagram followers, live follower count, growth stats, weekly growth, spialr`} />
-        <meta property="og:title" content={`${profile.name} Instagram Follower Count & Growth Stats - Spialr`} />
-        <meta property="og:description" content={`Track live follower count, weekly growth calendar, and community votes of ${profile.name} on Spialr.`} />
-        <meta property="og:image" content={profile.photo_url || ''} />
+        <title>{`${profile.name} (@${profile.instagram_handle || profile.name}) Instagram Followers Live - Real-Time Count & Stats | Spialr`}</title>
+        <meta
+          name="description"
+          content={`Track ${profile.name} (@${profile.instagram_handle || ''}) live Instagram follower count (${formatNumber(profile.followers_count)}). View real-time daily follower gains, 31-day growth history, weekly breakdown, and live rankings on Spialr.`}
+        />
+        <meta
+          name="keywords"
+          content={`${profile.name}, ${profile.name} instagram followers, ${profile.name} instagram followers count, ${profile.name} followers on instagram, ${profile.name} insta followers, ${profile.instagram_handle || ''} followers, live instagram follower count, instagram follower tracker, growth stats, spialr`}
+        />
+        <link rel="canonical" href={`https://spialr.com/profile/${slug || profile.instagram_handle || ''}`} />
+        <meta property="og:type" content="profile" />
+        <meta property="og:title" content={`${profile.name} (@${profile.instagram_handle || ''}) Instagram Followers Live - Real-Time Count & Stats | Spialr`} />
+        <meta property="og:description" content={`Track ${profile.name} (@${profile.instagram_handle || ''}) real-time Instagram follower count (${formatNumber(profile.followers_count)}), live daily gains, and 31-day growth history on Spialr.`} />
+        <meta property="og:image" content={profile.photo_url || 'https://spialr.com/og-image.jpg'} />
+        <meta property="og:url" content={`https://spialr.com/profile/${slug || profile.instagram_handle || ''}`} />
+        <meta property="og:site_name" content="Spialr" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${profile.name} Instagram Followers Count Live | Spialr`} />
+        <meta name="twitter:description" content={`Live real-time follower count and 31-day growth stats for ${profile.name} (@${profile.instagram_handle || ''}).`} />
+        <meta name="twitter:image" content={profile.photo_url || 'https://spialr.com/og-image.jpg'} />
+
+        {/* Structured Data: Person Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Person",
+              "name": profile.name,
+              "alternateName": profile.instagram_handle ? `@${profile.instagram_handle}` : profile.name,
+              "url": `https://spialr.com/profile/${slug || profile.instagram_handle || ''}`,
+              "image": profile.photo_url || '',
+              "sameAs": profile.instagram_handle ? `https://www.instagram.com/${profile.instagram_handle}/` : undefined,
+              "interactionStatistic": [
+                {
+                  "@type": "InteractionCounter",
+                  "interactionType": "https://schema.org/FollowAction",
+                  "userInteractionCount": profile.followers_count || 0
+                }
+              ]
+            })
+          }}
+        />
+
+        {/* Structured Data: FAQPage Schema (Targets Google Q&A Rich Snippets) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": `How many followers does ${profile.name} have on Instagram?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `As of today, ${profile.name} (@${profile.instagram_handle || ''}) has approximately ${formatNumber(profile.followers_count)} followers on Instagram, tracked in real-time with live updates on Spialr.`
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": `How fast is ${profile.name}'s Instagram account growing?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `${profile.name} gains approximately ${dailyGain >= 0 ? '+' + formatNumber(dailyGain) : formatNumber(dailyGain)} followers per day with an estimated 30-day growth of ${monthlyGain >= 0 ? '+' + formatNumber(monthlyGain) : formatNumber(monthlyGain)} followers.`
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": `What is ${profile.name}'s official Instagram handle?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `The official Instagram handle for ${profile.name} is @${profile.instagram_handle || 'N/A'}. You can track live real-time follower counts, rankings, and historical momentum on Spialr.`
+                  }
+                }
+              ]
+            })
+          }}
+        />
+
+        {/* Structured Data: BreadcrumbList Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                {
+                  "@type": "ListItem",
+                  "position": 1,
+                  "name": "Home",
+                  "item": "https://spialr.com"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": "Live Followers",
+                  "item": "https://spialr.com/live"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 3,
+                  "name": `${profile.name}`,
+                  "item": `https://spialr.com/profile/${slug || profile.instagram_handle || ''}`
+                }
+              ]
+            })
+          }}
+        />
       </Head>
 
       <style>{`
         .grid-square { transition: transform 0.15s ease, filter 0.15s ease; cursor: pointer; }
         .grid-square:hover { transform: scale(1.35); filter: brightness(1.25); z-index: 10; position: relative; }
+        .momentum-stat-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        @media (min-width: 600px) {
+          .momentum-stat-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+          }
+        }
         .tooltip-box {
           position: fixed;
           background: rgba(15, 15, 30, 0.95);
@@ -458,38 +593,38 @@ export default function ProfilePage({ profile }) {
 
           {/* Social Drama & Growth Meter widget */}
           {isLosing ? (
-            <div className="card" style={{ padding: '16px 20px 20px', marginBottom: 24, borderRadius: 16, background: '#ffffff', border: '1px solid #fee2e2', boxShadow: '0 4px 14px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#dc2626', fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 8 }}>
+            <div className="card" style={{ padding: '16px 20px 20px', marginBottom: 24, borderRadius: 16, background: 'var(--surface)', border: '1px solid rgba(239, 68, 68, 0.25)', boxShadow: '0 4px 14px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 8 }}>
                 <Flame size={18} />
-                <span>🚨 Mass Unfollow</span>
+                <span>Active Unfollow Trend</span>
               </div>
-              <p style={{ fontSize: 13, color: '#09090b', lineHeight: 1.6, margin: '0 0 14px', fontWeight: 500 }}>
-                <strong style={{ color: '#dc2626', fontWeight: 800 }}>{profile.name}</strong> is currently experiencing an active unfollow wave! This account has dropped by <strong style={{ color: '#dc2626', fontWeight: 800 }}>-{formatNumber(lostFollowers)}</strong> followers from their historical peak mark.
+              <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, margin: '0 0 14px', fontWeight: 500 }}>
+                <strong style={{ color: '#ef4444', fontWeight: 800 }}>{profile.name}</strong> is currently experiencing an active unfollow wave, dropping <strong style={{ color: '#ef4444', fontWeight: 800 }}>-{formatNumber(lostFollowers)}</strong> followers from their historical peak.
               </p>
               <div style={{ display: 'flex', gap: 24, fontSize: 12 }}>
                 <div>
-                  <span style={{ color: '#71717a' }}>Peak Follower Mark:</span> <strong style={{ color: '#0284c7', fontWeight: 800, marginLeft: 4 }}>{peakFollowers.toLocaleString()}</strong>
+                  <span style={{ color: 'var(--text-muted)' }}>Peak Mark:</span> <strong style={{ color: '#38bdf8', fontWeight: 800, marginLeft: 4 }}>{peakFollowers.toLocaleString()}</strong>
                 </div>
                 <div>
-                  <span style={{ color: '#71717a' }}>Total Lost:</span> <strong style={{ color: '#dc2626', fontWeight: 800, marginLeft: 4 }}>-{formatNumber(lostFollowers)}</strong>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Dropped:</span> <strong style={{ color: '#ef4444', fontWeight: 800, marginLeft: 4 }}>-{formatNumber(lostFollowers)}</strong>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="card" style={{ padding: '16px 20px 20px', marginBottom: 24, borderRadius: 16, background: '#ffffff', border: '1px solid #e4e4e7', boxShadow: '0 4px 14px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#059669', fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 8 }}>
+            <div className="card" style={{ padding: '16px 20px 20px', marginBottom: 24, borderRadius: 16, background: 'var(--surface)', border: '1px solid rgba(16, 185, 129, 0.25)', boxShadow: '0 4px 14px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10b981', fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 8 }}>
                 <TrendingUp size={18} />
-                <span>✨ Peak Momentum · Healthy Growth</span>
+                <span>Peak Follower Momentum</span>
               </div>
-              <p style={{ fontSize: 13, color: '#09090b', lineHeight: 1.6, margin: '0 0 14px', fontWeight: 500 }}>
-                <strong style={{ color: '#0284c7', fontWeight: 800 }}>{profile.name}</strong> is maintaining rock-solid momentum at their historical peak! Follower activity is steady and positive with zero major unfollow waves detected.
+              <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, margin: '0 0 14px', fontWeight: 500 }}>
+                <strong style={{ color: '#38bdf8', fontWeight: 800 }}>{profile.name}</strong> is maintaining steady momentum at their historical peak with positive daily activity.
               </p>
               <div style={{ display: 'flex', gap: 24, fontSize: 12 }}>
                 <div>
-                  <span style={{ color: '#71717a' }}>Peak Follower Mark:</span> <strong style={{ color: '#0284c7', fontWeight: 800, marginLeft: 4 }}>{peakFollowers.toLocaleString()}</strong>
+                  <span style={{ color: 'var(--text-muted)' }}>Peak Mark:</span> <strong style={{ color: '#38bdf8', fontWeight: 800, marginLeft: 4 }}>{peakFollowers.toLocaleString()}</strong>
                 </div>
                 <div>
-                  <span style={{ color: '#71717a' }}>Status:</span> <strong style={{ color: '#059669', fontWeight: 800, marginLeft: 4 }}>🏆 Peak Achieved</strong>
+                  <span style={{ color: 'var(--text-muted)' }}>Status:</span> <strong style={{ color: '#10b981', fontWeight: 800, marginLeft: 4 }}>Peak Achieved</strong>
                 </div>
               </div>
             </div>
@@ -556,60 +691,60 @@ export default function ProfilePage({ profile }) {
                 value: fmtShort(netChange),
                 sub: netChange >= 0 ? 'Followers Gained' : 'Followers Lost',
                 color: netChange >= 0 ? '#34d399' : '#fb7185',
-                bg: netChange >= 0 ? 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(6,182,212,0.06) 100%)' : 'linear-gradient(135deg, rgba(244,63,94,0.14) 0%, rgba(239,68,68,0.06) 100%)',
-                border: netChange >= 0 ? 'rgba(52,211,153,0.35)' : 'rgba(251,113,133,0.35)',
-                icon: netChange >= 0 ? '📈' : '📉'
+                bg: 'rgba(255, 255, 255, 0.03)',
+                border: netChange >= 0 ? 'rgba(52, 211, 153, 0.25)' : 'rgba(251, 113, 133, 0.25)',
+                iconBg: netChange >= 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                icon: netChange >= 0 ? <TrendingUp size={16} color="#34d399" /> : <TrendingDown size={16} color="#fb7185" />
               },
               {
-                label: 'Best Performance Day',
+                label: 'Best Performance',
                 value: bestDay?.increment ? fmtShort(bestDay.increment) : '—',
-                sub: bestDay?.date ? new Date(bestDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+                sub: bestDay?.date ? new Date(bestDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No data',
                 color: '#60a5fa',
-                bg: 'linear-gradient(135deg, rgba(59,130,246,0.14) 0%, rgba(147,51,234,0.06) 100%)',
-                border: 'rgba(96,165,250,0.35)',
-                icon: '🚀'
+                bg: 'rgba(255, 255, 255, 0.03)',
+                border: 'rgba(96, 165, 250, 0.25)',
+                iconBg: 'rgba(59, 130, 246, 0.12)',
+                icon: <Rocket size={16} color="#60a5fa" />
               },
               {
-                label: 'Biggest Drop Day',
+                label: 'Biggest Drop',
                 value: worstDay?.increment ? fmtShort(worstDay.increment) : '—',
-                sub: worstDay?.date ? new Date(worstDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+                sub: worstDay?.date ? new Date(worstDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No data',
                 color: '#fb7185',
-                bg: 'linear-gradient(135deg, rgba(244,63,94,0.14) 0%, rgba(225,29,72,0.06) 100%)',
-                border: 'rgba(251,113,133,0.35)',
-                icon: '💔'
+                bg: 'rgba(255, 255, 255, 0.03)',
+                border: 'rgba(251, 113, 133, 0.25)',
+                iconBg: 'rgba(244, 63, 94, 0.12)',
+                icon: <HeartCrack size={16} color="#fb7185" />
               },
               {
                 label: 'Growth Momentum',
                 value: streak > 0 ? `${streak} Days` : '—',
-                sub: streakType === 'up' ? '🔥 Growing daily' : streakType === 'down' ? '❄️ Losing daily' : 'Balanced',
-                color: streakType === 'up' ? '#fbbf24' : streakType === 'down' ? '#c084fc' : 'var(--text-muted)',
-                bg: streakType === 'up' ? 'linear-gradient(135deg, rgba(245,158,11,0.14) 0%, rgba(234,88,12,0.06) 100%)' : 'linear-gradient(135deg, rgba(168,85,247,0.14) 0%, rgba(99,102,241,0.06) 100%)',
-                border: streakType === 'up' ? 'rgba(251,191,36,0.35)' : 'rgba(192,132,252,0.35)',
-                icon: streakType === 'up' ? '🔥' : streakType === 'down' ? '❄️' : '⚡'
+                sub: streakType === 'up' ? 'Growing daily' : streakType === 'down' ? 'Losing daily' : 'Stable trajectory',
+                color: streakType === 'up' ? '#fbbf24' : streakType === 'down' ? '#c084fc' : '#94a3b8',
+                bg: 'rgba(255, 255, 255, 0.03)',
+                border: streakType === 'up' ? 'rgba(251, 191, 36, 0.25)' : 'rgba(192, 132, 252, 0.25)',
+                iconBg: streakType === 'up' ? 'rgba(245, 158, 11, 0.12)' : streakType === 'down' ? 'rgba(168, 85, 247, 0.12)' : 'rgba(255, 255, 255, 0.06)',
+                icon: streakType === 'up' ? <Flame size={16} color="#fbbf24" /> : streakType === 'down' ? <Snowflake size={16} color="#c084fc" /> : <Activity size={16} color="#94a3b8" />
               }
             ]
 
             return (
               <div className="card" style={{
-                padding: '24px 22px 22px',
+                padding: '22px 20px',
                 marginBottom: 24,
                 overflow: 'hidden',
                 position: 'relative',
-                background: 'linear-gradient(145deg, rgba(26, 20, 52, 0.95) 0%, rgba(15, 23, 42, 0.96) 60%, rgba(20, 16, 45, 0.95) 100%)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
-                boxShadow: '0 24px 50px -10px rgba(10, 8, 30, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.12)',
-                borderRadius: 24
+                background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 28, 0.98) 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.5)',
+                borderRadius: 20
               }}>
-                {/* Glowing ambient background orbs */}
-                <div style={{ position: 'absolute', top: -50, right: -50, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.25) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(20px)' }} />
-                <div style={{ position: 'absolute', bottom: -50, left: -50, width: 180, height: 180, borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.2) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(16px)' }} />
-
                 {/* Header with Month / Period Dropdown */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 22, position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.35)', padding: '5px 14px', borderRadius: 100, fontSize: 11, fontWeight: 800, color: '#d8b4fe', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#a855f7', boxShadow: '0 0 10px #a855f7', display: 'inline-block' }} />
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(168, 85, 247, 0.12)', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '4px 12px', borderRadius: 100, fontSize: 11, fontWeight: 750, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        <Activity size={12} color="#c084fc" />
                         Daily Growth Pulse
                       </div>
 
@@ -620,7 +755,7 @@ export default function ProfilePage({ profile }) {
                         style={{
                           background: 'rgba(15, 23, 42, 0.9)',
                           color: '#f1f5f9',
-                          border: '1px solid rgba(168, 85, 247, 0.45)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
                           borderRadius: 100,
                           padding: '5px 28px 5px 12px',
                           fontSize: 11,
@@ -628,76 +763,70 @@ export default function ProfilePage({ profile }) {
                           cursor: 'pointer',
                           outline: 'none',
                           appearance: 'none',
-                          boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c084fc' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                          boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'right 10px center'
                         }}
                       >
-                        <option value="last30" style={{ background: '#0f172a', color: '#fff' }}>🗓️ Last 30 Days</option>
-                        <option value="2026-09" style={{ background: '#0f172a', color: '#fff' }}>✨ September 2026</option>
-                        <option value="2026-08" style={{ background: '#0f172a', color: '#fff' }}>📅 August 2026</option>
+                        <option value="last30" style={{ background: '#0f172a', color: '#fff' }}>Last 30 Days</option>
+                        <option value="2026-09" style={{ background: '#0f172a', color: '#fff' }}>September 2026</option>
+                        <option value="2026-08" style={{ background: '#0f172a', color: '#fff' }}>August 2026</option>
                         {availableMonths.filter(m => m !== '2026-09' && m !== '2026-08').map(m => {
                           const [yr, mo] = m.split('-')
                           const label = new Date(parseInt(yr), parseInt(mo) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                          return <option key={m} value={m} style={{ background: '#0f172a', color: '#fff' }}>📅 {label}</option>
+                          return <option key={m} value={m} style={{ background: '#0f172a', color: '#fff' }}>{label}</option>
                         })}
-                        <option value="all" style={{ background: '#0f172a', color: '#fff' }}>🌐 All Recorded History</option>
+                        <option value="all" style={{ background: '#0f172a', color: '#fff' }}>All Recorded History</option>
                       </select>
                     </div>
 
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 21, fontWeight: 900, margin: 0, color: '#ffffff', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      ⚡ Follower Momentum Timeline
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, margin: 0, color: '#ffffff', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <BarChart3 size={20} color="#a78bfa" />
+                      Follower Momentum Timeline
                     </h2>
-                    <p style={{ fontSize: 12, color: '#94a3b8', margin: '5px 0 0', fontWeight: 500 }}>
-                      Showing records for <strong style={{ color: '#d8b4fe' }}>{periodTitle}</strong> &nbsp;·&nbsp; Gains <span style={{ color: '#34d399', fontWeight: 700 }}>Right ➔</span> &nbsp;·&nbsp; Drops <span style={{ color: '#fb7185', fontWeight: 700 }}>⬅ Left</span>
+                    <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0', fontWeight: 500 }}>
+                      Daily performance breakdown for <strong style={{ color: '#e2e8f0' }}>{periodTitle}</strong>
                     </p>
                   </div>
 
-                  <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)', padding: '8px 16px', borderRadius: 14, textAlign: 'right' }}>
-                    <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tracking Status</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 1 }}>
-                      <Sparkles size={13} /> Active Live Pulse
+                  <div style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '6px 14px', borderRadius: 12, textAlign: 'right' }}>
+                    <div style={{ fontSize: 9.5, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tracking Status</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                      <CheckCircle2 size={12} color="#34d399" /> Active Daily Pulse
                     </div>
                   </div>
                 </div>
 
                 {filteredDailyGains.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '48px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: 16, border: '1px dashed rgba(168,85,247,0.25)', position: 'relative', zIndex: 1 }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>📊</div>
+                  <div style={{ textAlign: 'center', padding: '48px 12px', background: 'rgba(0, 0, 0, 0.2)', borderRadius: 16, border: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+                    <BarChart3 size={32} color="#64748b" style={{ margin: '0 auto 8px' }} />
                     <div style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 700 }}>No Records for {periodTitle} Yet</div>
-                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Daily records for this period will appear once daily sync is recorded.</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Daily records will appear once daily sync is recorded.</div>
                   </div>
                 ) : (
-                  <div style={{ position: 'relative', zIndex: 1 }}>
-                    {/* ─── 4 Dynamic Stat Cards (Responsive & Spacious) ─── */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                      gap: 10,
-                      marginBottom: 20
-                    }}>
+                  <div>
+                    {/* ─── 4 Dynamic Stat Cards (Responsive: 2x2 on mobile, 4-col on desktop) ─── */}
+                    <div className="momentum-stat-grid">
                       {statCards.map((s, i) => (
                         <div key={i} style={{
                           background: s.bg,
                           border: `1px solid ${s.border}`,
-                          borderRadius: 16,
-                          padding: '12px 14px',
+                          borderRadius: 14,
+                          padding: '10px 12px',
                           display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'space-between',
-                          minHeight: 100,
-                          boxShadow: '0 8px 20px -5px rgba(0,0,0,0.3)',
-                          backdropFilter: 'blur(10px)',
+                          minHeight: 88,
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
                           overflow: 'hidden'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
                             <div style={{
-                              fontSize: 18,
-                              width: 34,
-                              height: 34,
-                              borderRadius: 10,
-                              background: 'rgba(255,255,255,0.06)',
+                              width: 28,
+                              height: 28,
+                              borderRadius: 8,
+                              background: s.iconBg,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -706,13 +835,13 @@ export default function ProfilePage({ profile }) {
                               {s.icon}
                             </div>
                             <div style={{
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: 900,
                               color: s.color,
                               lineHeight: 1,
                               fontFamily: 'var(--font-display)',
-                              textShadow: `0 0 12px ${s.color}44`,
-                              textAlign: 'right'
+                              textAlign: 'right',
+                              whiteSpace: 'nowrap'
                             }}>
                               {s.value}
                             </div>
@@ -720,18 +849,21 @@ export default function ProfilePage({ profile }) {
 
                           <div>
                             <div style={{
-                              fontSize: 10,
+                              fontSize: 9.5,
                               fontWeight: 700,
-                              color: '#cbd5e1',
+                              color: '#94a3b8',
                               textTransform: 'uppercase',
                               letterSpacing: '0.04em',
-                              lineHeight: 1.25,
-                              marginBottom: 3
+                              lineHeight: 1.2,
+                              marginBottom: 2,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
                             }}>
                               {s.label}
                             </div>
                             <div style={{
-                              fontSize: 11,
+                              fontSize: 10.5,
                               color: s.color,
                               opacity: 0.95,
                               fontWeight: 600,
@@ -748,12 +880,11 @@ export default function ProfilePage({ profile }) {
 
                     {/* ─── Diverging Timeline Chart Canvas with Horizontal & Vertical Scroll ─── */}
                     <div style={{
-                      background: 'rgba(15, 12, 35, 0.55)',
-                      borderRadius: 18,
-                      border: '1px solid rgba(168,85,247,0.22)',
+                      background: 'rgba(0, 0, 0, 0.35)',
+                      borderRadius: 16,
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
                       overflow: 'hidden',
-                      position: 'relative',
-                      boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.4)'
+                      position: 'relative'
                     }}>
                       {/* Top Horizontal Scroll Hint */}
                       <div style={{
@@ -761,19 +892,19 @@ export default function ProfilePage({ profile }) {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 14px',
-                        background: 'linear-gradient(90deg, rgba(168,85,247,0.12) 0%, rgba(6,182,212,0.08) 100%)',
-                        borderBottom: '1px solid rgba(168,85,247,0.18)',
-                        fontSize: 11.5,
-                        color: '#e2e8f0',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                        fontSize: 11,
+                        color: '#94a3b8',
                         fontWeight: 600,
                         flexWrap: 'wrap',
                         gap: 8
                       }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#d8b4fe' }}>
-                          <span>↔️</span>
-                          <span>Swipe / scroll left & right to inspect full table</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#cbd5e1' }}>
+                          <ArrowLeftRight size={13} color="#94a3b8" />
+                          <span>Scroll horizontally to inspect full timeline</span>
                         </span>
-                        <span style={{ fontSize: 10.5, color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 10 }}>
+                        <span style={{ fontSize: 10.5, color: '#94a3b8', background: 'rgba(255, 255, 255, 0.06)', padding: '2px 8px', borderRadius: 8 }}>
                           {filteredDailyGains.length} Days Tracked
                         </span>
                       </div>
@@ -786,7 +917,7 @@ export default function ProfilePage({ profile }) {
                         padding: '14px 12px',
                         WebkitOverflowScrolling: 'touch',
                         scrollbarWidth: 'thin',
-                        scrollbarColor: 'rgba(168,85,247,0.4) transparent',
+                        scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
                       }}>
                         <div style={{ minWidth: 460, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 6 }}>
                           {[...filteredDailyGains].reverse().map((day, idx) => {
@@ -799,7 +930,6 @@ export default function ProfilePage({ profile }) {
                             const displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
                             const isToday = day.date === new Date().toISOString().split('T')[0]
                             const valueLabel = day.isFirst ? 'BASELINE' : (isGain ? `+${formatNumber(day.increment)}` : isLoss ? `-${formatNumber(Math.abs(day.increment))}` : '±0')
-                            const valueColor = isGain ? '#34d399' : isLoss ? '#fb7185' : 'rgba(255,255,255,0.4)'
 
                             return (
                               <div
@@ -808,13 +938,13 @@ export default function ProfilePage({ profile }) {
                                   display: 'flex',
                                   alignItems: 'center',
                                   height: 36,
-                                  borderRadius: 10,
-                                  transition: 'all 0.15s ease',
+                                  borderRadius: 8,
+                                  transition: 'background 0.15s ease',
                                   cursor: 'pointer',
                                   padding: '0 6px'
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
                                   setTooltip({
                                     x: e.clientX,
                                     y: e.clientY,
@@ -831,8 +961,8 @@ export default function ProfilePage({ profile }) {
                                 {/* Date — left column */}
                                 <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                                   <div>
-                                    <div style={{ fontSize: 11.5, fontWeight: 800, color: isToday ? '#d8b4fe' : '#f1f5f9', lineHeight: 1 }}>{label}</div>
-                                    <div style={{ fontSize: 9.5, fontWeight: 700, color: isToday ? '#a855f7' : '#64748b', letterSpacing: '0.04em', marginTop: 2 }}>{weekday}{isToday ? ' · TODAY' : ''}</div>
+                                    <div style={{ fontSize: 11.5, fontWeight: 800, color: isToday ? '#a78bfa' : '#f1f5f9', lineHeight: 1 }}>{label}</div>
+                                    <div style={{ fontSize: 9.5, fontWeight: 600, color: isToday ? '#818cf8' : '#64748b', letterSpacing: '0.04em', marginTop: 2 }}>{weekday}{isToday ? ' · TODAY' : ''}</div>
                                   </div>
                                 </div>
 
@@ -845,7 +975,6 @@ export default function ProfilePage({ profile }) {
                                         fontWeight: 900,
                                         color: '#fb7185',
                                         fontFamily: 'var(--font-display)',
-                                        textShadow: '0 0 8px rgba(251, 113, 133, 0.4)',
                                         flexShrink: 0
                                       }}>
                                         {valueLabel}
@@ -853,20 +982,19 @@ export default function ProfilePage({ profile }) {
                                       <div style={{
                                         width: `${barPct}%`,
                                         height: 14,
-                                        borderRadius: '8px 0 0 8px',
+                                        borderRadius: '6px 0 0 6px',
                                         background: 'linear-gradient(270deg, #f43f5e 0%, #be123c 100%)',
-                                        boxShadow: '0 0 12px rgba(244, 63, 94, 0.45)',
                                         position: 'relative',
                                         overflow: 'hidden'
                                       }}>
-                                        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: '#fda4af', borderRadius: '0 8px 8px 0' }} />
+                                        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: '#fda4af' }} />
                                       </div>
                                     </>
                                   )}
                                 </div>
 
-                                {/* CENTER Glowing Axis */}
-                                <div style={{ width: 2, height: 24, background: 'linear-gradient(180deg, rgba(168,85,247,0.5), rgba(56,189,248,0.5))', flexShrink: 0, borderRadius: 2 }} />
+                                {/* CENTER Hairline Axis */}
+                                <div style={{ width: 1, height: 22, background: 'rgba(255, 255, 255, 0.15)', flexShrink: 0 }} />
 
                                 {/* RIGHT — Gain bar & Positive Value */}
                                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: 8, gap: 8 }}>
@@ -875,20 +1003,18 @@ export default function ProfilePage({ profile }) {
                                       <div style={{
                                         width: `${barPct}%`,
                                         height: 14,
-                                        borderRadius: '0 8px 8px 0',
-                                        background: 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)',
-                                        boxShadow: '0 0 12px rgba(16, 185, 129, 0.45)',
+                                        borderRadius: '0 6px 6px 0',
+                                        background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
                                         position: 'relative',
                                         overflow: 'hidden'
                                       }}>
-                                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6ee7b7', borderRadius: '8px 0 0 8px' }} />
+                                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6ee7b7' }} />
                                       </div>
                                       <span style={{
                                         fontSize: 11.5,
                                         fontWeight: 900,
                                         color: '#34d399',
                                         fontFamily: 'var(--font-display)',
-                                        textShadow: '0 0 8px rgba(52, 211, 153, 0.4)',
                                         flexShrink: 0
                                       }}>
                                         {valueLabel}
@@ -896,12 +1022,12 @@ export default function ProfilePage({ profile }) {
                                     </>
                                   )}
                                   {day.isFirst && (
-                                    <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 4 }}>BASELINE</div>
+                                    <div style={{ fontSize: 9.5, color: '#64748b', fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 4 }}>BASELINE</div>
                                   )}
                                   {!day.isFirst && day.increment === 0 && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 4 }}>
-                                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
-                                      <span style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-display)' }}>±0</span>
+                                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.25)' }} />
+                                      <span style={{ fontSize: 11, fontWeight: 750, color: '#64748b', fontFamily: 'var(--font-display)' }}>±0</span>
                                     </div>
                                   )}
                                 </div>
@@ -912,17 +1038,17 @@ export default function ProfilePage({ profile }) {
                       </div>
                     </div>
 
-                    {/* ─── Legend Footer ─── */}
-                    <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '10px 14px' }}>
+                    {/* ─── Clean Professional Legend Footer ─── */}
+                    <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: 12, padding: '8px 12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 20, height: 8, borderRadius: 4, background: 'linear-gradient(90deg, #10b981, #06b6d4)', boxShadow: '0 0 8px #10b981' }} />
-                        <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 700 }}>Follower Gain (+) ➔</span>
+                        <div style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981' }} />
+                        <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 600 }}>Follower Gain (+)</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 20, height: 8, borderRadius: 4, background: 'linear-gradient(270deg, #f43f5e, #be123c)', boxShadow: '0 0 8px #f43f5e' }} />
-                        <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 700 }}>⬅ Follower Drop (-)</span>
+                        <div style={{ width: 10, height: 10, borderRadius: 2, background: '#f43f5e' }} />
+                        <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 600 }}>Follower Drop (-)</span>
                       </div>
-                      <span style={{ fontSize: 10, color: '#a78bfa', marginLeft: 'auto', fontStyle: 'italic', opacity: 0.9 }}>Hover or tap row for exact count</span>
+                      <span style={{ fontSize: 10.5, color: '#64748b', marginLeft: 'auto' }}>Hover or tap row for detailed stats</span>
                     </div>
                   </div>
                 )}
@@ -931,6 +1057,38 @@ export default function ProfilePage({ profile }) {
           })()}
 
 
+
+          {/* SEO Content & Semantic Overview Section for Search Engines */}
+          <div style={{
+            marginTop: 36,
+            padding: '24px 20px',
+            background: 'rgba(15, 23, 42, 0.6)',
+            borderRadius: 16,
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            color: '#94a3b8',
+            fontSize: 13,
+            lineHeight: 1.65
+          }}>
+            <h2 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 16,
+              fontWeight: 800,
+              color: '#f8fafc',
+              marginBottom: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <CheckCircle2 size={16} color="#38bdf8" />
+              <span>About {profile.name} Instagram Follower Analytics</span>
+            </h2>
+            <p style={{ margin: '0 0 10px' }}>
+              <strong>{profile.name}</strong> ({profile.instagram_handle ? `@${profile.instagram_handle}` : 'creator'}) has a current follower base of <strong>{formatNumber(profile.followers_count)} followers</strong> on Instagram. Spialr tracks real-time live follower count, hourly velocity, and 31-day progressive momentum for {profile.name}.
+            </p>
+            <p style={{ margin: 0 }}>
+              Over the last recorded period, {profile.name} experienced a daily gain of <strong>{dailyGain >= 0 ? `+${formatNumber(dailyGain)}` : formatNumber(dailyGain)} followers</strong> and an estimated monthly growth of <strong>{monthlyGain >= 0 ? `+${formatNumber(monthlyGain)}` : formatNumber(monthlyGain)} followers</strong>. View interactive weekly heatmaps, timeline races, and comparative benchmarks across top creators on Spialr.
+            </p>
+          </div>
 
         </div>
       </div>
@@ -960,7 +1118,7 @@ export async function getServerSideProps(context) {
 
     const byHandle = exactMatch || dotMatch
     if (byHandle) {
-      return { props: { profile: byHandle } }
+      return { props: { profile: byHandle, slug: decodedSlug } }
     }
 
     // Step 2: Fallback — lightweight fetch of id/name/handle only, then full fetch by id
@@ -999,7 +1157,7 @@ export async function getServerSideProps(context) {
 
     if (fullErr || !fullProfile) return { notFound: true }
 
-    return { props: { profile: fullProfile } }
+    return { props: { profile: fullProfile, slug: decodedSlug } }
   } catch (err) {
     console.error('getServerSideProps error in profile page:', err)
     return { notFound: true }
