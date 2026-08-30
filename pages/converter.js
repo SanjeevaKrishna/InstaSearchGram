@@ -185,8 +185,10 @@ export default function Converter() {
   return (
     <>
       <Head>
-        <title>Dot Art Converter - Spialr</title>
-        <meta name="description" content="Generate beautiful Unicode Braille dot art optimized for Instagram, YouTube, and WhatsApp comments." />
+        <title>Image to Dot Art Converter (Unicode Braille for Comments) | Spialr</title>
+        <meta name="description" content="Free online Image to Dot Art Converter. Convert any image, portrait, or photo into copy-paste Unicode Braille dot art characters for Instagram, YouTube, and WhatsApp comments." />
+        <meta name="keywords" content="image to dot art, dot art generator, braille art generator, copy paste dot art, instagram comment dot art, spialr" />
+        <link rel="canonical" href="https://spialr.com/converter" />
       </Head>
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 20px', minHeight: 'calc(100vh - 130px)' }}>

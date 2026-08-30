@@ -597,8 +597,10 @@ export default function TrendingPage({ initialData = null }) {
   return (
     <>
       <Head>
-        <title>Daily Viral Instagram Reels Leaderboard — Spialr</title>
-        <meta name="description" content="Check out the top daily viral trending Instagram reels in order. Visual leaderboard of creator rankings in India." />
+        <title>Daily Viral Instagram Reels & Trending Posts Leaderboard | Spialr</title>
+        <meta name="description" content="Discover top daily viral Instagram reels, most liked posts, and viral comments. Track real-time engagement analytics and creator rankings on Spialr." />
+        <meta name="keywords" content="viral instagram reels, trending reels india, most liked instagram posts, top instagram comments, viral reels leaderboard, spialr" />
+        <link rel="canonical" href="https://spialr.com/trending" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

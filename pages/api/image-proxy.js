@@ -6,7 +6,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const decoded = decodeURIComponent(url)
+    let decoded = decodeURIComponent(url)
+    if (decoded.includes('cloudinary.com') && decoded.includes('/upload/') && !decoded.includes('w_120')) {
+      decoded = decoded.replace('/upload/', '/upload/w_120,h_120,c_fill,g_face,q_auto,f_auto/')
+    }
     const response = await fetch(decoded, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'

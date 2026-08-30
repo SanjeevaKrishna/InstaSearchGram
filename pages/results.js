@@ -457,7 +457,9 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
   return (
     <>
       <Head>
-        <title>Results — Spialr</title>
+        <title>{celebrity ? `${celebrity.name} Search Results & Posts — Spialr` : 'Search Results — Spialr'}</title>
+        <meta name="description" content={celebrity ? `Search results and filtered post archive for ${celebrity.name} on Spialr.` : 'Search results for Instagram creators and posts on Spialr.'} />
+        <meta name="robots" content="noindex, follow" />
       </Head>
 
       

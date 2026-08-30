@@ -20,7 +20,8 @@ export default function App({ Component, pageProps }) {
   }, [router.pathname])
 
   // Calculate canonical URL dynamically without query parameters
-  const canonicalUrl = `https://spialr.com${router.asPath.split('?')[0]}`
+  const canonicalPath = router.asPath.split('?')[0].replace(/\/+$/, '')
+  const canonicalUrl = `https://spialr.com${canonicalPath === '' ? '' : canonicalPath}`
 
   return (
     <>
