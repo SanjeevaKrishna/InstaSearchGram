@@ -670,136 +670,245 @@ export default function ProfilePage({ profile }) {
                   </div>
                 ) : (
                   <div style={{ position: 'relative', zIndex: 1 }}>
-                    {/* ─── 4 Dynamic Stat Cards ─── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
+                    {/* ─── 4 Dynamic Stat Cards (Responsive & Spacious) ─── */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                      gap: 10,
+                      marginBottom: 20
+                    }}>
                       {statCards.map((s, i) => (
-                        <div key={i} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 16, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 8px 20px -5px rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)' }}>
-                          <div style={{ fontSize: 22, width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {s.icon}
+                        <div key={i} style={{
+                          background: s.bg,
+                          border: `1px solid ${s.border}`,
+                          borderRadius: 16,
+                          padding: '12px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          minHeight: 100,
+                          boxShadow: '0 8px 20px -5px rgba(0,0,0,0.3)',
+                          backdropFilter: 'blur(10px)',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 8 }}>
+                            <div style={{
+                              fontSize: 18,
+                              width: 34,
+                              height: 34,
+                              borderRadius: 10,
+                              background: 'rgba(255,255,255,0.06)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              {s.icon}
+                            </div>
+                            <div style={{
+                              fontSize: 18,
+                              fontWeight: 900,
+                              color: s.color,
+                              lineHeight: 1,
+                              fontFamily: 'var(--font-display)',
+                              textShadow: `0 0 12px ${s.color}44`,
+                              textAlign: 'right'
+                            }}>
+                              {s.value}
+                            </div>
                           </div>
+
                           <div>
-                            <div style={{ fontSize: 20, fontWeight: 900, color: s.color, lineHeight: 1.1, fontFamily: 'var(--font-display)', textShadow: `0 0 12px ${s.color}44` }}>{s.value}</div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3 }}>{s.label}</div>
-                            <div style={{ fontSize: 11, color: s.color, opacity: 0.9, marginTop: 2, fontWeight: 600 }}>{s.sub}</div>
+                            <div style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: '#cbd5e1',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em',
+                              lineHeight: 1.25,
+                              marginBottom: 3
+                            }}>
+                              {s.label}
+                            </div>
+                            <div style={{
+                              fontSize: 11,
+                              color: s.color,
+                              opacity: 0.95,
+                              fontWeight: 600,
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              overflow: 'hidden'
+                            }}>
+                              {s.sub}
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    {/* ─── Diverging Timeline Chart ─── */}
-                    <div style={{ background: 'rgba(15, 12, 35, 0.45)', borderRadius: 18, border: '1px solid rgba(168,85,247,0.18)', padding: '14px 12px', overflowY: 'auto', maxHeight: 420, scrollbarWidth: 'thin', scrollbarColor: 'rgba(168,85,247,0.4) transparent' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {[...filteredDailyGains].reverse().map((day, idx) => {
-                          const barPct = day.isFirst ? 0 : Math.min(96, Math.max(5, (Math.abs(day.increment) / maxAbs) * 96))
-                          const isGain = day.increment > 0
-                          const isLoss = day.increment < 0
-                          const dateObj = new Date(day.date)
-                          const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                          const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
-                          const displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-                          const isToday = day.date === new Date().toISOString().split('T')[0]
-                          const valueLabel = day.isFirst ? 'BASELINE' : (isGain ? `+${formatNumber(day.increment)}` : isLoss ? `-${formatNumber(Math.abs(day.increment))}` : '±0')
-                          const valueColor = isGain ? '#34d399' : isLoss ? '#fb7185' : 'rgba(255,255,255,0.4)'
+                    {/* ─── Diverging Timeline Chart Canvas with Horizontal & Vertical Scroll ─── */}
+                    <div style={{
+                      background: 'rgba(15, 12, 35, 0.55)',
+                      borderRadius: 18,
+                      border: '1px solid rgba(168,85,247,0.22)',
+                      overflow: 'hidden',
+                      position: 'relative',
+                      boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.4)'
+                    }}>
+                      {/* Top Horizontal Scroll Hint */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 14px',
+                        background: 'linear-gradient(90deg, rgba(168,85,247,0.12) 0%, rgba(6,182,212,0.08) 100%)',
+                        borderBottom: '1px solid rgba(168,85,247,0.18)',
+                        fontSize: 11.5,
+                        color: '#e2e8f0',
+                        fontWeight: 600,
+                        flexWrap: 'wrap',
+                        gap: 8
+                      }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#d8b4fe' }}>
+                          <span>↔️</span>
+                          <span>Swipe / scroll left & right to inspect full table</span>
+                        </span>
+                        <span style={{ fontSize: 10.5, color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 10 }}>
+                          {filteredDailyGains.length} Days Tracked
+                        </span>
+                      </div>
 
-                          return (
-                            <div
-                              key={day.date}
-                              style={{ display: 'flex', alignItems: 'center', height: 34, borderRadius: 10, transition: 'all 0.15s ease', cursor: 'pointer', padding: '0 4px' }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
-                                setTooltip({
-                                  x: e.clientX,
-                                  y: e.clientY,
-                                  date: displayDate,
-                                  count: day.count,
-                                  increment: day.increment,
-                                  hasIncrement: !day.isFirst,
-                                  diffDays: day.diffDays
-                                })
-                              }}
-                              onMouseMove={(e) => setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; setTooltip(null) }}
-                            >
-                              {/* Date — left column */}
-                              <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                                <div>
-                                  <div style={{ fontSize: 11, fontWeight: 800, color: isToday ? '#d8b4fe' : '#f1f5f9', lineHeight: 1 }}>{label}</div>
-                                  <div style={{ fontSize: 9, fontWeight: 700, color: isToday ? '#a855f7' : '#64748b', letterSpacing: '0.04em', marginTop: 2 }}>{weekday}{isToday ? ' · TODAY' : ''}</div>
+                      {/* Scrollable Canvas (X & Y scrolling with custom scrollbar and touch inertia) */}
+                      <div style={{
+                        overflowX: 'auto',
+                        overflowY: 'auto',
+                        maxHeight: 460,
+                        padding: '14px 12px',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'rgba(168,85,247,0.4) transparent',
+                      }}>
+                        <div style={{ minWidth: 460, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 6 }}>
+                          {[...filteredDailyGains].reverse().map((day, idx) => {
+                            const barPct = day.isFirst ? 0 : Math.min(96, Math.max(6, (Math.abs(day.increment) / maxAbs) * 96))
+                            const isGain = day.increment > 0
+                            const isLoss = day.increment < 0
+                            const dateObj = new Date(day.date)
+                            const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
+                            const displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+                            const isToday = day.date === new Date().toISOString().split('T')[0]
+                            const valueLabel = day.isFirst ? 'BASELINE' : (isGain ? `+${formatNumber(day.increment)}` : isLoss ? `-${formatNumber(Math.abs(day.increment))}` : '±0')
+                            const valueColor = isGain ? '#34d399' : isLoss ? '#fb7185' : 'rgba(255,255,255,0.4)'
+
+                            return (
+                              <div
+                                key={day.date}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  height: 36,
+                                  borderRadius: 10,
+                                  transition: 'all 0.15s ease',
+                                  cursor: 'pointer',
+                                  padding: '0 6px'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                                  setTooltip({
+                                    x: e.clientX,
+                                    y: e.clientY,
+                                    date: displayDate,
+                                    count: day.count,
+                                    increment: day.increment,
+                                    hasIncrement: !day.isFirst,
+                                    diffDays: day.diffDays
+                                  })
+                                }}
+                                onMouseMove={(e) => setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; setTooltip(null) }}
+                              >
+                                {/* Date — left column */}
+                                <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                                  <div>
+                                    <div style={{ fontSize: 11.5, fontWeight: 800, color: isToday ? '#d8b4fe' : '#f1f5f9', lineHeight: 1 }}>{label}</div>
+                                    <div style={{ fontSize: 9.5, fontWeight: 700, color: isToday ? '#a855f7' : '#64748b', letterSpacing: '0.04em', marginTop: 2 }}>{weekday}{isToday ? ' · TODAY' : ''}</div>
+                                  </div>
+                                </div>
+
+                                {/* LEFT — Drop bar & Negative Value */}
+                                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: 8, gap: 8 }}>
+                                  {isLoss && !day.isFirst && (
+                                    <>
+                                      <span style={{
+                                        fontSize: 11.5,
+                                        fontWeight: 900,
+                                        color: '#fb7185',
+                                        fontFamily: 'var(--font-display)',
+                                        textShadow: '0 0 8px rgba(251, 113, 133, 0.4)',
+                                        flexShrink: 0
+                                      }}>
+                                        {valueLabel}
+                                      </span>
+                                      <div style={{
+                                        width: `${barPct}%`,
+                                        height: 14,
+                                        borderRadius: '8px 0 0 8px',
+                                        background: 'linear-gradient(270deg, #f43f5e 0%, #be123c 100%)',
+                                        boxShadow: '0 0 12px rgba(244, 63, 94, 0.45)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                      }}>
+                                        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: '#fda4af', borderRadius: '0 8px 8px 0' }} />
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+
+                                {/* CENTER Glowing Axis */}
+                                <div style={{ width: 2, height: 24, background: 'linear-gradient(180deg, rgba(168,85,247,0.5), rgba(56,189,248,0.5))', flexShrink: 0, borderRadius: 2 }} />
+
+                                {/* RIGHT — Gain bar & Positive Value */}
+                                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: 8, gap: 8 }}>
+                                  {isGain && !day.isFirst && (
+                                    <>
+                                      <div style={{
+                                        width: `${barPct}%`,
+                                        height: 14,
+                                        borderRadius: '0 8px 8px 0',
+                                        background: 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)',
+                                        boxShadow: '0 0 12px rgba(16, 185, 129, 0.45)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                      }}>
+                                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6ee7b7', borderRadius: '8px 0 0 8px' }} />
+                                      </div>
+                                      <span style={{
+                                        fontSize: 11.5,
+                                        fontWeight: 900,
+                                        color: '#34d399',
+                                        fontFamily: 'var(--font-display)',
+                                        textShadow: '0 0 8px rgba(52, 211, 153, 0.4)',
+                                        flexShrink: 0
+                                      }}>
+                                        {valueLabel}
+                                      </span>
+                                    </>
+                                  )}
+                                  {day.isFirst && (
+                                    <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 4 }}>BASELINE</div>
+                                  )}
+                                  {!day.isFirst && day.increment === 0 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 4 }}>
+                                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
+                                      <span style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-display)' }}>±0</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-
-                              {/* LEFT — Drop bar & Negative Value */}
-                              <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: 6, gap: 8 }}>
-                                {isLoss && !day.isFirst && (
-                                  <>
-                                    <span style={{
-                                      fontSize: 11,
-                                      fontWeight: 900,
-                                      color: '#fb7185',
-                                      fontFamily: 'var(--font-display)',
-                                      textShadow: '0 0 8px rgba(251, 113, 133, 0.4)',
-                                      flexShrink: 0
-                                    }}>
-                                      {valueLabel}
-                                    </span>
-                                    <div style={{
-                                      width: `${barPct}%`,
-                                      height: 14,
-                                      borderRadius: '8px 0 0 8px',
-                                      background: 'linear-gradient(270deg, #f43f5e 0%, #be123c 100%)',
-                                      boxShadow: '0 0 12px rgba(244, 63, 94, 0.45)',
-                                      position: 'relative',
-                                      overflow: 'hidden'
-                                    }}>
-                                      <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: '#fda4af', borderRadius: '0 8px 8px 0' }} />
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-
-                              {/* CENTER Glowing Axis */}
-                              <div style={{ width: 2, height: 24, background: 'linear-gradient(180deg, rgba(168,85,247,0.5), rgba(56,189,248,0.5))', flexShrink: 0, borderRadius: 2 }} />
-
-                              {/* RIGHT — Gain bar & Positive Value */}
-                              <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: 6, gap: 8 }}>
-                                {isGain && !day.isFirst && (
-                                  <>
-                                    <div style={{
-                                      width: `${barPct}%`,
-                                      height: 14,
-                                      borderRadius: '0 8px 8px 0',
-                                      background: 'linear-gradient(90deg, #10b981 0%, #06b6d4 100%)',
-                                      boxShadow: '0 0 12px rgba(16, 185, 129, 0.45)',
-                                      position: 'relative',
-                                      overflow: 'hidden'
-                                    }}>
-                                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6ee7b7', borderRadius: '8px 0 0 8px' }} />
-                                    </div>
-                                    <span style={{
-                                      fontSize: 11,
-                                      fontWeight: 900,
-                                      color: '#34d399',
-                                      fontFamily: 'var(--font-display)',
-                                      textShadow: '0 0 8px rgba(52, 211, 153, 0.4)',
-                                      flexShrink: 0
-                                    }}>
-                                      {valueLabel}
-                                    </span>
-                                  </>
-                                )}
-                                {day.isFirst && (
-                                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 4 }}>BASELINE</div>
-                                )}
-                                {!day.isFirst && day.increment === 0 && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 4 }}>
-                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
-                                    <span style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-display)' }}>±0</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
 
@@ -813,7 +922,7 @@ export default function ProfilePage({ profile }) {
                         <div style={{ width: 20, height: 8, borderRadius: 4, background: 'linear-gradient(270deg, #f43f5e, #be123c)', boxShadow: '0 0 8px #f43f5e' }} />
                         <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 700 }}>⬅ Follower Drop (-)</span>
                       </div>
-                      <span style={{ fontSize: 10, color: '#a78bfa', marginLeft: 'auto', fontStyle: 'italic', opacity: 0.9 }}>Hover row for exact count</span>
+                      <span style={{ fontSize: 10, color: '#a78bfa', marginLeft: 'auto', fontStyle: 'italic', opacity: 0.9 }}>Hover or tap row for exact count</span>
                     </div>
                   </div>
                 )}

@@ -45,6 +45,22 @@ const generateReelSlug = (reel) => {
   return `${parts || 'watch'}-${reel.id}`
 }
 
+const generateCommentSlug = (item) => {
+  if (!item) return ''
+  const authorClean = (item.creator_name || '')
+    .replace('@', '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    
+  const textClean = (item.title || item.description || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .substring(0, 40)
+
+  const parts = [authorClean, textClean].filter(Boolean).join('-').replace(/-+/g, '-').replace(/(^-|-$)/g, '')
+  return `${parts || 'comment'}-${item.id}`
+}
+
 function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrending }) {
   const router = useRouter()
   const { trendType, trendVal } = getTrend(reel, absoluteRank - 1)
@@ -104,17 +120,14 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
 
   const followersDisplay = (reel.followers_text || formatFollowers(reel.celebrity_followers_count))?.toUpperCase()
 
-  // 1. NATIVE INSTAGRAM COMMENT CARD DESIGN
+  // 1. NATIVE INSTAGRAM COMMENT ROW WITH SMALL GAP & LINK TO COMMENT PAGE
   if (isComment) {
+    const commentSlug = generateCommentSlug(reel)
     return (
       <div 
         className="leaderboard-row leaderboard-instagram-comment-row"
         onClick={() => {
-          if (reel.instagram_link) {
-            window.open(reel.instagram_link, '_blank')
-          } else {
-            router.push(`/reel/${generateReelSlug(reel)}`)
-          }
+          router.push(`/comment/${commentSlug}`)
         }}
         style={{
           display: 'flex',
@@ -124,7 +137,10 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
           position: 'relative',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
-          background: 'transparent'
+          background: 'var(--surface)',
+          borderRadius: 14,
+          border: '1px solid var(--border)',
+          marginBottom: 8,
         }}
       >
         {/* Left Rank */}
@@ -1082,6 +1098,20 @@ export default function TrendingPage({ initialData = null }) {
                         ? "No reels marked for 'Original' section yet. Select 'All' from the dropdown menu above or check 'Show in Original' in Admin panel!"
                         : "No items listed in this section today. Check back later!")}
                 </div>
+              ) : activeTab === 'most_viewed' && activeSubTab === 'comments' ? (
+                /* Native comment rows with small gap (ONLY in Most Viewed > Comments) */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {activeReels.map((reel, idx) => (
+                    <LeaderboardRow 
+                      key={reel.id}
+                      reel={reel}
+                      absoluteRank={idx + 1} 
+                      isMostViewed={true}
+                      isComment={true}
+                      isTrending={false}
+                    />
+                  ))}
+                </div>
               ) : (
                 /* Single unified leaderboard list */
                 <div style={{
@@ -1100,7 +1130,7 @@ export default function TrendingPage({ initialData = null }) {
                           reel={reel}
                           absoluteRank={absoluteRank} 
                           isMostViewed={activeTab === 'most_viewed'}
-                          isComment={activeSubTab === 'comments'}
+                          isComment={false}
                           isTrending={activeTab === 'trending'}
                         />
                       </div>

@@ -239,7 +239,15 @@ export default async function handler(req, res) {
 
         // 2. Run scraper on server side
         const scraper = new InstagramFollowersScraper(sessionId, csrfToken);
-        const scrapeData = await scraper.fetchFollowers(profile.instagram_handle);
+        let scrapeData;
+        try {
+          scrapeData = await scraper.fetchFollowers(profile.instagram_handle);
+        } catch (scrapeErr) {
+          if (scrapeErr.message.includes('404') || scrapeErr.message.includes('does not exist') || scrapeErr.message.includes('No follower_count')) {
+            return res.status(400).json({ error: `Instagram profile "@${profile.instagram_handle}" does not exist or was renamed on Instagram (404). Please check the username or update it to a valid handle.` });
+          }
+          return res.status(500).json({ error: `Scrape error for "@${profile.instagram_handle}": ${scrapeErr.message}` });
+        }
 
         // 3. Format the count text (e.g. 270M, 1.5M, 500K)
         let formattedText = '';

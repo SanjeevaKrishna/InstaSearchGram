@@ -333,6 +333,7 @@ export default function LivePage({ initialLiveData = null }) {
   const [isTimelinePlaying, setIsTimelinePlaying] = useState(false)
   const [timelineSpeed, setTimelineSpeed] = useState(1)
   const [timelineZoom, setTimelineZoom] = useState(1.0)
+  const [focusedProfileId, setFocusedProfileId] = useState(null)
 
   // Dynamic Timeline Dates: Extracts actual recorded dates from database up to Today's date
   const timelineDates = useMemo(() => {
@@ -392,7 +393,22 @@ export default function LivePage({ initialLiveData = null }) {
     }
   }, [isTimelinePlaying, timelineSpeed, timelineDates.length])
 
+  // Auto-tracking Camera: Smoothly follows the focused profile as it rises/drops during playback
+  useEffect(() => {
+    if (!focusedProfileId || !timelineMode) return
+
+    const timeout = setTimeout(() => {
+      const el = document.getElementById(`timeline-profile-${focusedProfileId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+      }
+    }, 40)
+
+    return () => clearTimeout(timeout)
+  }, [timelineDateIndex, focusedProfileId, timelineMode])
+
   const loaderRef = useRef(null)
+  const arenaScrollRef = useRef(null)
 
   // Infinite Scroll Observer
   useEffect(() => {
@@ -1007,13 +1023,16 @@ export default function LivePage({ initialLiveData = null }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 textAlign: 'center',
-                padding: '2px 4px 6px',
-                fontSize: 13,
+                padding: '2px 4px 4px',
+                fontSize: 'clamp(11px, 3.1vw, 13px)',
                 fontWeight: 600,
                 color: 'var(--text-muted)',
-                letterSpacing: '-0.01em'
+                letterSpacing: '-0.01em',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}>
-                Click any profile for detailed analytics & daily follower growth
+                Click any profile for detailed analytics & daily growth
               </div>
             )}
 
@@ -1199,6 +1218,12 @@ export default function LivePage({ initialLiveData = null }) {
                 }).sort((a, b) => (b.countOnDate || 0) - (a.countOnDate || 0))
 
                 const maxFollowersOnDate = timelineProfiles.length > 0 ? (timelineProfiles[0].countOnDate || 1) : 1
+                const focusedProfile = focusedProfileId 
+                  ? timelineProfiles.find(p => (p.id || p.instagram_handle || p.name) === focusedProfileId) 
+                  : null
+                const focusedProfileRank = focusedProfile 
+                  ? timelineProfiles.findIndex(p => (p.id || p.instagram_handle || p.name) === focusedProfileId) + 1 
+                  : null
 
                 return (
                   <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1235,8 +1260,18 @@ export default function LivePage({ initialLiveData = null }) {
                           }}>
                             TOP INSTAGRAM PROFILES LIVE RACE
                           </div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b', marginTop: 4 }}>
-                            Linear Follower Momentum · {startDateStr} to {endDateStr} (Today)
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span>Linear Follower Momentum · {startDateStr} to {endDateStr}</span>
+                            <span style={{
+                              color: focusedProfile ? '#4f46e5' : '#7c3aed',
+                              background: focusedProfile ? 'rgba(99, 102, 241, 0.12)' : 'rgba(124, 58, 237, 0.08)',
+                              padding: '2px 10px',
+                              borderRadius: 100,
+                              fontSize: 11.5,
+                              fontWeight: 800
+                            }}>
+                              {focusedProfile ? `🎯 Follow Cam: ${focusedProfile.name} (#${focusedProfileRank})` : '💡 Click any profile to track its race!'}
+                            </span>
                           </div>
                         </div>
 
@@ -1303,19 +1338,19 @@ export default function LivePage({ initialLiveData = null }) {
                       </div>
 
                       {/* Scrollable Horizontal Arena */}
-                      <div style={{ overflowX: 'auto', paddingBottom: 24 }}>
+                      <div ref={arenaScrollRef} style={{ overflowX: 'auto', paddingBottom: 24, WebkitOverflowScrolling: 'touch' }}>
                         <div style={{
-                          minWidth: `${Math.round(920 * timelineZoom)}px`,
+                          minWidth: `${Math.round(2200 * timelineZoom)}px`,
                           width: `${Math.round(100 * timelineZoom)}%`,
                           position: 'relative',
                           transition: 'width 0.2s ease, min-width 0.2s ease'
                         }}>
                           {/* Top Milestone Axis & Vertical Grid Lines */}
                           {(() => {
-                            const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0].map(r => Math.round(maxFollowersOnDate * r))
+                            const ticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map(r => Math.round(maxFollowersOnDate * r))
 
                             return (
-                              <div style={{ position: 'relative', marginLeft: 160, marginRight: 200, height: 26, marginBottom: 14 }}>
+                              <div style={{ position: 'relative', marginLeft: 180, marginRight: 220, height: 26, marginBottom: 14 }}>
                                 {ticks.map((t, i) => {
                                   const leftPct = (t / maxFollowersOnDate) * 100
                                   return (
@@ -1344,41 +1379,78 @@ export default function LivePage({ initialLiveData = null }) {
                           {/* Profile Bar Rows (Linear Proportions + Avatars at Bar Tip) */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', zIndex: 2 }}>
                             {timelineProfiles.map((profile, index) => {
+                              const profileKey = profile.id || profile.instagram_handle || profile.name
+                              const isFocused = focusedProfileId === profileKey
                               const count = profile.countOnDate || 0
-                              // Exact linear scale percentage relative to max
-                              const barPct = Math.max(1.5, (count / maxFollowersOnDate) * 100)
+                              // Exact linear scale percentage relative to max with solid minimum visual baseline
+                              const barPct = Math.max(2.5, (count / maxFollowersOnDate) * 100)
                               const barColor = RACE_BAR_COLORS[index % RACE_BAR_COLORS.length]
                               const delta = profile.dailyDelta
+                              const rank = index + 1
 
                               return (
                                 <div
-                                  key={profile.id || profile.name}
-                                  onClick={() => router.push(`/profile/${getProfileSlug(profile)}`)}
+                                  id={`timeline-profile-${profileKey}`}
+                                  key={profileKey}
+                                  onClick={() => {
+                                    setFocusedProfileId(isFocused ? null : profileKey)
+                                  }}
                                   style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    height: 34,
+                                    height: isFocused ? 38 : 34,
                                     cursor: 'pointer',
-                                    borderRadius: 6,
-                                    transition: 'background 0.15s ease'
+                                    borderRadius: 8,
+                                    padding: '0 6px',
+                                    transition: 'all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                                    background: isFocused 
+                                      ? 'linear-gradient(90deg, rgba(99, 102, 241, 0.12) 0%, rgba(244, 63, 94, 0.08) 100%)' 
+                                      : 'transparent',
+                                    boxShadow: isFocused ? '0 0 0 2px #6366f1, 0 6px 20px rgba(99, 102, 241, 0.25)' : 'none',
+                                    opacity: focusedProfileId && !isFocused ? 0.75 : 1,
+                                    position: 'relative',
+                                    zIndex: isFocused ? 10 : 2
                                   }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(241,245,249,0.7)' }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                                  onMouseEnter={e => {
+                                    if (!isFocused) e.currentTarget.style.background = 'rgba(241,245,249,0.7)'
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!isFocused) e.currentTarget.style.background = 'transparent'
+                                  }}
                                 >
-                                  {/* Left Column: Creator Name (Right-aligned, bold uppercase) */}
+                                  {/* Left Column: Creator Name & Rank + Focus Target Indicator */}
                                   <div style={{
-                                    width: 155,
+                                    width: 175,
                                     flexShrink: 0,
                                     textAlign: 'right',
                                     paddingRight: 14,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
+                                    whiteSpace: 'nowrap',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-end',
+                                    gap: 6
                                   }}>
+                                    {isFocused && (
+                                      <span style={{
+                                        fontSize: 10,
+                                        fontWeight: 900,
+                                        color: '#ffffff',
+                                        background: 'linear-gradient(135deg, #6366f1, #d946ef)',
+                                        padding: '2px 6px',
+                                        borderRadius: 6,
+                                        letterSpacing: '0.04em',
+                                        boxShadow: '0 2px 6px rgba(99, 102, 241, 0.4)',
+                                        flexShrink: 0
+                                      }}>
+                                        🎯 #{rank}
+                                      </span>
+                                    )}
                                     <span style={{
                                       fontSize: 12,
-                                      fontWeight: 900,
-                                      color: '#1e293b',
+                                      fontWeight: isFocused ? 950 : 900,
+                                      color: isFocused ? '#4f46e5' : '#1e293b',
                                       letterSpacing: '0.02em',
                                       textTransform: 'uppercase',
                                       fontFamily: 'var(--font-display)'
@@ -1388,35 +1460,37 @@ export default function LivePage({ initialLiveData = null }) {
                                   </div>
 
                                   {/* Center: The Colored Bar Track */}
-                                  <div style={{ flex: 1, position: 'relative', height: '100%', display: 'flex', alignItems: 'center', marginRight: 180 }}>
+                                  <div style={{ flex: 1, position: 'relative', height: '100%', display: 'flex', alignItems: 'center', marginRight: 200 }}>
                                     <div
                                       style={{
                                         width: `${barPct}%`,
-                                        height: 24,
+                                        minWidth: 48,
+                                        height: isFocused ? 28 : 24,
                                         background: barColor,
                                         borderRadius: 4,
                                         position: 'relative',
-                                        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                                        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.2s ease',
+                                        boxShadow: isFocused ? `0 0 16px ${barColor}88, 0 2px 8px rgba(0,0,0,0.15)` : '0 2px 6px rgba(0,0,0,0.08)'
                                       }}
                                     >
                                       {/* Circular Avatar overlapping the right tip of the bar */}
                                       <div style={{
                                         position: 'absolute',
-                                        right: -16,
+                                        right: isFocused ? -18 : -16,
                                         top: '50%',
                                         transform: 'translateY(-50%)',
-                                        width: 32,
-                                        height: 32,
+                                        width: isFocused ? 36 : 32,
+                                        height: isFocused ? 36 : 32,
                                         borderRadius: '50%',
-                                        border: '2.5px solid #ffffff',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                                        border: isFocused ? '3px solid #6366f1' : '2.5px solid #ffffff',
+                                        boxShadow: isFocused ? '0 0 14px rgba(99, 102, 241, 0.6)' : '0 2px 8px rgba(0,0,0,0.18)',
                                         overflow: 'hidden',
                                         background: '#f8fafc',
                                         zIndex: 5,
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        transition: 'all 0.2s ease'
                                       }}>
                                         {profile.photo_url ? (
                                           <img src={profile.photo_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
@@ -1429,7 +1503,7 @@ export default function LivePage({ initialLiveData = null }) {
                                     {/* Number count & Delta Badge directly beside avatar */}
                                     <div style={{
                                       position: 'absolute',
-                                      left: `calc(${barPct}% + 22px)`,
+                                      left: `max(calc(${barPct}% + ${isFocused ? 26 : 24}px), 76px)`,
                                       display: 'flex',
                                       alignItems: 'center',
                                       gap: 6,
@@ -1438,9 +1512,9 @@ export default function LivePage({ initialLiveData = null }) {
                                       zIndex: 4
                                     }}>
                                       <span style={{
-                                        fontSize: 13,
-                                        fontWeight: 850,
-                                        color: '#334155',
+                                        fontSize: isFocused ? 14 : 13,
+                                        fontWeight: isFocused ? 950 : 850,
+                                        color: isFocused ? '#1e1b4b' : '#334155',
                                         fontFamily: 'monospace',
                                         letterSpacing: '-0.02em'
                                       }}>
@@ -1491,7 +1565,7 @@ export default function LivePage({ initialLiveData = null }) {
                       </div>
                     </div>
 
-                    {/* STICKY PROGRESSIVE TIMELINE SCRUBBER */}
+                    {/* SLEEK COMPACT FLOATING TIMELINE CONTROLLER DOCK */}
                     <div
                       onWheel={(e) => {
                         e.preventDefault()
@@ -1501,22 +1575,25 @@ export default function LivePage({ initialLiveData = null }) {
                         position: 'sticky',
                         bottom: 16,
                         zIndex: 90,
-                        background: 'rgba(255, 255, 255, 0.95)',
+                        margin: '0 auto',
+                        maxWidth: 620,
+                        width: '100%',
+                        background: 'rgba(15, 23, 42, 0.88)',
                         backdropFilter: 'blur(20px)',
                         WebkitBackdropFilter: 'blur(20px)',
-                        border: '1px solid var(--border)',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
                         borderRadius: 20,
-                        padding: '16px 20px',
-                        boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
+                        padding: '10px 14px 12px',
+                        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 12
+                        gap: 8
                       }}
                     >
-                      {/* Controls Top Row: Symmetrical Layout with Play in the Middle */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                        {/* Left: Jump to Start Date */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {/* Compact Top Action Row */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        {/* Left: Jump to Start & Current Active Date */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <button
                             onClick={() => {
                               setIsTimelinePlaying(false)
@@ -1524,95 +1601,87 @@ export default function LivePage({ initialLiveData = null }) {
                             }}
                             title={`Jump to ${startDateStr}`}
                             style={{
-                              padding: '7px 14px',
-                              borderRadius: 100,
-                              border: '1px solid var(--border)',
-                              background: timelineDateIndex === 0 ? 'rgba(99, 102, 241, 0.12)' : 'var(--surface2)',
-                              color: timelineDateIndex === 0 ? '#6366f1' : 'var(--text)',
-                              fontSize: 12,
-                              fontWeight: 750,
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
+                              background: timelineDateIndex === 0 ? 'rgba(99, 102, 241, 0.35)' : 'rgba(255, 255, 255, 0.08)',
+                              color: timelineDateIndex === 0 ? '#a5b4fc' : '#e2e8f0',
                               cursor: 'pointer',
-                              display: 'inline-flex',
+                              display: 'flex',
                               alignItems: 'center',
-                              gap: 5,
-                              transition: 'all 0.2s ease'
+                              justifyContent: 'center',
+                              transition: 'all 0.15s ease'
                             }}
                           >
                             <RotateCcw size={12} />
-                            <span>{startDateStr}</span>
                           </button>
+
+                          <div style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: '#f8fafc',
+                            fontFamily: 'monospace',
+                            letterSpacing: '-0.01em',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            padding: '3px 8px',
+                            borderRadius: 8,
+                            border: '1px solid rgba(255, 255, 255, 0.08)'
+                          }}>
+                            {activeDateStr}
+                          </div>
                         </div>
 
-                        {/* Middle: Centered Play / Pause Button */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => setIsTimelinePlaying(!isTimelinePlaying)}
-                            style={{
-                              padding: '9px 24px',
-                              borderRadius: 100,
-                              border: 'none',
-                              background: isTimelinePlaying 
-                                ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
-                                : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%)',
-                              color: '#ffffff',
-                              fontSize: 13.5,
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              boxShadow: isTimelinePlaying 
-                                ? '0 6px 20px rgba(239, 68, 68, 0.35)' 
-                                : '0 6px 20px rgba(99, 102, 241, 0.35)',
-                              transition: 'all 0.2s ease'
-                            }}
-                          >
-                            {isTimelinePlaying ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}
-                            <span>{isTimelinePlaying ? 'Pause Timeline' : 'Play Timeline'}</span>
-                          </button>
-                        </div>
+                        {/* Center: Sleek Play / Pause Pill */}
+                        <button
+                          onClick={() => setIsTimelinePlaying(!isTimelinePlaying)}
+                          style={{
+                            padding: '6px 16px',
+                            borderRadius: 100,
+                            border: 'none',
+                            background: isTimelinePlaying 
+                              ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
+                              : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%)',
+                            color: '#ffffff',
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            boxShadow: isTimelinePlaying 
+                              ? '0 4px 14px rgba(239, 68, 68, 0.4)' 
+                              : '0 4px 14px rgba(99, 102, 241, 0.4)',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          {isTimelinePlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
+                          <span>{isTimelinePlaying ? 'Pause' : 'Play'}</span>
+                        </button>
 
-                        {/* Right: Jump to Today (End Date) & Speed selector */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <button
-                            onClick={() => {
-                              setIsTimelinePlaying(false)
-                              setTimelineDateIndex(timelineDates.length - 1)
-                            }}
-                            title={`Jump to ${endDateStr} (Today)`}
-                            style={{
-                              padding: '7px 14px',
-                              borderRadius: 100,
-                              border: '1px solid var(--border)',
-                              background: timelineDateIndex === timelineDates.length - 1 ? 'rgba(99, 102, 241, 0.12)' : 'var(--surface2)',
-                              color: timelineDateIndex === timelineDates.length - 1 ? '#6366f1' : 'var(--text)',
-                              fontSize: 12,
-                              fontWeight: 750,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 5,
-                              transition: 'all 0.2s ease'
-                            }}
-                          >
-                            <span>{endDateStr}</span>
-                            <FastForward size={12} />
-                          </button>
-
+                        {/* Right: Speed Controls & Close Button */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {/* Speed Selector */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'var(--surface2)', padding: '3px 5px', borderRadius: 8, border: '1px solid var(--border)' }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            background: 'rgba(255, 255, 255, 0.06)',
+                            padding: '2px',
+                            borderRadius: 8,
+                            border: '1px solid rgba(255, 255, 255, 0.08)'
+                          }}>
                             {[1, 2, 4].map(s => (
                               <button
                                 key={s}
                                 onClick={() => setTimelineSpeed(s)}
                                 style={{
-                                  padding: '3px 7px',
+                                  padding: '2px 6px',
                                   borderRadius: 6,
-                                  fontSize: 11,
-                                  fontWeight: 750,
+                                  fontSize: 10.5,
+                                  fontWeight: 800,
                                   border: 'none',
                                   background: timelineSpeed === s ? '#6366f1' : 'transparent',
-                                  color: timelineSpeed === s ? '#ffffff' : 'var(--text-muted)',
+                                  color: timelineSpeed === s ? '#ffffff' : '#94a3b8',
                                   cursor: 'pointer',
                                   transition: 'all 0.15s ease'
                                 }}
@@ -1621,11 +1690,88 @@ export default function LivePage({ initialLiveData = null }) {
                               </button>
                             ))}
                           </div>
+
+                          {/* Close Timeline */}
+                          <button
+                            onClick={() => setTimelineMode(false)}
+                            title="Exit Timeline Race"
+                            style={{
+                              width: 26,
+                              height: 26,
+                              borderRadius: '50%',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              color: '#cbd5e1',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
                         </div>
                       </div>
 
-                      {/* Dynamic Progressive Range Slider */}
-                      <div style={{ width: '100%' }}>
+                      {/* Focused Profile Live Camera Status Banner */}
+                      {focusedProfile && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: 'rgba(99, 102, 241, 0.22)',
+                          border: '1px solid rgba(99, 102, 241, 0.45)',
+                          borderRadius: 12,
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          color: '#e0e7ff',
+                          gap: 6
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+                            <span style={{ fontSize: 13, flexShrink: 0 }}>🎯</span>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              Follow Cam: <strong style={{ color: '#ffffff' }}>{focusedProfile.name}</strong> (Rank #{focusedProfileRank})
+                            </span>
+                            {isTimelinePlaying && (
+                              <span style={{
+                                fontSize: 9.5,
+                                fontWeight: 900,
+                                color: '#34d399',
+                                background: 'rgba(16, 185, 129, 0.25)',
+                                padding: '1px 6px',
+                                borderRadius: 6,
+                                letterSpacing: '0.04em',
+                                flexShrink: 0
+                              }}>
+                                ● LIVE TRACKING
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setFocusedProfileId(null)
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#cbd5e1',
+                              fontSize: 10.5,
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              padding: '2px 4px',
+                              flexShrink: 0
+                            }}
+                          >
+                            ✕ Clear Focus
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Embedded Seek Scrubber Track */}
+                      <div style={{ width: '100%', position: 'relative', display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <input
                           type="range"
                           min={0}
@@ -1638,10 +1784,11 @@ export default function LivePage({ initialLiveData = null }) {
                           }}
                           style={{
                             width: '100%',
-                            height: 6,
-                            borderRadius: 3,
-                            accentColor: '#6366f1',
-                            cursor: 'pointer'
+                            height: 4,
+                            borderRadius: 2,
+                            accentColor: '#818cf8',
+                            cursor: 'pointer',
+                            margin: '2px 0'
                           }}
                         />
 
@@ -1649,10 +1796,9 @@ export default function LivePage({ initialLiveData = null }) {
                         <div style={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          marginTop: 4,
-                          fontSize: 11.5,
+                          fontSize: 10,
                           fontWeight: 700,
-                          color: 'var(--text-muted)',
+                          color: '#94a3b8',
                           fontFamily: 'monospace'
                         }}>
                           {timelineDates.map((item, idx) => {
@@ -1666,11 +1812,8 @@ export default function LivePage({ initialLiveData = null }) {
                                 }}
                                 style={{
                                   cursor: 'pointer',
-                                  color: isSelected ? '#6366f1' : 'var(--text-muted)',
+                                  color: isSelected ? '#a5b4fc' : '#64748b',
                                   fontWeight: isSelected ? 900 : 600,
-                                  background: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
-                                  padding: '2px 8px',
-                                  borderRadius: 6,
                                   transition: 'all 0.15s ease'
                                 }}
                               >
@@ -2395,7 +2538,7 @@ export default function LivePage({ initialLiveData = null }) {
         )}
 
         {/* ── FLOATING 31 GROWTH TIMELINE ACTION BUTTON (ICON-ONLY AS IN USER SKETCH) ── */}
-        {activeTab === 'most_followed' && (
+        {activeTab === 'most_followed' && !timelineMode && (
           <div
             style={{
               position: 'fixed',

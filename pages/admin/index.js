@@ -972,12 +972,19 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
   const handleSave = async () => {
     if (!form.name.trim()) return setError('Name is required')
     
-    const followersVal = (form.followers_text || '').trim().toUpperCase();
+    let followersVal = (form.followers_text || '').trim().toUpperCase();
     if (!followersVal) {
       return setError('Followers Count is required');
     }
-    if (!/^[0-9]+(\.[0-9]+)?[KMB]$/.test(followersVal)) {
-      return setError('Followers Count must be a number followed by K, M, or B (e.g., 270M, 10K)');
+    // If entered as pure integer/number like "229172", automatically convert to standard shorthand
+    if (/^[0-9,]+$/.test(followersVal)) {
+      const rawNum = parseInt(followersVal.replace(/,/g, ''), 10);
+      if (rawNum >= 1000000000) followersVal = `${(Math.floor(rawNum / 100000000) / 10).toString().replace(/\.0$/, "")}B`;
+      else if (rawNum >= 1000000) followersVal = `${(Math.floor(rawNum / 100000) / 10).toString().replace(/\.0$/, "")}M`;
+      else if (rawNum >= 1000) followersVal = `${(Math.floor(rawNum / 100) / 10).toString().replace(/\.0$/, "")}K`;
+      else followersVal = rawNum.toString();
+    } else if (!/^[0-9]+(\.[0-9]+)?[KMB]$/.test(followersVal)) {
+      return setError('Followers Count must be a valid number or shorthand (e.g., 270M, 229.1K, 500K)');
     }
 
     // Validate categories
