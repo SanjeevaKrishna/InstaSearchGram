@@ -76,12 +76,25 @@ export default async function handler(req, res) {
     return res.status(200).json({ message: "No profiles with instagram handles found.", total: 0, updated: 0, failed: 0, failures: [] })
   }
 
+  // Disable socket timeout for long-running batch streaming
+  if (req.socket) req.socket.setTimeout(0);
+  if (res.socket) res.socket.setKeepAlive(true);
+
   // Set up Server-Sent Events (SSE) headers for real-time progress streaming
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",
-    "Connection": "keep-alive"
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no"
   })
+
+  const safeWrite = (data) => {
+    try {
+      res.write(data);
+    } catch (e) {
+      // Client may have disconnected or tab closed
+    }
+  };
 
   const scraper = new InstagramFollowersScraper(sessionId, csrfToken)
 
@@ -105,104 +118,112 @@ export default async function handler(req, res) {
   let updated = 0
   let failed = 0
   const failures = []
+  let processed = 0
 
   // Send initial start event
-  res.write(`data: ${JSON.stringify({
+  safeWrite(`data: ${JSON.stringify({
     type: "start",
     total: allProfiles.length,
     targetDate: todayStr
   })}\n\n`)
 
-  for (let i = 0; i < allProfiles.length; i++) {
-    const profile = allProfiles[i]
+  const chunkSize = 4
+  for (let i = 0; i < allProfiles.length; i += chunkSize) {
+    const chunk = allProfiles.slice(i, i + chunkSize)
 
-    // Respect Instagram rate limits with 3.5s safety interval between accounts
-    if (i > 0) await sleep(3500)
+    await Promise.all(chunk.map(async (profile) => {
+      try {
+        const cleanHandle = profile.instagram_handle.trim().toLowerCase().replace(/^@/, '')
+        const result = await scraper.fetchFollowers(cleanHandle)
+        const count = result.followersCount
 
-    try {
-      const result = await scraper.fetchFollowers(profile.instagram_handle)
-      const count = result.followersCount
+        if (!count || count === 0) {
+          throw new Error(`Zero follower count returned for @${profile.instagram_handle}`)
+        }
 
-      if (!count || count === 0) {
-        throw new Error(`Zero follower count returned for @${profile.instagram_handle}`)
+        const formattedText = formatFollowersText(count)
+
+        let history = Array.isArray(profile.follower_history) ? [...profile.follower_history] : []
+        const todayIdx = history.findIndex(h => h.date === todayStr)
+        if (todayIdx !== -1) {
+          history[todayIdx].count = count
+        } else {
+          history.push({ date: todayStr, count })
+        }
+
+        // If newly added profile with only 1 history date, automatically seed yesterday's baseline
+        if (history.length === 1) {
+          const delta = getRealisticDelta(count)
+          const targetDateObj = new Date(todayStr)
+          const priorDate = new Date(targetDateObj.getTime() - 24 * 60 * 60 * 1000)
+          const priorDateStr = priorDate.toISOString().split("T")[0]
+          history.unshift({ date: priorDateStr, count: Math.max(100, count - delta) })
+        }
+
+        history.sort((a, b) => new Date(a.date) - new Date(b.date))
+        if (history.length > 365) history = history.slice(-365)
+
+        await supabase
+          .from("most_followed")
+          .update({ followers_count: count, followers_text: formattedText, follower_history: history })
+          .eq("id", profile.id)
+
+        updated++
+        processed++
+        console.log(`[BatchScrape] OK [${processed}/${allProfiles.length}] @${cleanHandle} -> ${formattedText}`)
+
+        // Stream successful progress to client
+        safeWrite(`data: ${JSON.stringify({
+          type: "progress",
+          current: processed,
+          total: allProfiles.length,
+          percent: Math.round((processed / allProfiles.length) * 100),
+          id: profile.id,
+          name: profile.name,
+          handle: cleanHandle,
+          status: "success",
+          count,
+          formattedText,
+          updated,
+          failed
+        })}\n\n`)
+
+      } catch (err) {
+        failed++
+        processed++
+        const failureItem = {
+          id: profile.id,
+          name: profile.name,
+          handle: profile.instagram_handle,
+          error: err.message || "Failed to fetch follower count"
+        }
+        failures.push(failureItem)
+        console.warn(`[BatchScrape] FAIL [${processed}/${allProfiles.length}] @${profile.instagram_handle} -> ${err.message}`)
+
+        // Stream failed progress to client
+        safeWrite(`data: ${JSON.stringify({
+          type: "progress",
+          current: processed,
+          total: allProfiles.length,
+          percent: Math.round((processed / allProfiles.length) * 100),
+          id: profile.id,
+          name: profile.name,
+          handle: profile.instagram_handle,
+          status: "failed",
+          error: err.message || "Unknown error",
+          updated,
+          failed
+        })}\n\n`)
       }
+    }))
 
-      const formattedText = formatFollowersText(count)
-
-      let history = Array.isArray(profile.follower_history) ? [...profile.follower_history] : []
-      const todayIdx = history.findIndex(h => h.date === todayStr)
-      if (todayIdx !== -1) {
-        history[todayIdx].count = count
-      } else {
-        history.push({ date: todayStr, count })
-      }
-
-      // If newly added profile with only 1 history date, automatically seed yesterday's baseline
-      if (history.length === 1) {
-        const delta = getRealisticDelta(count)
-        const targetDateObj = new Date(todayStr)
-        const priorDate = new Date(targetDateObj.getTime() - 24 * 60 * 60 * 1000)
-        const priorDateStr = priorDate.toISOString().split("T")[0]
-        history.unshift({ date: priorDateStr, count: Math.max(100, count - delta) })
-      }
-
-      history.sort((a, b) => new Date(a.date) - new Date(b.date))
-      if (history.length > 365) history = history.slice(-365)
-
-      await supabase
-        .from("most_followed")
-        .update({ followers_count: count, followers_text: formattedText, follower_history: history })
-        .eq("id", profile.id)
-
-      updated++
-      console.log(`[BatchScrape] OK [${i + 1}/${allProfiles.length}] @${profile.instagram_handle} -> ${formattedText}`)
-
-      // Stream successful progress to client
-      res.write(`data: ${JSON.stringify({
-        type: "progress",
-        current: i + 1,
-        total: allProfiles.length,
-        percent: Math.round(((i + 1) / allProfiles.length) * 100),
-        id: profile.id,
-        name: profile.name,
-        handle: profile.instagram_handle,
-        status: "success",
-        count,
-        formattedText,
-        updated,
-        failed
-      })}\n\n`)
-
-    } catch (err) {
-      failed++
-      const failureItem = {
-        id: profile.id,
-        name: profile.name,
-        handle: profile.instagram_handle,
-        error: err.message || "Failed to fetch follower count"
-      }
-      failures.push(failureItem)
-      console.warn(`[BatchScrape] FAIL [${i + 1}/${allProfiles.length}] @${profile.instagram_handle} -> ${err.message}`)
-
-      // Stream failed (skipped) progress to client and continue to next profile
-      res.write(`data: ${JSON.stringify({
-        type: "progress",
-        current: i + 1,
-        total: allProfiles.length,
-        percent: Math.round(((i + 1) / allProfiles.length) * 100),
-        id: profile.id,
-        name: profile.name,
-        handle: profile.instagram_handle,
-        status: "failed",
-        error: err.message || "Unknown error",
-        updated,
-        failed
-      })}\n\n`)
+    if (i + chunkSize < allProfiles.length) {
+      await sleep(1000)
     }
   }
 
   // Send final complete event
-  res.write(`data: ${JSON.stringify({
+  safeWrite(`data: ${JSON.stringify({
     type: "complete",
     total: allProfiles.length,
     updated,
@@ -210,5 +231,5 @@ export default async function handler(req, res) {
     failures
   })}\n\n`)
 
-  res.end()
+  try { res.end(); } catch (e) {}
 }

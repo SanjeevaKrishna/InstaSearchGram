@@ -264,7 +264,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleSave = async () => {
-    if (!form.name.trim() && !form.instagram_handle.trim()) return setError('Please enter either a Name or an Instagram Handle')
+    if (!form.name.trim()) return setError('Name is required')
     setSaving(true)
     setError('')
     try {
@@ -311,12 +311,13 @@ function CelebrityForm({ initial, onSave, onCancel }) {
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)', marginBottom: 12 }}>
         <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          <strong>Tip:</strong> You can enter just the <strong>Instagram Handle</strong> and <strong>Photo URL</strong>! The scraper will automatically fetch the full Display Name, Bio, Followers, and Stats when scraped.
+          <strong>Note:</strong> Leave any stats blank to automatically use the scraped values. 
+          If you fill in a field, it will override the scraper.
         </p>
       </div>
       <div>
-        <label style={labelStyle}>Display Name (Optional — Auto-fetched from Instagram if empty)</label>
-        <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Virat Kohli (or leave blank)" />
+        <label style={labelStyle}>Display Name * (e.g. Virat Kohli)</label>
+        <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Virat Kohli" />
       </div>
       <div>
         <label style={labelStyle}>Instagram Handle (without @)</label>
@@ -2369,9 +2370,8 @@ export default function AdminPanel() {
 
         setMostFollowed(profiles => profiles.map(p => p.id === profile.id ? data.profile : p))
       } catch (err) {
-        setBatchErrorLog(`Failed on profile "${profile.name}": ${err.message}`)
-        setBatchStatusMessage(`❌ Batch update halted due to error on "${profile.name}".`)
-        break
+        console.warn(`Failed on profile "${profile.name}": ${err.message}`)
+        setBatchErrorLog(`Skipped "${profile.name}": ${err.message}`)
       }
 
       setBatchProgressCurrent(i + 1)
@@ -2391,8 +2391,8 @@ export default function AdminPanel() {
   const handleScrapeAllAccounts = async () => {
     const withHandles = mostFollowed.filter(p => p.instagram_handle && p.instagram_handle.trim() !== '')
     const total = withHandles.length
-    const estMinutes = Math.ceil((total * 3.5) / 60)
-    if (!confirm(`🚀 Scrape ALL ${total} accounts with Instagram handles?\n\nThis runs sequentially with a 3.5-second safety delay between each account to prevent rate limits.\n\nEstimated time: ~${estMinutes} minutes.\n\nDo NOT close this tab until it finishes!`)) return
+    const estMinutes = Math.ceil((total * 1.0) / (4 * 60)) + 1
+    if (!confirm(`⚡ Turbo Scrape ALL ${total} accounts with Instagram handles?\n\nThis runs with parallel 4x multi-threading.\n\nEstimated time: ~${estMinutes} minutes.`)) return
 
     setAllScrapeRunning(true)
     setAllScrapeResult(null)
@@ -4068,7 +4068,7 @@ export default function AdminPanel() {
                       boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
                     }}
                   >
-                    🚀 Scrape All {mostFollowed.filter(p => p.instagram_handle).length} Accounts Now
+                    ⚡ Turbo Scrape All {mostFollowed.filter(p => p.instagram_handle).length} Accounts (~3 mins)
                   </button>
                 </div>
               )}
