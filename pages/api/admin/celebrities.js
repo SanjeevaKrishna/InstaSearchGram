@@ -44,13 +44,25 @@ export default async function handler(req, res) {
     // POST - add new celebrity
     if (req.method === 'POST') {
       const { name, instagram_handle, followers_count, posts_count, photo_url, is_featured, has_full_details, order_index, total_reel_views, total_reel_likes, total_post_likes, total_comments, total_shares, total_reposts, hide_search, description, average_views, average_reel_likes, average_post_likes, followers_interaction, most_likes, account_created_year, most_liked_count, most_commented_count, most_viewed_count, most_liked_date, most_commented_date, most_viewed_date } = req.body
-      if (!name) return res.status(400).json({ error: 'Name is required' })
 
-      // Auto generate slug from name
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      const cleanHandle = instagram_handle ? instagram_handle.trim().toLowerCase().replace(/^@/, '') : ''
+      let finalName = name ? name.trim() : ''
+
+      if (!finalName && !cleanHandle) {
+        return res.status(400).json({ error: 'Please provide either a Name or an Instagram Handle' })
+      }
+
+      if (!finalName) {
+        // Auto-generate clean display name from handle until scraped
+        finalName = cleanHandle.replace(/[\._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      }
+
+      // Auto generate slug from name or handle
+      const baseSlug = (name ? name.trim() : cleanHandle).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      const slug = baseSlug || cleanHandle || ('celebrity-' + Date.now())
 
       const manualFields = {
-        name_manual: name || null,
+        name_manual: name && name.trim() ? name.trim() : null,
         description_manual: description || null,
         followers_manual: followers_count ? Number(followers_count) : null,
         posts_manual: posts_count ? Number(posts_count) : null,

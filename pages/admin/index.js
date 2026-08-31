@@ -264,7 +264,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleSave = async () => {
-    if (!form.name.trim()) return setError('Name is required')
+    if (!form.name.trim() && !form.instagram_handle.trim()) return setError('Please enter either a Name or an Instagram Handle')
     setSaving(true)
     setError('')
     try {
@@ -311,13 +311,12 @@ function CelebrityForm({ initial, onSave, onCancel }) {
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--border)', marginBottom: 12 }}>
         <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          <strong>Note:</strong> Leave any field blank to automatically use the scraped value. 
-          If you fill in a field, it will override the scraper.
+          <strong>Tip:</strong> You can enter just the <strong>Instagram Handle</strong> and <strong>Photo URL</strong>! The scraper will automatically fetch the full Display Name, Bio, Followers, and Stats when scraped.
         </p>
       </div>
       <div>
-        <label style={labelStyle}>Display Name Override (Scraped: {initial?.name_scraped || 'None'})</label>
-        <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Virat Kohli" />
+        <label style={labelStyle}>Display Name (Optional — Auto-fetched from Instagram if empty)</label>
+        <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Virat Kohli (or leave blank)" />
       </div>
       <div>
         <label style={labelStyle}>Instagram Handle (without @)</label>

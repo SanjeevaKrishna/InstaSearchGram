@@ -302,7 +302,10 @@ export default function ScrapeConsole() {
                   topReelViewsDate: resResult.finalStats?.topReelViews?.date || null,
                   latestItemsEngagement: resResult.finalStats?.latestItemsEngagement || 0,
                   latestItemsCount: resResult.finalStats?.latestItemsCount || 0,
-                  latestPostDate: resResult.finalStats?.latestPostDate || null
+                  latestPostDate: resResult.finalStats?.latestPostDate || null,
+                  averageReelViews: resResult.finalStats?.averageReelViews || 0,
+                  averageReelLikes: resResult.finalStats?.averageReelLikes || 0,
+                  averagePostLikes: resResult.finalStats?.averagePostLikes || 0,
                 }
                 
                 localStorage.setItem(`pending_progress_${handleKey}`, JSON.stringify({
