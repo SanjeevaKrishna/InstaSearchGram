@@ -321,7 +321,12 @@ function CelebrityForm({ initial, onSave, onCancel }) {
       </div>
       <div>
         <label style={labelStyle}>Instagram Handle (without @)</label>
-        <input className="input-field" value={form.instagram_handle} onChange={e => set('instagram_handle', e.target.value)} placeholder="e.g. virat.kohli" />
+        <input 
+          className="input-field" 
+          value={form.instagram_handle || ''} 
+          onChange={e => set('instagram_handle', e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))} 
+          placeholder="e.g. virat.kohli" 
+        />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         <div>
@@ -1055,7 +1060,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
         <input 
           className="input-field" 
           value={form.instagram_handle || ''} 
-          onChange={e => set('instagram_handle', e.target.value)} 
+          onChange={e => set('instagram_handle', e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))} 
           placeholder="e.g. virat.kohli" 
         />
       </div>
@@ -4123,7 +4128,7 @@ export default function AdminPanel() {
                             id={`handle-input-${index}`}
                             type="text"
                             value={tempHandles[profile.id] !== undefined ? tempHandles[profile.id] : (profile.instagram_handle || '')}
-                            onChange={e => setTempHandles(prev => ({ ...prev, [profile.id]: e.target.value }))}
+                            onChange={e => setTempHandles(prev => ({ ...prev, [profile.id]: e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, '') }))}
                             onKeyDown={e => {
                               if (e.key === 'Enter') {
                                 handleSaveHandle(profile, index, true)

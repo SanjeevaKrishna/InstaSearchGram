@@ -90,8 +90,10 @@ export default function ScrapeConsole() {
           const matched = data.celebrities?.find(c => c.id === celebrityId || c.instagram_handle?.toLowerCase() === handle?.toLowerCase())
           if (matched) {
             setCelebrity(matched)
-            const pCount = matched.posts_count || 0
-            setTotalPosts(pCount)
+            const pCount = matched.posts_count || matched.posts_scraped || 0
+            if (pCount > 0) {
+              setTotalPosts(pCount)
+            }
           }
         }
       } catch (err) {
@@ -259,6 +261,10 @@ export default function ScrapeConsole() {
               setSegmentProgress(Math.min(200, scrapedInThisRun))
               setPendingCount(s.processedItems)
               
+              if (s.totalPosts && s.totalPosts > 0) {
+                setTotalPosts(s.totalPosts)
+              }
+
               if (s.accountCreatedYear) {
                 setCelebrity(prev => prev ? ({ ...prev, account_created_year: s.accountCreatedYear }) : prev)
               }
@@ -272,6 +278,10 @@ export default function ScrapeConsole() {
             } else if (data.type === 'complete') {
               const resResult = data.result
               setScraping(false)
+
+              if (resResult.updates?.posts_count || resResult.updates?.posts_scraped) {
+                setTotalPosts(resResult.updates.posts_count || resResult.updates.posts_scraped)
+              }
 
               if (resResult.moreAvailable && resResult.nextMaxId) {
                 // Save progress for the next chunk
@@ -508,7 +518,7 @@ export default function ScrapeConsole() {
                 <div style={{ fontSize: 14, color: '#a1a1aa', marginBottom: 24 }}>
                   <strong>{segmentProgress} / 200</strong> posts collected in this run
                   <span style={{ color: '#71717a', display: 'block', marginTop: 4, fontSize: 12 }}>
-                    (Overall Progress: {pendingCount} / {totalPosts} posts scraped)
+                    (Overall Progress: {pendingCount} / {totalPosts > 0 ? totalPosts.toLocaleString() : (pendingCount > 0 ? pendingCount : '...')} posts scraped)
                   </span>
                 </div>
 
@@ -587,9 +597,13 @@ export default function ScrapeConsole() {
               /* 3. Pre-Scrape / Segment Complete State */
               <div>
                 <div style={{ fontSize: 14, color: '#a1a1aa', marginBottom: 20, lineHeight: 1.6 }}>
-                  <strong>@{handle}</strong> has <strong>{totalPosts.toLocaleString()}</strong> posts on Instagram.
+                  <strong>@{handle}</strong>{totalPosts > 0 ? (
+                    <> has <strong>{totalPosts.toLocaleString()}</strong> posts on Instagram.</>
+                  ) : (
+                    <> profile is ready to scrape.</>
+                  )}
                   <div style={{ color: '#71717a', marginTop: 4 }}>
-                    With a 200-post limit, this will require <strong>{totalRuns} runs</strong> to scrape completely.
+                    With a 200-post limit, this will require <strong>{totalRuns} run{totalRuns > 1 ? 's' : ''}</strong> to scrape completely.
                   </div>
                 </div>
 
