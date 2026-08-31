@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import Head from 'next/head'
 import PostCard from '../../components/PostCard'
 import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
@@ -1940,7 +1940,43 @@ export default function AdminPanel() {
   }
 
   const [searchCel, setSearchCel] = useState('')
+  const [celSortOption, setCelSortOption] = useState('first_added')
   const [searchPost, setSearchPost] = useState('')
+
+  const sortedAndFilteredCelebrities = useMemo(() => {
+    let list = (celebrities || []).filter(c => 
+      c.name?.toLowerCase().includes(searchCel.toLowerCase()) ||
+      c.instagram_handle?.toLowerCase().includes(searchCel.toLowerCase())
+    )
+
+    if (celSortOption === 'first_added') {
+      return [...list].sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.order_index || 0)
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.order_index || 0)
+        return timeA - timeB
+      })
+    } else if (celSortOption === 'newest_added') {
+      return [...list].sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.order_index || 0)
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.order_index || 0)
+        return timeB - timeA
+      })
+    } else if (celSortOption === 'name_asc') {
+      return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    } else if (celSortOption === 'followers_desc') {
+      return [...list].sort((a, b) => (b.followers_count || 0) - (a.followers_count || 0))
+    } else if (celSortOption === 'needs_scrape') {
+      return [...list].sort((a, b) => {
+        const aNeeds = (!a.has_full_details || !a.posts_scraped || a.posts_scraped === 0) ? 1 : 0
+        const bNeeds = (!b.has_full_details || !b.posts_scraped || b.posts_scraped === 0) ? 1 : 0
+        if (aNeeds !== bNeeds) return bNeeds - aNeeds
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.order_index || 0)
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.order_index || 0)
+        return timeA - timeB
+      })
+    }
+    return list
+  }, [celebrities, searchCel, celSortOption])
   const [searchNews, setSearchNews] = useState('')
   const [searchMostFollowed, setSearchMostFollowed] = useState('')
   const [searchViralReels, setSearchViralReels] = useState('')
@@ -3165,21 +3201,41 @@ export default function AdminPanel() {
               )
             })()}
 
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
               <input
                 className="input-field"
                 value={searchCel}
                 onChange={e => setSearchCel(e.target.value)}
                 placeholder="🔍 Search celebrities by name or handle..."
-                style={{ flex: 1, minWidth: 200 }}
+                style={{ flex: 1, minWidth: 220 }}
               />
-              <button
-                className="btn btn-primary"
-                onClick={() => {}}
-                style={{ padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                Search
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                  Sort By:
+                </label>
+                <select
+                  className="input-field"
+                  value={celSortOption}
+                  onChange={e => setCelSortOption(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    borderRadius: 10,
+                    background: 'var(--surface2)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
+                    cursor: 'pointer',
+                    minWidth: 220
+                  }}
+                >
+                  <option value="first_added">🕒 First Added → Last Added (Oldest First)</option>
+                  <option value="newest_added">✨ Newly Added First (Latest First)</option>
+                  <option value="name_asc">🔤 Alphabetical (A → Z)</option>
+                  <option value="followers_desc">👥 Followers (High → Low)</option>
+                  <option value="needs_scrape">⚠️ Not Scraped Yet First</option>
+                </select>
+              </div>
             </div>
 
             {loadingData ? (
@@ -3187,11 +3243,7 @@ export default function AdminPanel() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {(() => {
-                  const filtered = celebrities.filter(c => 
-                    c.name?.toLowerCase().includes(searchCel.toLowerCase()) ||
-                    c.instagram_handle?.toLowerCase().includes(searchCel.toLowerCase())
-                  )
-                  if (filtered.length === 0) {
+                  if (sortedAndFilteredCelebrities.length === 0) {
                     return (
                       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                         {celebrities.length === 0 ? "No celebrities yet. Add your first one! 👆" : "No matching celebrities found."}
@@ -3199,28 +3251,44 @@ export default function AdminPanel() {
                     )
                   }
 
-                  return filtered.map(cel => (
+                  return sortedAndFilteredCelebrities.map((cel, index) => (
                     <div key={cel.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', padding: '16px 20px', borderRadius: 16, background: 'var(--surface)' }}>
                       {/* Row 1: Profile */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16, width: '100%' }}>
-                        <div style={{
-                          width: 48, height: 48, borderRadius: '50%',
-                          background: 'var(--gradient)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontWeight: 800, fontSize: 18, flexShrink: 0,
-                        }}>
-                          {cel.name?.charAt(0)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-dim)', minWidth: 28, textAlign: 'center' }}>
+                            #{index + 1}
+                          </span>
+                          {cel.photo_url ? (
+                            <img src={cel.photo_url} alt={cel.name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{
+                              width: 48, height: 48, borderRadius: '50%',
+                              background: 'var(--gradient)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontWeight: 800, fontSize: 18, color: '#fff'
+                            }}>
+                              {cel.name?.charAt(0)}
+                            </div>
+                          )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{cel.name}</div>
+                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span>{cel.name}</span>
+                            {cel.account_created_year && (
+                              <span style={{ fontSize: 11, background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>
+                                Joined {cel.account_created_year}
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                             @{cel.instagram_handle || '—'} &nbsp;·&nbsp; {formatCount(cel.followers_count)} followers
                             {cel.is_featured && <span style={{ marginLeft: 8, color: '#ffeb3b', fontWeight: 600 }}>⭐ Featured</span>}
                             {cel.hide_search && <span style={{ marginLeft: 8, color: '#f44336', fontWeight: 600 }}>🚫 Disabled</span>}
                             {cel.has_full_details ? (
-                              <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Add Search</span>
+                              <span style={{ marginLeft: 8, color: '#4caf50', fontWeight: 600 }}>✓ Scraped ({cel.posts_count || 0} posts)</span>
                             ) : (
-                              <span style={{ marginLeft: 8, color: '#ff9800', fontWeight: 600 }}>⚠️ No Search ({cel.request_count || 0} requests)</span>
+                              <span style={{ marginLeft: 8, color: '#ff9800', fontWeight: 600 }}>⚠️ Not Scraped ({cel.request_count || 0} requests)</span>
                             )}
                           </div>
                         </div>
