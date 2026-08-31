@@ -190,9 +190,13 @@ export default function ScrapeConsole() {
       lastScrapedDate = localStorage.getItem(`last_scraped_date_${handleKey}`)
       addLog(`Daily Refresh: Fetching new posts since ${new Date(lastScrapedDate).toLocaleDateString()}`, 'info')
     } else if (mode === 'fresh') {
-      // Discard saved progress to start from scratch
+      // Discard saved progress and previous completion flag to start fresh
       localStorage.removeItem(`pending_progress_${handleKey}`)
+      localStorage.removeItem(`last_scraped_date_${handleKey}`)
       setHasPending(false)
+      setHasIncremental(false)
+      setShowFinishedOptions(false)
+      setIsFullyCompleted(false)
       setPendingCount(0)
       setRunIndex(1)
     }
@@ -255,10 +259,15 @@ export default function ScrapeConsole() {
               setSegmentProgress(Math.min(200, scrapedInThisRun))
               setPendingCount(s.processedItems)
               
+              if (s.accountCreatedYear) {
+                setCelebrity(prev => prev ? ({ ...prev, account_created_year: s.accountCreatedYear }) : prev)
+              }
+
               if (s.statusMessage) {
                 addLog(s.statusMessage, 'warn')
               } else {
-                addLog(`Processed ${s.processedItems} posts (${s.totalReels} reels, ${s.skippedPosts} skipped).`, 'success')
+                const yearText = s.accountCreatedYear ? ` | Joined: ${s.accountCreatedYear}` : ''
+                addLog(`Processed ${s.processedItems} posts (${s.totalReels} reels, ${s.skippedPosts} skipped)${yearText}.`, 'success')
               }
             } else if (data.type === 'complete') {
               const resResult = data.result
@@ -297,8 +306,8 @@ export default function ScrapeConsole() {
                 setRunIndex(Math.floor(resResult.processedItems / 200) + 1)
                 
                 addLog(`Run ${runIndex} finished! Completed ${resResult.processedItems} posts overall.`, 'success')
-              } else {
-                // Scrape fully complete!
+              } else if ((resResult.processedItems || 0) > 0 || mode === 'incremental') {
+                // Scrape genuinely complete!
                 localStorage.removeItem(`pending_progress_${handleKey}`)
                 setHasPending(false)
                 setIsFullyCompleted(true)
@@ -313,6 +322,8 @@ export default function ScrapeConsole() {
                 }
                 
                 addLog(`Full Scrape Complete! Reached the end of the feed.`, 'success')
+              } else {
+                addLog(`No posts could be retrieved. Please check your Instagram cookies or try again.`, 'warn')
               }
             } else if (data.type === 'error') {
               throw new Error(data.error)
