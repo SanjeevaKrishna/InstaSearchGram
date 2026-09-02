@@ -132,7 +132,7 @@ export default async function handler(req, res) {
 
     // PUT - update a profile or trigger auto-reordering
     if (req.method === 'PUT') {
-      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, instagram_handle, action, votes } = req.body
+      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, instagram_handle, action, votes, follower_history } = req.body
 
       // Sub-action: Reorder profiles by followers count descending
       if (action === 'reorder') {
@@ -330,14 +330,15 @@ export default async function handler(req, res) {
       const calculatedFollowersCount = parseCountText(followers_text)
 
       const payload = {
-        name,
-        photo_url,
-        followers_count: calculatedFollowersCount,
-        followers_text: followers_text || '',
-        order_index: order_index ? Number(order_index) : 0,
-        category: category || '',
-        language: language || null,
-        instagram_handle: instagram_handle || null
+        ...(name !== undefined ? { name } : {}),
+        ...(photo_url !== undefined ? { photo_url } : {}),
+        ...(followers_count !== undefined ? { followers_count: Number(followers_count) } : (followers_text ? { followers_count: calculatedFollowersCount } : {})),
+        ...(followers_text !== undefined ? { followers_text } : {}),
+        ...(order_index !== undefined ? { order_index: Number(order_index) } : {}),
+        ...(category !== undefined ? { category } : {}),
+        ...(language !== undefined ? { language } : {}),
+        ...(instagram_handle !== undefined ? { instagram_handle } : {}),
+        ...(follower_history !== undefined ? { follower_history } : {})
       }
 
       const { data, error } = await supabase

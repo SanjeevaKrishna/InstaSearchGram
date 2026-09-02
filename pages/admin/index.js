@@ -1903,7 +1903,246 @@ export default function AdminPanel() {
 
   const handleRefreshStats = (cel) => {
     if (!cel.instagram_handle) return alert('No Instagram handle set for this profile!');
-    window.open(`/admin/scrape?id=${cel.id}&handle=${cel.instagram_handle}`, '_blank');
+    window.open(`/admin/scrape?id=${cel.id}&handle=${encodeURIComponent(cel.instagram_handle)}`, '_blank');
+  }
+
+  // ── Automatic Batch Scraper States ──
+  const [batchRunning, setBatchRunning] = useState(false)
+  const [batchPaused, setBatchPaused] = useState(false)
+  const [batchMode, setBatchMode] = useState(null) // 'daily' | 'full' | 'unscraped'
+  const [batchIndex, setBatchIndex] = useState(0)
+  const [batchQueue, setBatchQueue] = useState([])
+  const [batchCurrentProfile, setBatchCurrentProfile] = useState(null)
+  const [batchProfileProgress, setBatchProfileProgress] = useState('')
+  const [batchCooldown, setBatchCooldown] = useState(0)
+  const [batchFailedProfiles, setBatchFailedProfiles] = useState([])
+  const [batchSuccessProfiles, setBatchSuccessProfiles] = useState([])
+  const [batchSummaryOpen, setBatchSummaryOpen] = useState(false)
+  const [pendingBatchRecovery, setPendingBatchRecovery] = useState(null)
+
+  const batchAbortControllerRef = useRef(null)
+  const isBatchRunningRef = useRef(false)
+  const isBatchPausedRef = useRef(false)
+  const celebritiesRef = useRef([])
+
+  useEffect(() => {
+    celebritiesRef.current = celebrities || []
+  }, [celebrities])
+
+  // Count unscraped profiles
+  const unscrapedCelebrities = useMemo(() => {
+    return (celebrities || []).filter(c => 
+      c.instagram_handle && 
+      c.instagram_handle.trim() && 
+      (!c.posts_scraped || c.posts_scraped === 0) &&
+      (!c.total_reel_views_scraped || c.total_reel_views_scraped === 0)
+    )
+  }, [celebrities])
+
+  // Check saved batch state on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('batch_scrape_state')
+      if (saved) {
+        const data = JSON.parse(saved)
+        if (data && data.queue && data.queue.length > 0 && data.currentIndex < data.queue.length) {
+          setPendingBatchRecovery(data)
+        }
+      }
+    } catch (e) {}
+  }, [])
+
+  const startBatchScraper = (mode = 'daily', resumeState = null) => {
+    let sourceList = (celebrities || []).filter(c => c.instagram_handle && c.instagram_handle.trim())
+    
+    if (mode === 'unscraped') {
+      sourceList = unscrapedCelebrities
+      if (sourceList.length === 0) {
+        return alert('All profiles in your database are already scraped! No unscraped profiles found.')
+      }
+    } else if (sourceList.length === 0) {
+      return alert('No celebrity profiles with valid Instagram handles found!')
+    }
+
+    const queue = resumeState ? resumeState.queue : sourceList.map(c => ({ id: c.id, handle: c.instagram_handle.trim(), name: c.name }))
+    const startIndex = resumeState ? resumeState.currentIndex : 0
+    const failed = resumeState ? (resumeState.failed || []) : []
+    const success = resumeState ? (resumeState.success || []) : []
+
+    setBatchQueue(queue)
+    setBatchIndex(startIndex)
+    setBatchMode(mode)
+    setBatchRunning(true)
+    setBatchPaused(false)
+    setBatchFailedProfiles(failed)
+    setBatchSuccessProfiles(success)
+    setPendingBatchRecovery(null)
+    setBatchSummaryOpen(false)
+
+    isBatchRunningRef.current = true
+    isBatchPausedRef.current = false
+
+    executeBatchLoop(queue, startIndex, mode, failed, success)
+  }
+
+  const executeBatchLoop = async (queue, startIndex, mode, failedList, successList) => {
+    for (let i = startIndex; i < queue.length; i++) {
+      if (!isBatchRunningRef.current) break
+
+      while (isBatchPausedRef.current) {
+        await new Promise(r => setTimeout(r, 1000))
+        if (!isBatchRunningRef.current) break
+      }
+      if (!isBatchRunningRef.current) break
+
+      // Dynamic check: if new profiles were added to DB while scraper is running, append them to queue!
+      const currentIds = new Set(queue.map(q => q.id))
+      const latestList = celebritiesRef.current || []
+      const newlyAdded = latestList.filter(c => c.instagram_handle && c.instagram_handle.trim() && !currentIds.has(c.id))
+      if (newlyAdded.length > 0) {
+        newlyAdded.forEach(c => {
+          queue.push({ id: c.id, handle: c.instagram_handle.trim(), name: c.name })
+        })
+        setBatchQueue([...queue])
+      }
+
+      const item = queue[i]
+      setBatchIndex(i)
+      setBatchCurrentProfile(item)
+      setBatchProfileProgress(`Connecting to Instagram for @${item.handle}...`)
+
+      localStorage.setItem('batch_scrape_state', JSON.stringify({
+        queue,
+        currentIndex: i,
+        mode,
+        failed: failedList,
+        success: successList,
+        timestamp: Date.now()
+      }))
+
+      try {
+        batchAbortControllerRef.current = new AbortController()
+        const token = getToken()
+        const handleKey = item.handle.toLowerCase()
+        const dateCutoff = mode === 'daily' ? localStorage.getItem(`last_scraped_date_${handleKey}`) : null
+        const maxPages = mode === 'daily' ? 3 : 17
+
+        const res = await fetch('/api/admin/refresh_stats', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': token || '',
+          },
+          body: JSON.stringify({
+            celebrityId: item.id,
+            instagram_handle: item.handle,
+            maxPages,
+            lastScrapedDate: dateCutoff
+          }),
+          signal: batchAbortControllerRef.current.signal
+        })
+
+        if (!res.ok) {
+          throw new Error(`Server returned HTTP ${res.status}`)
+        }
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n\n')
+          buffer = lines.pop()
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = JSON.parse(line.slice(6))
+
+              if (data.type === 'progress') {
+                const s = data.stats
+                setBatchProfileProgress(s.statusMessage || `Scraped ${s.processedItems || 0} posts (${s.totalReelViews ? Math.round(s.totalReelViews/1000000*10)/10 + 'M' : '0'} views)`)
+              } else if (data.type === 'complete') {
+                const resResult = data.result
+                const finalS = resResult.finalStats || {}
+
+                const latestDate = finalS.latestPostDate || resResult.updates?.most_liked_date
+                if (latestDate) {
+                  localStorage.setItem(`last_scraped_date_${handleKey}`, latestDate)
+                }
+
+                if (resResult.updates) {
+                  setCelebrities(prev => prev.map(c => c.id === item.id ? { ...c, ...resResult.updates } : c))
+                }
+
+                successList.push({ handle: item.handle, updates: resResult.updates })
+                setBatchSuccessProfiles([...successList])
+              } else if (data.type === 'error') {
+                throw new Error(data.error)
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.warn(`[BatchScraper] Error on @${item.handle}:`, err.message)
+          failedList.push({ handle: item.handle, error: err.message, time: new Date().toLocaleTimeString() })
+          setBatchFailedProfiles([...failedList])
+        }
+      }
+
+      localStorage.setItem('batch_scrape_state', JSON.stringify({
+        queue,
+        currentIndex: i + 1,
+        mode,
+        failed: failedList,
+        success: successList,
+        timestamp: Date.now()
+      }))
+
+      if (i < queue.length - 1 && isBatchRunningRef.current && !isBatchPausedRef.current) {
+        const cooldownSeconds = 15
+        for (let cd = cooldownSeconds; cd > 0; cd--) {
+          if (!isBatchRunningRef.current || isBatchPausedRef.current) break
+          setBatchCooldown(cd)
+          setBatchProfileProgress(`⏳ Cooldown: Resting ${cd}s before next profile to protect Instagram session...`)
+          await new Promise(r => setTimeout(r, 1000))
+        }
+        setBatchCooldown(0)
+      }
+    }
+
+    setBatchRunning(false)
+    setBatchCurrentProfile(null)
+    setBatchProfileProgress('')
+    setBatchSummaryOpen(true)
+    isBatchRunningRef.current = false
+    localStorage.removeItem('batch_scrape_state')
+  }
+
+  const handlePauseBatch = () => {
+    isBatchPausedRef.current = true
+    setBatchPaused(true)
+  }
+
+  const handleResumeBatch = () => {
+    isBatchPausedRef.current = false
+    setBatchPaused(false)
+  }
+
+  const handleStopBatch = () => {
+    isBatchRunningRef.current = false
+    isBatchPausedRef.current = false
+    if (batchAbortControllerRef.current) {
+      batchAbortControllerRef.current.abort()
+    }
+    setBatchRunning(false)
+    setBatchPaused(false)
+    setBatchCurrentProfile(null)
+    setBatchCooldown(0)
   }
 
   const openPostFormForHighlight = async (cel, highlightKey) => {
@@ -3064,16 +3303,259 @@ export default function AdminPanel() {
         {/* ── CELEBRITIES TAB ─────────────────────────────────────────────── */}
         {tab === 'celebrities' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
-                Celebrities ({celebrities.length})
-              </h2>
-              {!showCelForm && !editingCel && (
-                <button className="btn btn-primary" onClick={() => setShowCelForm(true)}>
-                  + Add Celebrity
+            {/* Top Bar with Automatic Batch Scraper Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, margin: 0 }}>
+                  Celebrities ({celebrities.length})
+                </h2>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  Manage creators and run automated background scraping
+                </span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                {/* 1. Daily Scrape for all */}
+                <button 
+                  className="btn" 
+                  onClick={() => {
+                    window.open('/admin/scrape?mode=daily', '_blank')
+                  }}
+                  style={{ 
+                    background: '#10b981', 
+                    color: 'white', 
+                    border: 'none', 
+                    padding: '9px 16px', 
+                    fontSize: 13, 
+                    fontWeight: 700, 
+                    borderRadius: 8,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 4px 12px rgba(16,185,129,0.25)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⚡ Daily Scrape (All {celebrities.length})
                 </button>
-              )}
+
+                {/* 2. Unscraped Only Button */}
+                <button 
+                  className="btn" 
+                  onClick={() => {
+                    if (unscrapedCelebrities.length === 0) {
+                      alert('All ' + celebrities.length + ' profiles in your database are already scraped! There are 0 unscraped profiles.')
+                      return
+                    }
+                    window.open('/admin/scrape?mode=unscraped', '_blank')
+                  }}
+                  style={{ 
+                    background: unscrapedCelebrities.length > 0 ? '#38bdf8' : '#27272a', 
+                    color: unscrapedCelebrities.length > 0 ? '#09090b' : '#a1a1aa', 
+                    border: 'none', 
+                    padding: '9px 16px', 
+                    fontSize: 13, 
+                    fontWeight: 700, 
+                    borderRadius: 8,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: unscrapedCelebrities.length > 0 ? '0 4px 12px rgba(56,189,248,0.3)' : 'none',
+                    cursor: unscrapedCelebrities.length > 0 ? 'pointer' : 'default'
+                  }}
+                >
+                  🆕 Scrape Unscraped Only ({unscrapedCelebrities.length})
+                </button>
+
+                {/* 3. Full Scrape for all */}
+                <button 
+                  className="btn" 
+                  onClick={() => {
+                    window.open('/admin/scrape?mode=full', '_blank')
+                  }}
+                  style={{ 
+                    background: '#e1306c', 
+                    color: 'white', 
+                    border: 'none', 
+                    padding: '9px 16px', 
+                    fontSize: 13, 
+                    fontWeight: 700, 
+                    borderRadius: 8,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 4px 12px rgba(225,48,108,0.25)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔄 Full Scrape (All {celebrities.length})
+                </button>
+
+                {!showCelForm && !editingCel && (
+                  <button className="btn btn-primary" onClick={() => setShowCelForm(true)} style={{ padding: '9px 18px', fontSize: 13 }}>
+                    + Add Celebrity
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Incomplete Batch Resume Recovery Banner */}
+            {pendingBatchRecovery && !batchRunning && (
+              <div style={{
+                background: 'rgba(56, 189, 248, 0.1)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                borderRadius: 12,
+                padding: '14px 20px',
+                marginBottom: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12
+              }}>
+                <div>
+                  <strong style={{ color: '#38bdf8', fontSize: 14 }}>📌 Previous Batch Scrape Detected</strong>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Stopped at Profile {pendingBatchRecovery.currentIndex + 1} of {pendingBatchRecovery.queue.length} (@{pendingBatchRecovery.queue[pendingBatchRecovery.currentIndex]?.handle}). Would you like to continue?
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => startBatchScraper(pendingBatchRecovery.mode || 'daily', pendingBatchRecovery)}
+                    style={{ background: '#38bdf8', color: '#09090b', border: 'none', padding: '8px 18px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                  >
+                    ▶️ Resume Automatic Scrape
+                  </button>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('batch_scrape_state')
+                      setPendingBatchRecovery(null)
+                    }}
+                    style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', padding: '8px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Active Batch Scraper Running Panel */}
+            {batchRunning && (
+              <div className="card" style={{
+                background: 'linear-gradient(135deg, rgba(24, 24, 27, 0.95), rgba(18, 18, 22, 0.95))',
+                border: '1px solid ' + (batchPaused ? '#f59e0b' : '#e1306c'),
+                borderRadius: 16,
+                padding: '20px 24px',
+                marginBottom: 24,
+                boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      background: batchPaused ? '#f59e0b' : '#e1306c',
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 800
+                    }}>
+                      {batchPaused ? '⏸️ PAUSED' : '⚡ RUNNING AUTOMATION'}
+                    </span>
+                    <strong style={{ fontSize: 15, color: 'white' }}>
+                      Profile {batchIndex + 1} of {batchQueue.length}: @{batchCurrentProfile?.handle} ({batchCurrentProfile?.name})
+                    </strong>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 14 }}>
+                    <span style={{ color: '#10b981', fontWeight: 600 }}>✓ Success: {batchSuccessProfiles.length}</span>
+                    <span style={{ color: '#ef4444', fontWeight: 600 }}>⚠️ Failed: {batchFailedProfiles.length}</span>
+                    <span style={{ color: '#a1a1aa' }}>⏳ Remaining: {Math.max(0, batchQueue.length - (batchIndex + 1))}</span>
+                  </div>
+                </div>
+
+                {/* Overall Batch Progress Bar */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+                    <span>Overall Batch Progress</span>
+                    <span style={{ color: 'white', fontWeight: 700 }}>
+                      {Math.round(((batchIndex) / batchQueue.length) * 100)}% ({batchIndex} / {batchQueue.length} profiles)
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: 10, background: '#27272a', borderRadius: 6, overflow: 'hidden' }}>
+                    <div style={{ width: (Math.round(((batchIndex) / batchQueue.length) * 100) + '%'), height: '100%', background: 'linear-gradient(90deg, #e1306c, #10b981)', transition: 'width 0.4s ease' }} />
+                  </div>
+                </div>
+
+                {/* Current Profile Status / Cooldown Badge */}
+                <div style={{
+                  background: batchCooldown > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid ' + (batchCooldown > 0 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(255, 255, 255, 0.1)'),
+                  color: batchCooldown > 0 ? '#fbbf24' : '#f4f4f5',
+                  padding: '9px 14px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <span>{batchProfileProgress || 'Processing...'}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Batch Completion Summary Modal/Card */}
+            {batchSummaryOpen && (
+              <div className="card" style={{
+                background: '#18181b',
+                border: '1px solid ' + (batchFailedProfiles.length > 0 ? '#f59e0b' : '#10b981'),
+                borderRadius: 16,
+                padding: '20px 24px',
+                marginBottom: 24
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 20 }}>{batchFailedProfiles.length > 0 ? '⚠️' : '🎉'}</span>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'white' }}>
+                      Batch Automatic Scraping Completed!
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setBatchSummaryOpen(false)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Successfully updated <strong>{batchSuccessProfiles.length}</strong> profiles.
+                  {batchFailedProfiles.length > 0 ? (
+                    <span style={{ color: '#ef4444', marginLeft: 6 }}>
+                      ({batchFailedProfiles.length} profile{batchFailedProfiles.length > 1 ? 's' : ''} encountered errors).
+                    </span>
+                  ) : (
+                    <span style={{ color: '#10b981', marginLeft: 6 }}>
+                      (All profiles updated cleanly with 0 errors).
+                    </span>
+                  )}
+                </div>
+
+                {batchFailedProfiles.length > 0 && (
+                  <div style={{ background: '#09090b', border: '1px solid #27272a', borderRadius: 8, padding: 12, maxHeight: 150, overflowY: 'auto' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 6 }}>
+                      FAILED / ERRORED PROFILES LIST:
+                    </div>
+                    {batchFailedProfiles.map((f, idx) => (
+                      <div key={idx} style={{ fontSize: 12, color: '#f4f4f5', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                        <span><strong>@{f.handle}</strong>: <span style={{ color: '#a1a1aa' }}>{f.error}</span></span>
+                        <span style={{ color: '#71717a', fontSize: 11 }}>{f.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Instagram Scraper Sessions Credentials (global config) */}
             <div className="card" style={{ marginBottom: 28, padding: '20px' }}>

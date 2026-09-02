@@ -115,6 +115,12 @@ export default async function handler(req, res) {
     }
   }
 
+  // Filter only missing profiles if requested or default when resuming
+  if (req.body?.onlyMissing || req.query?.onlyMissing) {
+    allProfiles = allProfiles.filter(p => !Array.isArray(p.follower_history) || !p.follower_history.some(h => h.date === todayStr));
+    console.log(`[BatchScrape] Filtered to ${allProfiles.length} missing profiles for ${todayStr}`);
+  }
+
   let updated = 0
   let failed = 0
   const failures = []
@@ -127,7 +133,7 @@ export default async function handler(req, res) {
     targetDate: todayStr
   })}\n\n`)
 
-  const chunkSize = 4
+  const chunkSize = 2
   for (let i = 0; i < allProfiles.length; i += chunkSize) {
     const chunk = allProfiles.slice(i, i + chunkSize)
 
@@ -218,7 +224,7 @@ export default async function handler(req, res) {
     }))
 
     if (i + chunkSize < allProfiles.length) {
-      await sleep(1000)
+      await sleep(3500)
     }
   }
 
