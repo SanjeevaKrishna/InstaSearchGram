@@ -78,50 +78,66 @@ const getFollowerStats = (history = [], currentCount = 0) => {
   const sorted = [...history].sort((a, b) => new Date(a.date) - new Date(b.date))
   const historyMap = {}
   for (let i = 0; i < sorted.length; i++) {
-    historyMap[sorted[i].date] = { count: sorted[i].count, increment: i > 0 ? sorted[i].count - sorted[i - 1].count : 0 }
+    const isFailed = sorted[i].status === 'Server Failed' || sorted[i].serverFailed || sorted[i].count === null || sorted[i].count === 0
+    historyMap[sorted[i].date] = {
+      count: isFailed ? null : sorted[i].count,
+      serverFailed: isFailed,
+      increment: i > 0 && !isFailed && sorted[i - 1].count ? sorted[i].count - sorted[i - 1].count : 0
+    }
   }
 
+  // Filter valid entries with positive follower count
+  const valid = sorted.filter(e => e.count !== null && e.count > 0 && e.status !== 'Server Failed' && !e.serverFailed)
+
   let monthlyGain = 0
-  if (sorted.length > 0) {
-    const latest = sorted[sorted.length - 1]
+  if (valid.length > 0) {
+    const latest = valid[valid.length - 1]
     const ld = new Date(latest.date)
     const yr = ld.getFullYear(), mo = ld.getMonth()
-    const thisMonth = sorted.filter(e => { const d = new Date(e.date); return d.getFullYear() === yr && d.getMonth() === mo })
+    const thisMonth = valid.filter(e => { const d = new Date(e.date); return d.getFullYear() === yr && d.getMonth() === mo })
     if (thisMonth.length > 0) {
-      const firstIdx = sorted.findIndex(e => e.date === thisMonth[0].date)
-      const base = firstIdx > 0 ? sorted[firstIdx - 1] : thisMonth[0]
+      const firstIdx = valid.findIndex(e => e.date === thisMonth[0].date)
+      const base = firstIdx > 0 ? valid[firstIdx - 1] : thisMonth[0]
       monthlyGain = thisMonth[thisMonth.length - 1].count - base.count
     }
   }
 
   let dailyGain = 0
   let dailyGainDays = 1
-  if (sorted.length >= 2) {
-    const latest = sorted[sorted.length - 1]
-    const prev = sorted[sorted.length - 2]
+  let isLatestFailed = false
+  if (sorted.length > 0) {
+    const latestRaw = sorted[sorted.length - 1]
+    if (latestRaw.status === 'Server Failed' || latestRaw.serverFailed || latestRaw.count === null) {
+      isLatestFailed = true
+    }
+  }
+
+  if (valid.length >= 2) {
+    const latest = valid[valid.length - 1]
+    const prev = valid[valid.length - 2]
     dailyGain = latest.count - prev.count
     const d1 = new Date(latest.date)
     const d2 = new Date(prev.date)
     dailyGainDays = Math.max(1, Math.round(Math.abs(d1 - d2) / (1000 * 60 * 60 * 24)))
-  } else if (sorted.length === 1 && currentCount) {
-    dailyGain = currentCount - sorted[0].count
+  } else if (valid.length === 1 && currentCount) {
+    dailyGain = currentCount - valid[0].count
   }
 
   // Calculate smart weighted velocity (recent day + 3-day moving average) to handle viral spikes smoothly:
   let recentVelocity = dailyGain
-  if (sorted.length >= 4) {
-    const inc1 = sorted[sorted.length - 1].count - sorted[sorted.length - 2].count
-    const inc2 = sorted[sorted.length - 2].count - sorted[sorted.length - 3].count
-    const inc3 = sorted[sorted.length - 3].count - sorted[sorted.length - 4].count
+  if (valid.length >= 4) {
+    const inc1 = valid[valid.length - 1].count - valid[valid.length - 2].count
+    const inc2 = valid[valid.length - 2].count - valid[valid.length - 3].count
+    const inc3 = valid[valid.length - 3].count - valid[valid.length - 4].count
     const avg3d = Math.round((inc1 + inc2 + inc3) / 3)
     recentVelocity = Math.round(inc1 * 0.6 + avg3d * 0.4)
-  } else if (sorted.length >= 3) {
-    const inc1 = sorted[sorted.length - 1].count - sorted[sorted.length - 2].count
-    const inc2 = sorted[sorted.length - 2].count - sorted[sorted.length - 3].count
+  } else if (valid.length >= 3) {
+    const inc1 = valid[valid.length - 1].count - valid[valid.length - 2].count
+    const inc2 = valid[valid.length - 2].count - valid[valid.length - 3].count
     recentVelocity = Math.round(inc1 * 0.7 + inc2 * 0.3)
   }
 
-  return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted }
+  return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed }
 }
 
 export default function ProfilePage({ profile, slug }) {
@@ -137,7 +153,7 @@ export default function ProfilePage({ profile, slug }) {
     )
   }
 
-  const { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted } = getFollowerStats(profile.follower_history || [], profile.followers_count || 0)
+  const { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed } = getFollowerStats(profile.follower_history || [], profile.followers_count || 0)
   const last12 = getLast12Months()
 
   const historyEntries = profile.follower_history || []
@@ -438,19 +454,268 @@ export default function ProfilePage({ profile, slug }) {
       <style>{`
         .grid-square { transition: transform 0.15s ease, filter 0.15s ease; cursor: pointer; }
         .grid-square:hover { transform: scale(1.35); filter: brightness(1.25); z-index: 10; position: relative; }
+        
+        .profile-page-wrapper {
+          min-height: 100vh;
+          background: var(--background);
+          color: var(--text);
+          padding: 24px 16px;
+        }
+
+        .profile-main-container {
+          max-width: 680px;
+          margin: 0 auto;
+        }
+
+        .profile-hero-card {
+          padding: 28px;
+          position: relative;
+          overflow: hidden;
+          margin-bottom: 24px;
+          border-radius: 20px;
+        }
+
+        .profile-stats-grid {
+          width: 100%;
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 12px;
+          border-top: 1px solid var(--border);
+          padding-top: 24px;
+        }
+
+        .profile-stat-box {
+          padding: 14px 10px;
+          border-radius: 14px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          box-sizing: border-box;
+        }
+
+        .info-drama-card {
+          padding: 18px 20px;
+          margin-bottom: 24px;
+          border-radius: 16px;
+        }
+
+        .info-drama-stats {
+          display: flex;
+          gap: 14px;
+          font-size: 12px;
+          flex-wrap: wrap;
+        }
+
+        .info-drama-stat-item {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 6px 12px;
+          border-radius: 8px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .pulse-card {
+          padding: 22px 20px;
+          margin-bottom: 24px;
+          overflow: hidden;
+          position: relative;
+          border-radius: 20px;
+        }
+
+        .pulse-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+
+        .pulse-header-left {
+          flex: 1;
+          min-width: 260px;
+        }
+
+        .pulse-header-status {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 8px 14px;
+          border-radius: 12px;
+          text-align: right;
+          flex-shrink: 0;
+        }
+
         .momentum-stat-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 8px;
-          margin-bottom: 16px;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+          margin-bottom: 20px;
         }
-        @media (min-width: 600px) {
+
+        .momentum-stat-card {
+          border-radius: 14px;
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 86px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+          overflow: hidden;
+          box-sizing: border-box;
+        }
+
+        .timeline-row {
+          display: flex;
+          align-items: center;
+          height: 38px;
+          border-radius: 8px;
+          transition: background 0.15s ease;
+          cursor: pointer;
+          padding: 0 6px;
+          margin: 1px 0;
+        }
+
+        .seo-overview-card {
+          margin-top: 36px;
+          padding: 24px 20px;
+          background: rgba(15, 23, 42, 0.6);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #94a3b8;
+          font-size: 13px;
+          line-height: 1.7;
+        }
+
+        /* ─── Mobile View Enhancements (Max-Width 640px) ─── */
+        @media (max-width: 640px) {
+          .profile-page-wrapper {
+            padding: 14px 10px !important;
+          }
+          
+          .profile-hero-card {
+            padding: 20px 14px !important;
+            margin-bottom: 18px !important;
+            border-radius: 16px !important;
+          }
+
+          .profile-avatar {
+            width: 86px !important;
+            height: 86px !important;
+          }
+
+          .profile-title {
+            font-size: 20px !important;
+            margin-bottom: 6px !important;
+          }
+
+          .profile-tags-container {
+            gap: 5px !important;
+            margin-bottom: 18px !important;
+          }
+
+          /* Featured 2-Row Stats on Mobile: Real-Time Followers takes full width, other 2 share row */
+          .profile-stats-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+            padding-top: 18px !important;
+          }
+
+          .profile-stat-box-featured {
+            grid-column: 1 / -1 !important;
+            padding: 14px 12px !important;
+          }
+
+          .profile-stat-box {
+            padding: 12px 8px !important;
+          }
+
+          .info-drama-card {
+            padding: 16px 14px !important;
+            margin-bottom: 18px !important;
+            border-radius: 14px !important;
+          }
+
+          .info-drama-sentence {
+            font-size: 12.5px !important;
+            line-height: 1.65 !important;
+            margin-bottom: 14px !important;
+          }
+
+          .info-drama-stats {
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+
+          .info-drama-stat-item {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            justifyContent: space-between !important;
+            padding: 8px 12px !important;
+          }
+
+          .pulse-card {
+            padding: 16px 12px !important;
+            margin-bottom: 18px !important;
+            border-radius: 16px !important;
+          }
+
+          .pulse-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+            margin-bottom: 16px !important;
+          }
+
+          .pulse-header-left {
+            min-width: unset !important;
+          }
+
+          .pulse-header-status {
+            text-align: left !important;
+            align-self: flex-start !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 8px 12px !important;
+          }
+
           .momentum-stat-grid {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 8px !important;
+            margin-bottom: 16px !important;
+          }
+
+          .momentum-stat-card {
+            padding: 10px 10px !important;
+            min-height: 80px !important;
+            border-radius: 12px !important;
+          }
+
+          .timeline-row {
+            height: 42px !important;
+            padding: 0 8px !important;
+            margin: 2px 0 !important;
+          }
+
+          .seo-overview-card {
+            margin-top: 24px !important;
+            padding: 18px 14px !important;
+            border-radius: 14px !important;
+          }
+
+          .seo-overview-paragraph {
+            line-height: 1.75 !important;
+            font-size: 12.5px !important;
+            margin-bottom: 14px !important;
           }
         }
+
         .tooltip-box {
           position: fixed;
           background: rgba(15, 15, 30, 0.95);
@@ -471,68 +736,90 @@ export default function ProfilePage({ profile, slug }) {
       {tooltip && (
         <div className="tooltip-box" style={{ left: tooltip.x + 14, top: tooltip.y - 60 }}>
           <div style={{ fontWeight: 700, marginBottom: 2, color: '#e2e8f0' }}>{tooltip.date}</div>
-          <div style={{ color: '#94a3b8', marginBottom: 2 }}>Followers: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{tooltip.count?.toLocaleString() || '—'}</span></div>
-          {tooltip.hasIncrement && (
-            <div style={{ color: tooltip.increment > 0 ? '#34d399' : tooltip.increment < 0 ? '#fb7185' : '#64748b' }}>
-              Growth: <span style={{ fontWeight: 700 }}>{tooltip.increment > 0 ? `+${tooltip.increment.toLocaleString()}` : tooltip.increment.toLocaleString()}</span>
+          {tooltip.isFailed ? (
+            <div style={{ color: '#f87171', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
+              <AlertTriangle size={13} color="#f87171" />
+              <span>Server Failed</span>
             </div>
+          ) : (
+            <>
+              <div style={{ color: '#94a3b8', marginBottom: 2 }}>
+                Followers: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{tooltip.count?.toLocaleString() || '—'}</span>
+                {tooltip.diffDays > 1 && (
+                  <span style={{ fontSize: 10, color: '#f59e0b', marginLeft: 5, fontWeight: 800 }}>
+                    ({tooltip.diffDays} day follower count)
+                  </span>
+                )}
+              </div>
+              {tooltip.hasIncrement && (
+                <div style={{ color: tooltip.increment > 0 ? '#34d399' : tooltip.increment < 0 ? '#fb7185' : '#64748b' }}>
+                  Growth: <span style={{ fontWeight: 700 }}>{tooltip.increment > 0 ? `+${tooltip.increment.toLocaleString()}` : tooltip.increment.toLocaleString()}</span>
+                  {tooltip.diffDays > 1 && (
+                    <span style={{ fontSize: 9.5, color: '#fbbf24', marginLeft: 5, fontWeight: 700 }}>
+                      ({tooltip.diffDays} days accumulated)
+                    </span>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
 
-      <div style={{ minHeight: '100vh', background: 'var(--background)', color: 'var(--text)', padding: '24px 16px' }}>
-        <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <div className="profile-page-wrapper">
+        <div className="profile-main-container">
 
           {/* Back Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <Link href="/live" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '50%', width: 40, height: 40, color: 'var(--text)', cursor: 'pointer', textDecoration: 'none' }}>
               <CornerUpLeft size={18} />
             </Link>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>Back to Live Standings</span>
           </div>
 
-          {/* Profile Card */}
-          <div className="card" style={{ padding: 28, position: 'relative', overflow: 'hidden', marginBottom: 24 }}>
+          {/* Profile Hero Card */}
+          <div className="card profile-hero-card">
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 6, background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)' }} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ marginBottom: 18 }}>
                 <img src={profile.photo_url || '/placeholder-avatar.png'} alt={profile.name}
+                  className="profile-avatar"
                   style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(168,85,247,0.4)', boxShadow: '0 0 20px rgba(168,85,247,0.2)' }} />
               </div>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, margin: '0 0 4px', lineHeight: 1.2 }}>{profile.name}</h1>
+              <h1 className="profile-title" style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, margin: '0 0 6px', lineHeight: 1.25 }}>{profile.name}</h1>
               {profile.instagram_handle && (
                 <a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 13, color: '#a855f7', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
+                  style={{ fontSize: 13, color: '#a855f7', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 14 }}>
                   <InstagramIcon size={13} />@{profile.instagram_handle}
                 </a>
               )}
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 24 }}>
+              <div className="profile-tags-container" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
                 {profile.category?.split(',').map((cat, idx) => (
-                  <span key={idx} style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)', padding: '3px 11px', borderRadius: 100, fontSize: 11, fontWeight: 600 }}>
+                  <span key={idx} style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)', padding: '4px 11px', borderRadius: 100, fontSize: 11, fontWeight: 600 }}>
                     {cat.includes(':') ? cat.split(':')[1].trim() : cat.trim()}
                   </span>
                 ))}
                 {profile.language && (
-                  <span style={{ background: 'var(--surface2)', color: 'var(--text-muted)', border: '1px solid var(--border)', padding: '3px 11px', borderRadius: 100, fontSize: 11, fontWeight: 600 }}>
+                  <span style={{ background: 'var(--surface2)', color: 'var(--text-muted)', border: '1px solid var(--border)', padding: '4px 11px', borderRadius: 100, fontSize: 11, fontWeight: 600 }}>
                     {profile.language}
                   </span>
                 )}
               </div>
 
-              {/* Stats Grid */}
-              <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
-                <div style={{ padding: '14px 8px', background: 'rgba(99,102,241,0.07)', borderRadius: 14, border: '1px solid rgba(99,102,241,0.2)' }}>
+              {/* Responsive Stats Grid */}
+              <div className="profile-stats-grid">
+                <div className="profile-stat-box profile-stat-box-featured" style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
                   <div style={{ 
-                    fontSize: 19, 
-                    fontWeight: 800, 
+                    fontSize: 20, 
+                    fontWeight: 850, 
                     color: changeDir === 'up' ? '#10b981' : changeDir === 'down' ? '#ef4444' : '#818cf8', 
                     fontFamily: 'var(--font-display)', 
-                    marginBottom: 3,
+                    marginBottom: 4,
                     transition: 'color 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 4
+                    gap: 5
                   }}>
                     <span>{liveFollowers ? liveFollowers.toLocaleString() : '—'}</span>
                     {changeDir && (
@@ -541,13 +828,15 @@ export default function ProfilePage({ profile, slug }) {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Real Time Followers</div>
+                  <div style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Real Time Followers</div>
                 </div>
 
                 {/* Dynamic Relatable Daily Change Card */}
                 {(() => {
                   let badgeLabel = 'Daily Gain'
-                  if (dailyGain > 0) {
+                  if (isLatestFailed) {
+                    badgeLabel = 'Server Failed'
+                  } else if (dailyGain > 0) {
                     badgeLabel = 'Gained Today'
                   } else if (dailyGain < 0) {
                     badgeLabel = 'Lost Today'
@@ -555,75 +844,85 @@ export default function ProfilePage({ profile, slug }) {
                     badgeLabel = 'Stable Today'
                   }
 
+                  if (!isLatestFailed && dailyGainDays > 1) {
+                    badgeLabel = `${badgeLabel} (${dailyGainDays} day follower count)`
+                  }
+
                   return (
-                    <div style={{ 
-                      padding: '14px 8px', 
-                      background: dailyGain > 0 ? 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(6,182,212,0.06) 100%)' : dailyGain < 0 ? 'linear-gradient(135deg, rgba(244,63,94,0.14) 0%, rgba(225,29,72,0.06) 100%)' : 'var(--surface2)', 
-                      borderRadius: 14, 
-                      border: `1px solid ${dailyGain > 0 ? 'rgba(52,211,153,0.4)' : dailyGain < 0 ? 'rgba(251,113,133,0.4)' : 'var(--border)'}`,
-                      boxShadow: dailyGain !== 0 ? `0 4px 14px -2px ${dailyGain > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}` : 'none'
+                    <div className="profile-stat-box" style={{ 
+                      background: isLatestFailed ? 'rgba(239, 68, 68, 0.1)' : dailyGain > 0 ? 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(6,182,212,0.06) 100%)' : dailyGain < 0 ? 'linear-gradient(135deg, rgba(244,63,94,0.14) 0%, rgba(225,29,72,0.06) 100%)' : 'var(--surface2)', 
+                      border: `1px solid ${isLatestFailed ? 'rgba(239, 68, 68, 0.4)' : dailyGain > 0 ? 'rgba(52,211,153,0.4)' : dailyGain < 0 ? 'rgba(251,113,133,0.4)' : 'var(--border)'}`,
+                      boxShadow: isLatestFailed ? 'none' : dailyGain !== 0 ? `0 4px 14px -2px ${dailyGain > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}` : 'none'
                     }}>
                       <div style={{ 
-                        fontSize: 19, 
+                        fontSize: isLatestFailed ? 15 : 19, 
                         fontWeight: 800, 
-                        color: dailyGain > 0 ? '#34d399' : dailyGain < 0 ? '#fb7185' : 'var(--text-muted)', 
+                        color: isLatestFailed ? '#f87171' : dailyGain > 0 ? '#34d399' : dailyGain < 0 ? '#fb7185' : 'var(--text-muted)', 
                         fontFamily: 'var(--font-display)', 
-                        marginBottom: 3,
+                        marginBottom: 4,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: 3,
-                        textShadow: dailyGain !== 0 ? `0 0 10px ${dailyGain > 0 ? '#34d399' : '#fb7185'}44` : 'none'
+                        gap: 4,
+                        textShadow: !isLatestFailed && dailyGain !== 0 ? `0 0 10px ${dailyGain > 0 ? '#34d399' : '#fb7185'}44` : 'none'
                       }}>
-                        <span>{dailyGain > 0 ? `+${formatNumber(dailyGain)}` : dailyGain < 0 ? `-${formatNumber(Math.abs(dailyGain))}` : '±0'}</span>
+                        {isLatestFailed ? (
+                          <>
+                            <AlertTriangle size={15} color="#f87171" />
+                            <span>Server Failed</span>
+                          </>
+                        ) : (
+                          <span>{dailyGain > 0 ? `+${formatNumber(dailyGain)}` : dailyGain < 0 ? `-${formatNumber(Math.abs(dailyGain))}` : '±0'}</span>
+                        )}
                       </div>
-                      <div style={{ fontSize: 9, color: dailyGain > 0 ? '#6ee7b7' : dailyGain < 0 ? '#fda4af' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      <div style={{ fontSize: 9.5, color: isLatestFailed ? '#fca5a5' : dailyGain > 0 ? '#6ee7b7' : dailyGain < 0 ? '#fda4af' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center', lineHeight: 1.3 }}>
                         {badgeLabel}
                       </div>
                     </div>
                   )
                 })()}
 
-                <div style={{ padding: '14px 8px', background: 'rgba(236,72,153,0.07)', borderRadius: 14, border: '1px solid rgba(236,72,153,0.2)' }}>
-                  <div style={{ fontSize: 19, fontWeight: 800, color: '#f472b6', fontFamily: 'var(--font-display)', marginBottom: 3 }}>{profile.votes || 0}</div>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Votes</div>
+                <div className="profile-stat-box" style={{ background: 'rgba(236,72,153,0.07)', border: '1px solid rgba(236,72,153,0.2)' }}>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: '#f472b6', fontFamily: 'var(--font-display)', marginBottom: 4 }}>{profile.votes || 0}</div>
+                  <div style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Votes</div>
                 </div>
               </div>
             </div>
+          </div>
 
           {/* Social Drama & Growth Meter widget */}
           {isLosing ? (
-            <div className="card" style={{ padding: '16px 20px 20px', marginBottom: 24, borderRadius: 16, background: 'var(--surface)', border: '1px solid rgba(239, 68, 68, 0.25)', boxShadow: '0 4px 14px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 8 }}>
+            <div className="card info-drama-card" style={{ background: 'var(--surface)', border: '1px solid rgba(239, 68, 68, 0.25)', boxShadow: '0 4px 14px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 10 }}>
                 <Flame size={18} />
                 <span>Active Unfollow Trend</span>
               </div>
-              <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, margin: '0 0 14px', fontWeight: 500 }}>
+              <p className="info-drama-sentence" style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.65, margin: '0 0 16px', fontWeight: 500 }}>
                 <strong style={{ color: '#ef4444', fontWeight: 800 }}>{profile.name}</strong> is currently experiencing an active unfollow wave, dropping <strong style={{ color: '#ef4444', fontWeight: 800 }}>-{formatNumber(lostFollowers)}</strong> followers from their historical peak.
               </p>
-              <div style={{ display: 'flex', gap: 24, fontSize: 12 }}>
-                <div>
+              <div className="info-drama-stats">
+                <div className="info-drama-stat-item">
                   <span style={{ color: 'var(--text-muted)' }}>Peak Mark:</span> <strong style={{ color: '#38bdf8', fontWeight: 800, marginLeft: 4 }}>{peakFollowers.toLocaleString()}</strong>
                 </div>
-                <div>
+                <div className="info-drama-stat-item">
                   <span style={{ color: 'var(--text-muted)' }}>Total Dropped:</span> <strong style={{ color: '#ef4444', fontWeight: 800, marginLeft: 4 }}>-{formatNumber(lostFollowers)}</strong>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="card" style={{ padding: '16px 20px 20px', marginBottom: 24, borderRadius: 16, background: 'var(--surface)', border: '1px solid rgba(16, 185, 129, 0.25)', boxShadow: '0 4px 14px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10b981', fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 8 }}>
+            <div className="card info-drama-card" style={{ background: 'var(--surface)', border: '1px solid rgba(16, 185, 129, 0.25)', boxShadow: '0 4px 14px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10b981', fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 10 }}>
                 <TrendingUp size={18} />
                 <span>Peak Follower Momentum</span>
               </div>
-              <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, margin: '0 0 14px', fontWeight: 500 }}>
+              <p className="info-drama-sentence" style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.65, margin: '0 0 16px', fontWeight: 500 }}>
                 <strong style={{ color: '#38bdf8', fontWeight: 800 }}>{profile.name}</strong> is maintaining steady momentum at their historical peak with positive daily activity.
               </p>
-              <div style={{ display: 'flex', gap: 24, fontSize: 12 }}>
-                <div>
+              <div className="info-drama-stats">
+                <div className="info-drama-stat-item">
                   <span style={{ color: 'var(--text-muted)' }}>Peak Mark:</span> <strong style={{ color: '#38bdf8', fontWeight: 800, marginLeft: 4 }}>{peakFollowers.toLocaleString()}</strong>
                 </div>
-                <div>
+                <div className="info-drama-stat-item">
                   <span style={{ color: 'var(--text-muted)' }}>Status:</span> <strong style={{ color: '#10b981', fontWeight: 800, marginLeft: 4 }}>Peak Achieved</strong>
                 </div>
               </div>
@@ -632,21 +931,67 @@ export default function ProfilePage({ profile, slug }) {
 
           {/* ⚡ Daily Growth Pulse — Vibrant Ultra-Modern Edition with Month Filter */}
           {(() => {
-            const allDailyHistory = sorted.map((item, idx) => {
-              const prev = idx > 0 ? sorted[idx - 1] : item
-              const inc = item.count - prev.count
-              const curDate = new Date(item.date)
-              const prevDate = new Date(prev.date)
-              const diffDays = idx === 0 ? 1 : Math.max(1, Math.round(Math.abs(curDate - prevDate) / (1000 * 60 * 60 * 24)))
-              return {
-                date: item.date,
-                count: item.count,
-                increment: inc,
-                isFirst: idx === 0,
-                diffDays,
-                prevDate: prev.date
-              }
+            // Build full chronological day-by-day history filling any missing dates with 'Server Failed'
+            const dailyHistoryItems = []
+            const entriesByDate = {}
+            sorted.forEach(item => {
+              if (item && item.date) entriesByDate[item.date] = item
             })
+
+            if (sorted.length > 0) {
+              const firstDateStr = sorted[0].date
+              const lastDateStr = sorted[sorted.length - 1].date
+              const cur = new Date(firstDateStr)
+              const end = new Date(lastDateStr)
+
+              let lastValidCount = null
+              let lastValidDate = null
+
+              while (cur <= end) {
+                const dateStr = cur.toISOString().split('T')[0]
+                const entry = entriesByDate[dateStr]
+
+                const isFailed = !entry || entry.status === 'Server Failed' || entry.serverFailed || entry.count === null || entry.count === 0
+
+                if (isFailed) {
+                  dailyHistoryItems.push({
+                    date: dateStr,
+                    count: null,
+                    increment: 0,
+                    isFirst: false,
+                    isFailed: true,
+                    diffDays: 1,
+                    status: 'Server Failed'
+                  })
+                } else {
+                  let diffDays = 1
+                  let inc = 0
+                  const isFirst = lastValidCount === null
+                  if (!isFirst && lastValidDate) {
+                    const dCur = new Date(dateStr)
+                    const dPrev = new Date(lastValidDate)
+                    diffDays = Math.max(1, Math.round(Math.abs(dCur - dPrev) / (1000 * 60 * 60 * 24)))
+                    inc = entry.count - lastValidCount
+                  }
+                  lastValidCount = entry.count
+                  lastValidDate = dateStr
+
+                  dailyHistoryItems.push({
+                    date: dateStr,
+                    count: entry.count,
+                    increment: inc,
+                    isFirst,
+                    isFailed: false,
+                    diffDays,
+                    lastValidDate
+                  })
+                }
+
+                cur.setDate(cur.getDate() + 1)
+              }
+            }
+
+            const allDailyHistory = dailyHistoryItems
 
             // Filter based on selected period
             let filteredDailyGains = allDailyHistory
@@ -664,7 +1009,7 @@ export default function ProfilePage({ profile, slug }) {
               periodTitle = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
             }
 
-            const nonFirstGains = filteredDailyGains.filter(d => !d.isFirst)
+            const nonFirstGains = filteredDailyGains.filter(d => !d.isFirst && !d.isFailed)
             const netChange = nonFirstGains.reduce((s, d) => s + d.increment, 0)
             const bestDay = nonFirstGains.reduce((best, d) => (d.increment > (best?.increment ?? -Infinity) ? d : best), nonFirstGains[0] || { increment: 0, date: '' })
             const worstDay = nonFirstGains.reduce((worst, d) => (d.increment < (worst?.increment ?? Infinity) ? d : worst), nonFirstGains[0] || { increment: 0, date: '' })
@@ -729,20 +1074,15 @@ export default function ProfilePage({ profile, slug }) {
             ]
 
             return (
-              <div className="card" style={{
-                padding: '22px 20px',
-                marginBottom: 24,
-                overflow: 'hidden',
-                position: 'relative',
+              <div className="card pulse-card" style={{
                 background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 28, 0.98) 100%)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
-                boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.5)',
-                borderRadius: 20
+                boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.5)'
               }}>
                 {/* Header with Month / Period Dropdown */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                <div className="pulse-header">
+                  <div className="pulse-header-left">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(168, 85, 247, 0.12)', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '4px 12px', borderRadius: 100, fontSize: 11, fontWeight: 750, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                         <Activity size={12} color="#c084fc" />
                         Daily Growth Pulse
@@ -781,18 +1121,18 @@ export default function ProfilePage({ profile, slug }) {
                       </select>
                     </div>
 
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, margin: 0, color: '#ffffff', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, margin: 0, color: '#ffffff', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.3 }}>
                       <BarChart3 size={20} color="#a78bfa" />
                       Follower Momentum Timeline
                     </h2>
-                    <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0', fontWeight: 500 }}>
+                    <p style={{ fontSize: 12.5, color: '#94a3b8', margin: '6px 0 0', fontWeight: 500, lineHeight: 1.5 }}>
                       Daily performance breakdown for <strong style={{ color: '#e2e8f0' }}>{periodTitle}</strong>
                     </p>
                   </div>
 
-                  <div style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '6px 14px', borderRadius: 12, textAlign: 'right' }}>
+                  <div className="pulse-header-status">
                     <div style={{ fontSize: 9.5, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tracking Status</div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
                       <CheckCircle2 size={12} color="#34d399" /> Active Daily Pulse
                     </div>
                   </div>
@@ -809,17 +1149,9 @@ export default function ProfilePage({ profile, slug }) {
                     {/* ─── 4 Dynamic Stat Cards (Responsive: 2x2 on mobile, 4-col on desktop) ─── */}
                     <div className="momentum-stat-grid">
                       {statCards.map((s, i) => (
-                        <div key={i} style={{
+                        <div key={i} className="momentum-stat-card" style={{
                           background: s.bg,
-                          border: `1px solid ${s.border}`,
-                          borderRadius: 14,
-                          padding: '10px 12px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          minHeight: 88,
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
-                          overflow: 'hidden'
+                          border: `1px solid ${s.border}`
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
                             <div style={{
@@ -934,15 +1266,7 @@ export default function ProfilePage({ profile, slug }) {
                             return (
                               <div
                                 key={day.date}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  height: 36,
-                                  borderRadius: 8,
-                                  transition: 'background 0.15s ease',
-                                  cursor: 'pointer',
-                                  padding: '0 6px'
-                                }}
+                                className="timeline-row"
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
                                   setTooltip({
@@ -951,8 +1275,9 @@ export default function ProfilePage({ profile, slug }) {
                                     date: displayDate,
                                     count: day.count,
                                     increment: day.increment,
-                                    hasIncrement: !day.isFirst,
-                                    diffDays: day.diffDays
+                                    hasIncrement: !day.isFirst && !day.isFailed,
+                                    diffDays: day.diffDays,
+                                    isFailed: day.isFailed
                                   })
                                 }}
                                 onMouseMove={(e) => setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
@@ -966,71 +1291,141 @@ export default function ProfilePage({ profile, slug }) {
                                   </div>
                                 </div>
 
-                                {/* LEFT — Drop bar & Negative Value */}
-                                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: 8, gap: 8 }}>
-                                  {isLoss && !day.isFirst && (
-                                    <>
-                                      <span style={{
-                                        fontSize: 11.5,
-                                        fontWeight: 900,
-                                        color: '#fb7185',
-                                        fontFamily: 'var(--font-display)',
-                                        flexShrink: 0
-                                      }}>
-                                        {valueLabel}
-                                      </span>
-                                      <div style={{
-                                        width: `${barPct}%`,
-                                        height: 14,
-                                        borderRadius: '6px 0 0 6px',
-                                        background: 'linear-gradient(270deg, #f43f5e 0%, #be123c 100%)',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                      }}>
-                                        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: '#fda4af' }} />
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-
-                                {/* CENTER Hairline Axis */}
-                                <div style={{ width: 1, height: 22, background: 'rgba(255, 255, 255, 0.15)', flexShrink: 0 }} />
-
-                                {/* RIGHT — Gain bar & Positive Value */}
-                                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: 8, gap: 8 }}>
-                                  {isGain && !day.isFirst && (
-                                    <>
-                                      <div style={{
-                                        width: `${barPct}%`,
-                                        height: 14,
-                                        borderRadius: '0 6px 6px 0',
-                                        background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                      }}>
-                                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6ee7b7' }} />
-                                      </div>
-                                      <span style={{
-                                        fontSize: 11.5,
-                                        fontWeight: 900,
-                                        color: '#34d399',
-                                        fontFamily: 'var(--font-display)',
-                                        flexShrink: 0
-                                      }}>
-                                        {valueLabel}
-                                      </span>
-                                    </>
-                                  )}
-                                  {day.isFirst && (
-                                    <div style={{ fontSize: 9.5, color: '#64748b', fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 4 }}>BASELINE</div>
-                                  )}
-                                  {!day.isFirst && day.increment === 0 && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 4 }}>
-                                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.25)' }} />
-                                      <span style={{ fontSize: 11, fontWeight: 750, color: '#64748b', fontFamily: 'var(--font-display)' }}>±0</span>
+                                {day.isFailed ? (
+                                  /* SERVER FAILED STATE */
+                                  <div style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 12 }}>
+                                    <div style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                      padding: '3px 10px',
+                                      borderRadius: 6,
+                                      background: 'rgba(239, 68, 68, 0.12)',
+                                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                                      color: '#f87171',
+                                      fontSize: 11,
+                                      fontWeight: 800,
+                                      letterSpacing: '0.03em'
+                                    }}>
+                                      <AlertTriangle size={12} color="#f87171" />
+                                      <span>Server Failed</span>
                                     </div>
-                                  )}
-                                </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {/* LEFT — Drop bar & Negative Value */}
+                                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: 8, gap: 8 }}>
+                                      {isLoss && !day.isFirst && (
+                                        <>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                            <span style={{
+                                              fontSize: 11.5,
+                                              fontWeight: 900,
+                                              color: '#fb7185',
+                                              fontFamily: 'var(--font-display)',
+                                              flexShrink: 0
+                                            }}>
+                                              {valueLabel}
+                                            </span>
+                                            {day.diffDays > 1 && (
+                                              <span style={{
+                                                fontSize: 9.5,
+                                                fontWeight: 800,
+                                                color: '#f59e0b',
+                                                background: 'rgba(245, 158, 11, 0.14)',
+                                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                                padding: '1px 5px',
+                                                borderRadius: 4,
+                                                whiteSpace: 'nowrap'
+                                              }}>
+                                                ({day.diffDays} day follower count)
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div style={{
+                                            width: `${barPct}%`,
+                                            height: 14,
+                                            borderRadius: '6px 0 0 6px',
+                                            background: 'linear-gradient(270deg, #f43f5e 0%, #be123c 100%)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                          }}>
+                                            <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: '#fda4af' }} />
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+
+                                    {/* CENTER Hairline Axis */}
+                                    <div style={{ width: 1, height: 22, background: 'rgba(255, 255, 255, 0.15)', flexShrink: 0 }} />
+
+                                    {/* RIGHT — Gain bar & Positive Value */}
+                                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: 8, gap: 8 }}>
+                                      {isGain && !day.isFirst && (
+                                        <>
+                                          <div style={{
+                                            width: `${barPct}%`,
+                                            height: 14,
+                                            borderRadius: '0 6px 6px 0',
+                                            background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                          }}>
+                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6ee7b7' }} />
+                                          </div>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                            <span style={{
+                                              fontSize: 11.5,
+                                              fontWeight: 900,
+                                              color: '#34d399',
+                                              fontFamily: 'var(--font-display)',
+                                              flexShrink: 0
+                                            }}>
+                                              {valueLabel}
+                                            </span>
+                                            {day.diffDays > 1 && (
+                                              <span style={{
+                                                fontSize: 9.5,
+                                                fontWeight: 800,
+                                                color: '#f59e0b',
+                                                background: 'rgba(245, 158, 11, 0.14)',
+                                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                                padding: '1px 5px',
+                                                borderRadius: 4,
+                                                whiteSpace: 'nowrap'
+                                              }}>
+                                                ({day.diffDays} day follower count)
+                                              </span>
+                                            )}
+                                          </div>
+                                        </>
+                                      )}
+                                      {day.isFirst && (
+                                        <div style={{ fontSize: 9.5, color: '#64748b', fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 4 }}>BASELINE</div>
+                                      )}
+                                      {!day.isFirst && day.increment === 0 && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 4 }}>
+                                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.25)' }} />
+                                          <span style={{ fontSize: 11, fontWeight: 750, color: '#64748b', fontFamily: 'var(--font-display)' }}>±0</span>
+                                          {day.diffDays > 1 && (
+                                            <span style={{
+                                              fontSize: 9.5,
+                                              fontWeight: 800,
+                                              color: '#f59e0b',
+                                              background: 'rgba(245, 158, 11, 0.14)',
+                                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                                              padding: '1px 5px',
+                                              borderRadius: 4,
+                                              whiteSpace: 'nowrap'
+                                            }}>
+                                              ({day.diffDays} day follower count)
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             )
                           })}
@@ -1039,7 +1434,7 @@ export default function ProfilePage({ profile, slug }) {
                     </div>
 
                     {/* ─── Clean Professional Legend Footer ─── */}
-                    <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: 12, padding: '8px 12px' }}>
+                    <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: 12, padding: '10px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <div style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981' }} />
                         <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 600 }}>Follower Gain (+)</span>
@@ -1056,43 +1451,32 @@ export default function ProfilePage({ profile, slug }) {
             )
           })()}
 
-
-
           {/* SEO Content & Semantic Overview Section for Search Engines */}
-          <div style={{
-            marginTop: 36,
-            padding: '24px 20px',
-            background: 'rgba(15, 23, 42, 0.6)',
-            borderRadius: 16,
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            color: '#94a3b8',
-            fontSize: 13,
-            lineHeight: 1.65
-          }}>
+          <div className="seo-overview-card">
             <h2 style={{
               fontFamily: 'var(--font-display)',
               fontSize: 16,
               fontWeight: 800,
               color: '#f8fafc',
-              marginBottom: 10,
+              marginBottom: 12,
               display: 'flex',
               alignItems: 'center',
-              gap: 8
+              gap: 8,
+              lineHeight: 1.3
             }}>
               <CheckCircle2 size={16} color="#38bdf8" />
               <span>About {profile.name} Instagram Follower Analytics</span>
             </h2>
-            <p style={{ margin: '0 0 10px' }}>
+            <p className="seo-overview-paragraph" style={{ margin: '0 0 14px' }}>
               <strong>{profile.name}</strong> ({profile.instagram_handle ? `@${profile.instagram_handle}` : 'creator'}) has a current follower base of <strong>{formatNumber(profile.followers_count)} followers</strong> on Instagram. Spialr tracks real-time live follower count, hourly velocity, and 31-day progressive momentum for {profile.name}.
             </p>
-            <p style={{ margin: 0 }}>
+            <p className="seo-overview-paragraph" style={{ margin: 0 }}>
               Over the last recorded period, {profile.name} experienced a daily gain of <strong>{dailyGain >= 0 ? `+${formatNumber(dailyGain)}` : formatNumber(dailyGain)} followers</strong> and an estimated monthly growth of <strong>{monthlyGain >= 0 ? `+${formatNumber(monthlyGain)}` : formatNumber(monthlyGain)} followers</strong>. View interactive weekly heatmaps, timeline races, and comparative benchmarks across top creators on Spialr.
             </p>
           </div>
 
         </div>
       </div>
-    </div>
     </>
   )
 }

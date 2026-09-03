@@ -1261,31 +1261,47 @@ export default function LivePage({ initialLiveData = null }) {
                 const timelineProfiles = filtered.map(p => {
                   let count = p.followers_count || 0
                   let prevCount = null
+                  let isServerFailed = false
+                  let diffDays = 1
 
                   if (Array.isArray(p.follower_history) && p.follower_history.length > 0) {
                     const sortedHistory = [...p.follower_history].sort((a, b) => new Date(a.date) - new Date(b.date))
                     const exactEntry = sortedHistory.find(h => h.date === activeDateISO)
-                    if (exactEntry) {
+                    
+                    if (exactEntry && (exactEntry.status === 'Server Failed' || exactEntry.serverFailed || exactEntry.count === null)) {
+                      isServerFailed = true
+                      count = null
+                    } else if (exactEntry) {
                       count = exactEntry.count
                     } else {
-                      const prior = sortedHistory.filter(h => h.date <= activeDateISO)
+                      const prior = sortedHistory.filter(h => h.date <= activeDateISO && h.count !== null && h.status !== 'Server Failed')
                       if (prior.length > 0) {
                         count = prior[prior.length - 1].count
                       }
                     }
 
                     const currentIdx = sortedHistory.findIndex(h => h.date === activeDateISO)
-                    if (currentIdx > 0) {
-                      prevCount = sortedHistory[currentIdx - 1].count
+                    if (currentIdx > 0 && count !== null) {
+                      for (let j = currentIdx - 1; j >= 0; j--) {
+                        if (sortedHistory[j].count !== null && sortedHistory[j].status !== 'Server Failed') {
+                          prevCount = sortedHistory[j].count
+                          const dCur = new Date(activeDateISO)
+                          const dPrev = new Date(sortedHistory[j].date)
+                          diffDays = Math.max(1, Math.round(Math.abs(dCur - dPrev) / (1000 * 60 * 60 * 24)))
+                          break
+                        }
+                      }
                     }
                   }
 
-                  const dailyDelta = prevCount !== null ? (count - prevCount) : null
+                  const dailyDelta = (prevCount !== null && count !== null) ? (count - prevCount) : null
 
                   return {
                     ...p,
                     countOnDate: count,
-                    dailyDelta
+                    dailyDelta,
+                    isServerFailed,
+                    diffDays
                   }
                 }).sort((a, b) => (b.countOnDate || 0) - (a.countOnDate || 0))
 
@@ -1643,25 +1659,55 @@ export default function LivePage({ initialLiveData = null }) {
                                       transition: 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                       zIndex: 4
                                     }}>
-                                      <span style={{
-                                        fontSize: isFocused ? 14 : 13,
-                                        fontWeight: isFocused ? 950 : 850,
-                                        color: isFocused ? '#1e1b4b' : '#334155',
-                                        fontFamily: 'monospace',
-                                        letterSpacing: '-0.02em'
-                                      }}>
-                                        {count.toLocaleString('en-US')}
-                                      </span>
-
-                                      {delta !== null && delta !== 0 && (
+                                      {profile.isServerFailed ? (
                                         <span style={{
-                                          fontSize: 10.5,
+                                          fontSize: 11,
                                           fontWeight: 800,
-                                          color: delta > 0 ? '#16a34a' : '#dc2626',
-                                          fontFamily: 'var(--font-display)'
+                                          color: '#f87171',
+                                          background: 'rgba(239, 68, 68, 0.12)',
+                                          border: '1px solid rgba(239, 68, 68, 0.35)',
+                                          padding: '2px 7px',
+                                          borderRadius: 6
                                         }}>
-                                          ({delta > 0 ? `+${formatNumber(delta)}` : `-${formatNumber(Math.abs(delta))}`})
+                                          Server Failed
                                         </span>
+                                      ) : (
+                                        <>
+                                          <span style={{
+                                            fontSize: isFocused ? 14 : 13,
+                                            fontWeight: isFocused ? 950 : 850,
+                                            color: isFocused ? '#1e1b4b' : '#334155',
+                                            fontFamily: 'monospace',
+                                            letterSpacing: '-0.02em'
+                                          }}>
+                                            {(count || 0).toLocaleString('en-US')}
+                                          </span>
+
+                                          {delta !== null && delta !== 0 && (
+                                            <span style={{
+                                              fontSize: 10.5,
+                                              fontWeight: 800,
+                                              color: delta > 0 ? '#16a34a' : '#dc2626',
+                                              fontFamily: 'var(--font-display)'
+                                            }}>
+                                              ({delta > 0 ? `+${formatNumber(delta)}` : `-${formatNumber(Math.abs(delta))}`})
+                                            </span>
+                                          )}
+
+                                          {profile.diffDays > 1 && (
+                                            <span style={{
+                                              fontSize: 9.5,
+                                              fontWeight: 800,
+                                              color: '#d97706',
+                                              background: 'rgba(245, 158, 11, 0.14)',
+                                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                                              padding: '1px 5px',
+                                              borderRadius: 4
+                                            }}>
+                                              ({profile.diffDays} day follower count)
+                                            </span>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   </div>

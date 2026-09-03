@@ -206,6 +206,26 @@ export default async function handler(req, res) {
         failures.push(failureItem)
         console.warn(`[BatchScrape] FAIL [${processed}/${allProfiles.length}] @${profile.instagram_handle} -> ${err.message}`)
 
+        // Record Server Failed status in follower_history for todayStr so UI displays "Server Failed"
+        try {
+          let history = Array.isArray(profile.follower_history) ? [...profile.follower_history] : []
+          const todayIdx = history.findIndex(h => h.date === todayStr)
+          if (todayIdx !== -1) {
+            if (!history[todayIdx].count) {
+              history[todayIdx] = { date: todayStr, count: null, status: 'Server Failed' }
+            }
+          } else {
+            history.push({ date: todayStr, count: null, status: 'Server Failed' })
+          }
+          history.sort((a, b) => new Date(a.date) - new Date(b.date))
+          await supabase
+            .from("most_followed")
+            .update({ follower_history: history })
+            .eq("id", profile.id)
+        } catch (dbErr) {
+          console.warn(`[BatchScrape] Could not record Server Failed in DB for @${profile.instagram_handle}:`, dbErr.message)
+        }
+
         // Stream failed progress to client
         safeWrite(`data: ${JSON.stringify({
           type: "progress",

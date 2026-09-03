@@ -33,6 +33,7 @@ export default function ScrapeConsole() {
   const [successList, setSuccessList] = useState([])
   const [batchCompleted, setBatchCompleted] = useState(false)
   const [pendingRecovery, setPendingRecovery] = useState(null)
+  const [selectedStartIndex, setSelectedStartIndex] = useState(0)
 
   // Current Active Profile States
   const [currentCelebrity, setCurrentCelebrity] = useState(null)
@@ -72,6 +73,7 @@ export default function ScrapeConsole() {
   const abortControllerRef = useRef(null)
   const isBatchRunningRef = useRef(false)
   const isBatchPausedRef = useRef(false)
+  const executionTokenRef = useRef(0)
 
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString()
@@ -225,6 +227,16 @@ export default function ScrapeConsole() {
   // ─────────────────────────────────────────────────────────────────────────────
   const startBatchExecution = (startIndex = 0, resumeState = null) => {
     if (queue.length === 0) return
+
+    // Immediately abort any running chunk request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+
+    // Increment execution token to instantly kill any previous batch loop
+    const currentToken = ++executionTokenRef.current
+
     setBatchRunning(true)
     setBatchPaused(false)
     setBatchCompleted(false)
@@ -235,18 +247,18 @@ export default function ScrapeConsole() {
     const initialFailed = resumeState ? (resumeState.failed || []) : failedList
     const initialSuccess = resumeState ? (resumeState.success || []) : successList
 
-    runBatchLoop(queue, startIndex, batchModeType, initialFailed, initialSuccess)
+    runBatchLoop(queue, startIndex, batchModeType, initialFailed, initialSuccess, currentToken)
   }
 
-  const runBatchLoop = async (q, startIdx, mode, fList, sList) => {
+  const runBatchLoop = async (q, startIdx, mode, fList, sList, token) => {
     for (let i = startIdx; i < q.length; i++) {
-      if (!isBatchRunningRef.current) break
+      if (!isBatchRunningRef.current || token !== executionTokenRef.current) return
 
       while (isBatchPausedRef.current) {
-        await new Promise(r => setTimeout(r, 1000))
-        if (!isBatchRunningRef.current) break
+        await new Promise(r => setTimeout(r, 500))
+        if (!isBatchRunningRef.current || token !== executionTokenRef.current) return
       }
-      if (!isBatchRunningRef.current) break
+      if (!isBatchRunningRef.current || token !== executionTokenRef.current) return
 
       const item = q[i]
       setCurrentIndex(i)
@@ -290,12 +302,12 @@ export default function ScrapeConsole() {
       let accumulatedStats = null
       let runNum = 1
 
-      while (isBatchRunningRef.current) {
+      while (isBatchRunningRef.current && token === executionTokenRef.current) {
         while (isBatchPausedRef.current) {
-          await new Promise(r => setTimeout(r, 1000))
-          if (!isBatchRunningRef.current) break
+          await new Promise(r => setTimeout(r, 500))
+          if (!isBatchRunningRef.current || token !== executionTokenRef.current) return
         }
-        if (!isBatchRunningRef.current) break
+        if (!isBatchRunningRef.current || token !== executionTokenRef.current) return
 
         setRunIndex(runNum)
         setSegmentProgress(0)
@@ -303,7 +315,7 @@ export default function ScrapeConsole() {
 
         try {
           const chunkResult = await scrapeSingleProfileChunkAsync(item.id, item.handle, mode, currentNextMaxId, accumulatedStats)
-          if (!chunkResult) break // Paused/aborted
+          if (!chunkResult || token !== executionTokenRef.current) return // Paused/aborted or superseded
 
           const finalS = chunkResult.finalStats || {}
           accumulatedStats = finalS
@@ -317,13 +329,20 @@ export default function ScrapeConsole() {
           }
 
           // Check if there are more posts to scrape for this creator
-          const hasMore = Boolean(chunkResult.moreAvailable && currentNextMaxId && (finalS.processedItems < (finalS.totalPosts || expectedTotalPosts)))
+          const hasMore = Boolean(chunkResult.moreAvailable && currentNextMaxId)
 
-          if (hasMore && mode !== 'daily' && runNum < 30 && isBatchRunningRef.current && !isBatchPausedRef.current) {
+          if (hasMore && mode !== 'daily' && runNum < 50 && isBatchRunningRef.current && !isBatchPausedRef.current && token === executionTokenRef.current) {
+            // Dynamically increase total posts display if creator has more posts than originally estimated
+            if (finalS.processedItems >= expectedTotalPosts) {
+              const newEstimatedTotal = finalS.totalPosts && finalS.totalPosts > finalS.processedItems ? finalS.totalPosts : (finalS.processedItems + 200)
+              setTotalPosts(newEstimatedTotal)
+              setMaxRunsExpected(Math.ceil(newEstimatedTotal / 200))
+            }
+
             // Anti-ban pause between 200-post chunks of the SAME creator (12s - 16s)
             const chunkRest = Math.floor(Math.random() * 5) + 12
             for (let cd = chunkRest; cd > 0; cd--) {
-              if (!isBatchRunningRef.current || isBatchPausedRef.current) break
+              if (!isBatchRunningRef.current || isBatchPausedRef.current || token !== executionTokenRef.current) return
               setStatusMessage('🛡️ Anti-Ban Rest: Pausing ' + cd + 's before Run ' + (runNum + 1) + ' for @' + item.handle + '...')
               await new Promise(r => setTimeout(r, 1000))
             }
@@ -334,12 +353,15 @@ export default function ScrapeConsole() {
             break
           }
         } catch (err) {
+          if (token !== executionTokenRef.current) return
           addLog('❌ Error scraping @' + item.handle + ' on Run ' + runNum + ': ' + err.message, 'error')
           fList.push({ handle: item.handle, name: item.name, error: err.message, time: new Date().toLocaleTimeString() })
           setFailedList([...fList])
           break
         }
       }
+
+      if (token !== executionTokenRef.current) return
 
       if (profileSuccess) {
         sList.push({ handle: item.handle, name: item.name })
@@ -356,10 +378,10 @@ export default function ScrapeConsole() {
       }))
 
       // If not the last profile, rest for 25s - 35s natural cooldown between creators
-      if (i < q.length - 1 && isBatchRunningRef.current && !isBatchPausedRef.current) {
+      if (i < q.length - 1 && isBatchRunningRef.current && !isBatchPausedRef.current && token === executionTokenRef.current) {
         const restDuration = Math.floor(Math.random() * 10) + 25
         for (let cd = restDuration; cd > 0; cd--) {
-          if (!isBatchRunningRef.current || isBatchPausedRef.current) break
+          if (!isBatchRunningRef.current || isBatchPausedRef.current || token !== executionTokenRef.current) return
           setCooldownSeconds(cd)
           setStatusMessage('☕ Natural Creator Break: Resting ' + cd + 's before next creator (@' + (q[i + 1]?.handle || '') + ') to protect account...')
           await new Promise(r => setTimeout(r, 1000))
@@ -368,11 +390,13 @@ export default function ScrapeConsole() {
       }
     }
 
-    setBatchRunning(false)
-    setBatchCompleted(true)
-    isBatchRunningRef.current = false
-    localStorage.removeItem('batch_scrape_active_' + mode)
-    addLog('🎉 All profiles in queue 100% Lifetime Depth Scraped!', 'success')
+    if (token === executionTokenRef.current) {
+      setBatchRunning(false)
+      setBatchCompleted(true)
+      isBatchRunningRef.current = false
+      localStorage.removeItem('batch_scrape_active_' + mode)
+      addLog('🎉 All profiles in queue 100% Lifetime Depth Scraped!', 'success')
+    }
   }
 
   // Core single chunk stream runner (200 posts per run)
@@ -511,9 +535,9 @@ export default function ScrapeConsole() {
     }
 
     try {
-      while (runNum <= maxRuns) {
+      while (runNum <= 50) {
         setRunIndex(runNum)
-        addLog('▶️ Run ' + runNum + '/' + maxRuns + ' for @' + currentHandle + ' (Posts ' + (accumulatedStats?.processedItems || 0) + '/' + expectedTotal + ')...', 'info')
+        addLog('▶️ Run ' + runNum + ' for @' + currentHandle + ' (Posts collected so far: ' + (accumulatedStats?.processedItems || 0) + ')...', 'info')
 
         const chunkResult = await scrapeSingleProfileChunkAsync(currentCelId, currentHandle, mode, currentNextMaxId, accumulatedStats)
         if (!chunkResult) break
@@ -522,9 +546,9 @@ export default function ScrapeConsole() {
         accumulatedStats = finalS
         currentNextMaxId = chunkResult.nextMaxId
 
-        const hasMore = Boolean(chunkResult.moreAvailable && currentNextMaxId && (finalS.processedItems < (finalS.totalPosts || expectedTotal)))
+        const hasMore = Boolean(chunkResult.moreAvailable && currentNextMaxId)
 
-        if (hasMore && mode !== 'daily' && runNum < maxRuns) {
+        if (hasMore && mode !== 'daily' && runNum < 50) {
           const chunkRest = Math.floor(Math.random() * 5) + 12
           for (let cd = chunkRest; cd > 0; cd--) {
             setStatusMessage('🛡️ Safe Anti-Ban Rest: Pausing ' + cd + 's before Run ' + (runNum + 1) + '...')
@@ -549,7 +573,10 @@ export default function ScrapeConsole() {
   const handlePauseBatch = () => {
     isBatchPausedRef.current = true
     setBatchPaused(true)
-    if (abortControllerRef.current) abortControllerRef.current.abort()
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
   }
 
   const handleResumeBatch = () => {
@@ -559,9 +586,13 @@ export default function ScrapeConsole() {
   }
 
   const handleStopBatch = () => {
+    executionTokenRef.current++ // Instantly terminates all in-flight loops
     isBatchRunningRef.current = false
     isBatchPausedRef.current = false
-    if (abortControllerRef.current) abortControllerRef.current.abort()
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
     setBatchRunning(false)
     setBatchPaused(false)
     addLog('Batch scraper stopped by user.', 'warn')
@@ -670,27 +701,73 @@ export default function ScrapeConsole() {
               </div>
 
               {/* Batch Controls */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
                 {!batchRunning && !batchCompleted ? (
-                  <button 
-                    onClick={() => startBatchExecution(0)}
-                    style={{
-                      background: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      padding: '10px 24px',
-                      borderRadius: 8,
-                      fontWeight: 700,
-                      fontSize: 14,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      boxShadow: '0 4px 12px rgba(16,185,129,0.3)'
-                    }}
-                  >
-                    <Play size={15} /> Start 100% Lifetime Depth Scraping ({queue.length} Creators)
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, width: '100%' }}>
+                    <button 
+                      onClick={() => startBatchExecution(0)}
+                      style={{
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 22px',
+                        borderRadius: 8,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: '0 4px 12px rgba(16,185,129,0.3)'
+                      }}
+                    >
+                      <Play size={14} /> Start from #1 ({queue[0]?.name || queue[0]?.handle || 'Beginning'})
+                    </button>
+
+                    {/* Quick Jump Selector */}
+                    {queue.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 280, justifyContent: 'flex-end' }}>
+                        <span style={{ fontSize: 12, color: '#a1a1aa', fontWeight: 600, whiteSpace: 'nowrap' }}>Or jump to:</span>
+                        <select 
+                          value={selectedStartIndex} 
+                          onChange={(e) => setSelectedStartIndex(Number(e.target.value))}
+                          style={{
+                            background: '#18181b',
+                            border: '1px solid #3f3f46',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            maxWidth: 240,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {queue.map((qItem, idx) => (
+                            <option key={idx} value={idx}>
+                              #{idx + 1} - {qItem.name || qItem.handle} (@{qItem.handle})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => startBatchExecution(selectedStartIndex)}
+                          style={{
+                            background: '#38bdf8',
+                            color: '#09090b',
+                            border: 'none',
+                            padding: '8px 16px',
+                            borderRadius: 8,
+                            fontWeight: 700,
+                            fontSize: 12,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Start from #{selectedStartIndex + 1}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ) : batchRunning ? (
                   <div style={{ display: 'flex', gap: 8 }}>
                     {batchPaused ? (
@@ -719,8 +796,8 @@ export default function ScrapeConsole() {
 
                 {/* Shutdown Recovery Banner */}
                 {pendingRecovery && !batchRunning && (
-                  <div style={{ fontSize: 12, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span>Previous session stopped at Profile {pendingRecovery.currentIndex + 1}.</span>
+                  <div style={{ fontSize: 12, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                    <span>Previous session stopped at Profile #{pendingRecovery.currentIndex + 1}.</span>
                     <button 
                       onClick={() => startBatchExecution(pendingRecovery.currentIndex, pendingRecovery)}
                       style={{ background: '#38bdf8', color: '#09090b', border: 'none', padding: '5px 12px', borderRadius: 6, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
@@ -746,14 +823,14 @@ export default function ScrapeConsole() {
             marginBottom: 20
           }}>
             <div style={{ marginBottom: 14 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', marginBottom: 8 }}>
-                <Layers size={13} /> Run {runIndex} of {maxRunsExpected} (100% Lifetime Depth Mode)
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.35)', color: '#38bdf8', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', marginBottom: 8 }}>
+                <Layers size={14} /> Run {runIndex} of {maxRunsExpected} (Posts {Math.max(1, (runIndex - 1) * 200 + 1)}–{Math.min(totalPosts || 1000, runIndex * 200)} of {totalPosts ? totalPosts.toLocaleString() : '1,000+'})
               </div>
-              <h3 style={{ fontSize: 24, fontWeight: 800, margin: '2px 0 6px 0', color: 'white' }}>
+              <h3 style={{ fontSize: 26, fontWeight: 800, margin: '2px 0 6px 0', color: 'white' }}>
                 @{currentHandle || 'Select a Profile'}
               </h3>
               <div style={{ fontSize: 13, color: '#a1a1aa' }}>
-                {totalPosts > 0 ? (totalPosts.toLocaleString() + ' Total Lifetime Posts on Instagram') : 'Ready to scrape'}
+                {totalPosts > 0 ? (totalPosts.toLocaleString() + ' Total Lifetime Posts on Instagram • ' + maxRunsExpected + ' Total Runs Scheduled') : 'Ready to scrape'}
               </div>
             </div>
 
