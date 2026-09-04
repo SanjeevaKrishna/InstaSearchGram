@@ -75,7 +75,10 @@ const getSquareColor = (increment, hasData) => {
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 const getFollowerStats = (history = [], currentCount = 0) => {
-  const sorted = [...history].sort((a, b) => new Date(a.date) - new Date(b.date))
+  // Systematic tracking begins from Aug 28 or 29 (2026-08-28). Remove old pre-Aug 28 test dates.
+  const postAug28 = history.filter(h => h && h.date && h.date >= '2026-08-28')
+  const activeHistory = postAug28.length > 0 ? postAug28 : history
+  const sorted = [...activeHistory].sort((a, b) => new Date(a.date) - new Date(b.date))
   const historyMap = {}
   for (let i = 0; i < sorted.length; i++) {
     const isFailed = sorted[i].status === 'Server Failed' || sorted[i].serverFailed || sorted[i].count === null || sorted[i].count === 0
@@ -932,15 +935,19 @@ export default function ProfilePage({ profile, slug }) {
           {/* ⚡ Daily Growth Pulse — Vibrant Ultra-Modern Edition with Month Filter */}
           {(() => {
             // Build full chronological day-by-day history filling any missing dates with 'Server Failed'
+            // Tracking officially starts on Aug 28 or Aug 29. Never generate Server Failed for pre-Aug 28 test dates.
+            const trackingSorted = sorted.filter(item => item && item.date && item.date >= '2026-08-28')
+            const sourceList = trackingSorted.length > 0 ? trackingSorted : sorted
+
             const dailyHistoryItems = []
             const entriesByDate = {}
-            sorted.forEach(item => {
+            sourceList.forEach(item => {
               if (item && item.date) entriesByDate[item.date] = item
             })
 
-            if (sorted.length > 0) {
-              const firstDateStr = sorted[0].date
-              const lastDateStr = sorted[sorted.length - 1].date
+            if (sourceList.length > 0) {
+              const firstDateStr = sourceList[0].date
+              const lastDateStr = sourceList[sourceList.length - 1].date
               const cur = new Date(firstDateStr)
               const end = new Date(lastDateStr)
 

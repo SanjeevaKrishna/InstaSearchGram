@@ -3,7 +3,8 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import PostCard from '../../components/PostCard'
 import Logo from '../../components/Logo'
-import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck } from 'lucide-react'
+import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck, Download } from 'lucide-react'
+import { downloadComparisonCard } from '../../lib/exportComparisonCard'
 import { supabase } from '../../lib/supabase'
 
 const getOrdinal = (n) => {
@@ -167,6 +168,39 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
   // Compare states
   const [compareCelebrity, setCompareCelebrity] = useState(initialCompareCelebrity)
   const [loadingCompare, setLoadingCompare] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExportComparison = async () => {
+    if (isExporting || !celebrity || !compareCelebrity) return
+    setIsExporting(true)
+    try {
+      const comparisonMetrics = [
+        { label: 'Reel Views', val1: celebrity.total_reel_views, val2: compareCelebrity.total_reel_views },
+        { label: 'Reel Likes', val1: celebrity.total_reel_likes, val2: compareCelebrity.total_reel_likes },
+        { label: 'Post Likes', val1: celebrity.total_post_likes, val2: compareCelebrity.total_post_likes },
+        { label: 'Total Comments', val1: celebrity.total_comments, val2: compareCelebrity.total_comments },
+        { label: 'Total Shares', val1: celebrity.total_shares, val2: compareCelebrity.total_shares },
+        { label: 'Total Repost', val1: celebrity.total_reposts, val2: compareCelebrity.total_reposts },
+        { label: 'Average Views', val1: celebrity.average_views, val2: compareCelebrity.average_views },
+        { label: 'Average Reel Likes', val1: celebrity.average_reel_likes, val2: compareCelebrity.average_reel_likes },
+        { label: 'Average Post Likes', val1: celebrity.average_post_likes, val2: compareCelebrity.average_post_likes },
+        { label: 'Followers Interaction', val1: celebrity.followers_interaction, val2: compareCelebrity.followers_interaction, isPercent: true },
+        { label: 'Most Likes', val1: celebrity.most_likes, val2: compareCelebrity.most_likes }
+      ]
+
+      await downloadComparisonCard({
+        celebrity1: celebrity,
+        celebrity2: compareCelebrity,
+        metrics: comparisonMetrics,
+        liveRank1: liveRank,
+        liveRank2: compareLiveRank
+      })
+    } catch (err) {
+      console.error('Error downloading comparison card:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   const getWinner = (val1, val2) => {
     const n1 = Number(val1 || 0)
@@ -423,8 +457,23 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
+                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                   {celebrity.followers_count ? formatCount(celebrity.followers_count) : '—'} followers
+                  {followersWinner.cel1 && (
+                    <div style={{
+                      background: 'var(--accent)',
+                      color: '#fff',
+                      borderRadius: '50%',
+                      width: 18,
+                      height: 18,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(225, 48, 108, 0.25)'
+                    }}>
+                      <TrendingUp size={10} strokeWidth={3} />
+                    </div>
+                  )}
                 </span>
                 {celebrity.account_created_year && (
                   <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
@@ -475,8 +524,23 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
+                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                   {compareCelebrity.followers_count ? formatCount(compareCelebrity.followers_count) : '—'} followers
+                  {followersWinner.cel2 && (
+                    <div style={{
+                      background: 'var(--accent)',
+                      color: '#fff',
+                      borderRadius: '50%',
+                      width: 18,
+                      height: 18,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(225, 48, 108, 0.25)'
+                    }}>
+                      <TrendingUp size={10} strokeWidth={3} />
+                    </div>
+                  )}
                 </span>
                 {compareCelebrity.account_created_year && (
                   <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
@@ -529,6 +593,38 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             }}
           >
             Your View, Your Like, Your Comment, Your Repost Counts
+          </div>
+
+          {/* Download Action at bottom of page */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 28, marginBottom: 12 }}>
+            <button
+              type="button"
+              onClick={handleExportComparison}
+              disabled={isExporting}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                background: 'linear-gradient(135deg, #e1306c 0%, #8f00ff 100%)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '11px 28px',
+                borderRadius: '30px',
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: isExporting ? 'wait' : 'pointer',
+                boxShadow: '0 4px 18px rgba(225, 48, 108, 0.35)',
+                transition: 'all 0.2s ease',
+                opacity: isExporting ? 0.75 : 1,
+                userSelect: 'none'
+              }}
+              onMouseEnter={(e) => { if (!isExporting) e.currentTarget.style.transform = 'translateY(-1px)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <Download size={17} strokeWidth={2.5} />
+              <span>{isExporting ? 'Downloading...' : 'Download'}</span>
+            </button>
           </div>
         </main>
       </>
