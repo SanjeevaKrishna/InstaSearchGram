@@ -6,6 +6,7 @@ import Logo from '../../components/Logo'
 import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck, Download } from 'lucide-react'
 import { downloadComparisonCard } from '../../lib/exportComparisonCard'
 import { supabase } from '../../lib/supabase'
+import CommentSection from '../../components/CommentSection'
 
 const getOrdinal = (n) => {
   const s = ["th", "st", "nd", "rd"];
@@ -457,23 +458,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
                   {celebrity.followers_count ? formatCount(celebrity.followers_count) : '—'} followers
-                  {followersWinner.cel1 && (
-                    <div style={{
-                      background: 'var(--accent)',
-                      color: '#fff',
-                      borderRadius: '50%',
-                      width: 18,
-                      height: 18,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(225, 48, 108, 0.25)'
-                    }}>
-                      <TrendingUp size={10} strokeWidth={3} />
-                    </div>
-                  )}
                 </span>
                 {celebrity.account_created_year && (
                   <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
@@ -524,23 +510,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
                   {compareCelebrity.followers_count ? formatCount(compareCelebrity.followers_count) : '—'} followers
-                  {followersWinner.cel2 && (
-                    <div style={{
-                      background: 'var(--accent)',
-                      color: '#fff',
-                      borderRadius: '50%',
-                      width: 18,
-                      height: 18,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(225, 48, 108, 0.25)'
-                    }}>
-                      <TrendingUp size={10} strokeWidth={3} />
-                    </div>
-                  )}
                 </span>
                 {compareCelebrity.account_created_year && (
                   <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
@@ -1373,6 +1344,13 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             )}
           </div>
         )}
+
+        {/* Community Comments Section */}
+        <CommentSection
+          targetType="celebrity"
+          targetSlug={celebrity.slug}
+          targetName={celebrity.name}
+        />
       </main>
 
 

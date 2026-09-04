@@ -2,10 +2,12 @@ import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { TrendingUp, Flame, Calendar, AlertTriangle, Search, BarChart3, Film, Play, Pause, RotateCcw, FastForward, Activity, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus, CornerUpLeft, Target, Download, Video, Loader2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, Flame, Calendar, Clock, AlertTriangle, Search, BarChart3, Film, Play, Pause, RotateCcw, FastForward, Activity, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus, CornerUpLeft, Target, Download, Video, Loader2, ArrowUpRight, ArrowDownRight, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { safeStorage } from '../lib/storage'
 import { exportTimelineVideo } from '../lib/timelineVideoExporter'
+import { calculateGrowthVelocity, formatFollowersText, formatSignedChange, formatSignedPercent } from '../lib/growthVelocity'
+import CelebritySuggestionChat, { CelebritySuggestionBanner, CelebrityEmptySearchCard } from '../components/CelebritySuggestionChat'
 
 const InstagramIcon = ({ size = 24, strokeWidth = 2, style = {} }) => (
   <svg
@@ -91,6 +93,9 @@ const parseCategoryAndTag = (rawCategory) => {
 
   return { tabCategory, describingTag };
 };
+
+const CATEGORIES = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers'];
+const categories = CATEGORIES;
 
 const getProfileSlug = (profile) => {
   if (profile.instagram_handle) {
@@ -283,32 +288,50 @@ const playSound = (type) => {
   }
 }
 
-export default function LivePage({ initialLiveData = null }) {
+export default function LivePage({ initialLiveData = null, initialTab = 'most_followed' }) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('most_followed') // 'most_followed' or 'voting'
+  const [activeTab, setActiveTab] = useState(initialTab) // 'most_followed' or 'daily_growth'
   const [liveData, setLiveData] = useState(initialLiveData || { live_date: '', most_followed: [], viral_reels: [] })
   const profileCount = initialLiveData?.most_followed?.length || 'thousands of'
+
+  // Daily Growth velocity states
+  const [growthMode, setGrowthMode] = useState('gainers') // 'gainers' or 'losers'
+  const [growthLimit, setGrowthLimit] = useState(50)
+  const [isGrowthDropdownOpen, setIsGrowthDropdownOpen] = useState(false)
 
   // Synchronize activeTab state with the tab query parameter
   useEffect(() => {
     if (router.isReady) {
       const queryTab = router.query.tab
-      if (queryTab === 'voting' || queryTab === 'most_followed') {
-        setActiveTab(queryTab)
+      if (queryTab === 'voting' || queryTab === 'daily_growth') {
+        setActiveTab('daily_growth')
+      } else if (queryTab === 'most_followed') {
+        setActiveTab('most_followed')
       }
     }
   }, [router.isReady, router.query.tab])
 
   const handleTabChange = (tab) => {
-    setActiveTab(tab)
+    const targetTab = tab === 'voting' ? 'daily_growth' : tab
+    setActiveTab(targetTab)
     setSearchQuery('')
     setSelectedLanguage('All')
+    setSelectedCategory('All')
     setIsLangDropdownOpen(false)
+    setIsGrowthDropdownOpen(false)
+    setGrowthLimit(50)
     router.push({
       pathname: '/live',
-      query: { tab }
+      query: { tab: targetTab }
     }, undefined, { shallow: true })
   }
+
+  // Precompute Daily Growth Velocity using memoization
+  const growthData = useMemo(() => {
+    const profiles = liveData?.most_followed || initialLiveData?.most_followed || []
+    const dateSetting = liveData?.live_date?.replace('||AUDIT_OFF', '').trim() || null
+    return calculateGrowthVelocity(profiles, dateSetting)
+  }, [liveData, initialLiveData])
   
   // Voting states
   const [selectedProfile, setSelectedProfile] = useState(null)
@@ -327,6 +350,8 @@ export default function LivePage({ initialLiveData = null }) {
   const [selectedLanguage, setSelectedLanguage] = useState('All')
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
   const [displayLimit, setDisplayLimit] = useState(100)
+  const [isSuggestionChatOpen, setIsSuggestionChatOpen] = useState(false)
+  const [suggestionPrefill, setSuggestionPrefill] = useState('')
 
   // Follower Growth Progressive Timeline States (Dynamic up to Today's date)
   const [timelineMode, setTimelineMode] = useState(false)
@@ -492,6 +517,32 @@ export default function LivePage({ initialLiveData = null }) {
       }
     }
   }, [loading, searchQuery, selectedCategory, selectedLanguage, activeTab])
+
+  const growthLoaderRef = useRef(null)
+
+  // Infinite Scroll Observer for Daily Growth
+  useEffect(() => {
+    const sentinel = growthLoaderRef.current
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return
+
+    const observer = new IntersectionObserver((entries) => {
+      const firstEntry = entries[0]
+      if (firstEntry.isIntersecting) {
+        setGrowthLimit(prev => prev + 50)
+      }
+    }, {
+      rootMargin: '400px',
+      threshold: 0.1
+    })
+
+    observer.observe(sentinel)
+
+    return () => {
+      if (sentinel && observer) {
+        observer.unobserve(sentinel)
+      }
+    }
+  }, [loading, growthMode, activeTab])
 
   // Reset display limit when filter state changes to optimize initial load & render speed
   useEffect(() => {
@@ -839,14 +890,14 @@ export default function LivePage({ initialLiveData = null }) {
               <span className="live-pulse" style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-              }}>{activeTab === 'most_followed' ? <TrendingUp size={13} style={{ color: 'var(--accent)' }} /> : <ThumbsUp size={13} style={{ color: 'var(--accent)' }} />}</span>
+              }}>{activeTab === 'most_followed' ? <TrendingUp size={13} style={{ color: 'var(--accent)' }} /> : <TrendingUp size={13} style={{ color: '#10b981' }} />}</span>
               <span style={{
                 fontSize: 10,
                 fontWeight: 800,
-                color: 'var(--accent)',
+                color: activeTab === 'most_followed' ? 'var(--accent)' : '#10b981',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em'
-              }}>{activeTab === 'most_followed' ? 'Live' : 'Voting'}</span>
+              }}>{activeTab === 'most_followed' ? 'Live' : 'Daily Growth'}</span>
             </button>
  
              {/* Separator Dot */}
@@ -863,7 +914,7 @@ export default function LivePage({ initialLiveData = null }) {
                  color: 'var(--text-dim)',
                }}>
                  <Calendar size={13} style={{ color: 'var(--text-muted)' }} />
-                 <span>Updated {currentDate}</span>
+                 <span>Updated {activeTab === 'daily_growth' && growthData.activeDate ? growthData.activeDate : currentDate}</span>
                </div>
              )}
            </div>
@@ -881,10 +932,10 @@ export default function LivePage({ initialLiveData = null }) {
              {activeTab === 'most_followed' ? (
                <>Most Followed <span className="gradient-text">Instagram Accounts</span></>
              ) : (
-               <>Vote Your <span className="gradient-text">Favourites</span></>
+               <>Daily Follower <span className="gradient-text">Gainers & Losers</span></>
              )}
            </h1>
-           {activeTab === 'voting' && (
+           {activeTab === 'daily_growth' && (
              <p style={{
                fontSize: 'clamp(11px, 3.2vw, 13px)',
                color: 'var(--text-dim)',
@@ -895,7 +946,7 @@ export default function LivePage({ initialLiveData = null }) {
                letterSpacing: '0.01em',
                textAlign: 'center',
              }}>
-               Compare, upvote to support, or downvote to drag. Let the fan wars begin!
+               Tracking 24-hour follower growth momentum across all 1,110+ indexed Indian creators.
              </p>
            )}
           </div>
@@ -953,8 +1004,8 @@ export default function LivePage({ initialLiveData = null }) {
                 Most Followed
               </button>
               <button
-                onClick={() => handleTabChange('voting')}
-                onMouseEnter={() => setHoveredTab('voting')}
+                onClick={() => handleTabChange('daily_growth')}
+                onMouseEnter={() => setHoveredTab('daily_growth')}
                 onMouseLeave={() => setHoveredTab(null)}
                 style={{
                   flex: 1,
@@ -967,17 +1018,15 @@ export default function LivePage({ initialLiveData = null }) {
                   fontSize: 12.5,
                   fontWeight: 700,
                   cursor: 'pointer',
-                  background: activeTab === 'voting' ? 'var(--surface)' : 'transparent',
-                  color: activeTab === 'voting' ? 'var(--text)' : 'var(--text-muted)',
-                  boxShadow: activeTab === 'voting' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-                  transform: hoveredTab === 'voting' && activeTab !== 'voting' ? 'scale(1.02)' : 'scale(1)',
+                  background: activeTab === 'daily_growth' ? 'var(--surface)' : 'transparent',
+                  color: activeTab === 'daily_growth' ? 'var(--text)' : 'var(--text-muted)',
+                  boxShadow: activeTab === 'daily_growth' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  transform: hoveredTab === 'daily_growth' && activeTab !== 'daily_growth' ? 'scale(1.02)' : 'scale(1)',
                   transition: 'all 0.2s ease',
                 }}
               >
-                <span style={{ marginRight: 6, fontSize: 14, flexShrink: 0, opacity: activeTab === 'voting' ? 1 : 0.6 }}>
-                   👥
-                 </span>
-                Voting
+                <TrendingUp size={14} style={{ marginRight: 6, flexShrink: 0, color: activeTab === 'daily_growth' ? '#10b981' : 'var(--text-muted)' }} />
+                Daily Growth
               </button>
             </div>
 
@@ -1243,6 +1292,18 @@ export default function LivePage({ initialLiveData = null }) {
               })
 
               if (filtered.length === 0) {
+                if (searchQuery.trim()) {
+                  return (
+                    <CelebrityEmptySearchCard
+                      searchQuery={searchQuery}
+                      onOpenChat={(prefill) => {
+                        setSuggestionPrefill(prefill || `Please feature: ${searchQuery}`)
+                        setIsSuggestionChatOpen(true)
+                      }}
+                      style={{ margin: '30px auto' }}
+                    />
+                  )
+                }
                 return (
                   <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
                     No profiles match the filter criteria
@@ -2373,117 +2434,219 @@ export default function LivePage({ initialLiveData = null }) {
                       <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Loading more profiles...</span>
                     </div>
                   )}
+
+                  {/* Community Feature Request Broad Bar at end of profiles */}
+                  <CelebritySuggestionBanner
+                    onOpenChat={() => {
+                      setSuggestionPrefill('')
+                      setIsSuggestionChatOpen(true)
+                    }}
+                    style={{ margin: '18px 16px 10px', width: 'auto' }}
+                  />
                 </div>
               )
             })()}
           </div>
         ) : (
-          /* VOTING TAB */
+          /* ── DAILY FOLLOWER GROWTH TAB (GAINERS & LOSERS) ── */
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Search Input */}
-            {liveData.most_followed.length > 0 && (
-              <div style={{ position: 'relative', marginBottom: 4 }}>
-                <Search size={16} style={{
-                  position: 'absolute',
-                  left: 16,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                  pointerEvents: 'none'
-                }} />
-                <input
-                  type="text"
-                  placeholder="Search profiles by name or Instagram handle..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="input-field"
-                  style={{
-                    paddingLeft: 44,
-                    width: '100%',
-                    background: 'var(--surface2)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 12,
-                    fontSize: 14,
-                    height: 46,
-                    color: 'var(--text)',
-                  }}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    style={{
-                      position: 'absolute',
-                      right: 16,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--text-muted)',
-                      cursor: 'pointer',
-                      fontSize: 16,
-                      padding: 0
-                    }}
-                  >
-                    ✕
-                  </button>
+            {/* Header Row: Small Heading + Date in Middle, Dropdown on Right with Horizontal Line Below */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '6px 4px 6px',
+              position: 'relative',
+              zIndex: 30,
+              gap: 8
+            }}>
+              {/* Left spacer to keep center truly centered */}
+              <div style={{ flex: 1 }} className="growth-header-spacer" />
+
+              {/* Middle: Small Heading + Date Directly Below */}
+              <div style={{ textAlign: 'center', flexShrink: 0, padding: '0 8px' }}>
+                <h2 style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  margin: 0,
+                  color: 'var(--text)',
+                  letterSpacing: '-0.01em',
+                }}>
+                  {growthMode === 'gainers' ? 'Most Followed' : 'Most Unfollowed'}
+                </h2>
+                {growthData.activeDate && (
+                  <div style={{
+                    fontSize: 12.5,
+                    color: 'var(--text-muted)',
+                    fontWeight: 600,
+                    marginTop: 3,
+                    letterSpacing: '0.01em',
+                  }}>
+                    {(() => {
+                      try {
+                        const d = new Date(growthData.activeDate + 'T00:00:00');
+                        const day = d.getDate();
+                        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+                        return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+                      } catch {
+                        return growthData.activeDate;
+                      }
+                    })()}
+                  </div>
                 )}
               </div>
-            )}
 
+              {/* Right Side: Dropdown Menu */}
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsGrowthDropdownOpen(!isGrowthDropdownOpen)}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '100px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                      fontSize: 13,
+                      fontWeight: 650,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {growthMode === 'gainers' ? (
+                      <TrendingUp size={15} strokeWidth={2.5} style={{ color: '#10b981' }} />
+                    ) : (
+                      <TrendingDown size={15} strokeWidth={2.5} style={{ color: '#ef4444' }} />
+                    )}
+                    <span>{growthMode === 'gainers' ? 'Most Followed' : 'Most Unfollowed'}</span>
+                    <ChevronDown size={13} style={{
+                      transform: isGrowthDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      color: 'var(--text-muted)'
+                    }} />
+                  </button>
+
+                  {isGrowthDropdownOpen && (
+                    <>
+                      <div
+                        onClick={() => setIsGrowthDropdownOpen(false)}
+                        style={{
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 99,
+                          background: 'transparent'
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        right: 0,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 14,
+                        boxShadow: '0 10px 32px rgba(0, 0, 0, 0.15)',
+                        zIndex: 100,
+                        minWidth: 175,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '4px 0',
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGrowthMode('gainers');
+                            setIsGrowthDropdownOpen(false);
+                            setGrowthLimit(50);
+                          }}
+                          className={`lang-dropdown-item ${growthMode === 'gainers' ? 'active' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}
+                        >
+                          <TrendingUp size={15} strokeWidth={2.5} style={{ color: '#10b981' }} />
+                          <span>Most Followed</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGrowthMode('losers');
+                            setIsGrowthDropdownOpen(false);
+                            setGrowthLimit(50);
+                          }}
+                          className={`lang-dropdown-item ${growthMode === 'losers' ? 'active' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}
+                        >
+                          <TrendingDown size={15} strokeWidth={2.5} style={{ color: '#ef4444' }} />
+                          <span>Most Unfollowed</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Clean, Elegant Horizontal Divider Line */}
+            <div style={{
+              width: '100%',
+              height: 1.5,
+              background: 'rgba(0, 0, 0, 0.16)',
+              borderRadius: 1,
+              margin: '4px 0 8px',
+            }} />
+
+            {/* Accounts with Normal Ranking and Daily Growth Followers */}
             {(() => {
-              // 1. Filter by language (Voting leaderboard is a single category-agnostic leaderboard)
-              const categoryFiltered = (liveData.most_followed || []).filter(p => {
-                const matchesCategory = true
-                const matchesLanguage = selectedLanguage === 'All' || 
-                  (p.language && p.language.split(',').map(l => l.trim().toLowerCase()).includes(selectedLanguage.toLowerCase()))
-                return matchesCategory && matchesLanguage
-              })
-
-              // 2. Sort by votes desc, then by followers desc, then by name asc
-              const sortedVotingList = [...categoryFiltered].sort((a, b) => {
-                const votesA = a.votes || 0
-                const votesB = b.votes || 0
-                if (votesA !== votesB) return votesB - votesA
-                
-                const followersA = a.followers_count || 0
-                const followersB = b.followers_count || 0
-                if (followersA !== followersB) return followersB - followersA
-                
-                return (a.name || '').localeCompare(b.name || '')
-              })
-
-              // 3. Assign category-specific rankings
-              const rankedVotingList = sortedVotingList.map((p, idx) => ({
-                ...p,
-                categoryRank: idx + 1
-              }))
-
-              // 4. Filter by search query for display
-              const filtered = rankedVotingList.filter(p => {
-                const query = searchQuery.toLowerCase();
-                return p.name?.toLowerCase().includes(query) ||
-                       p.instagram_handle?.toLowerCase().includes(query);
-              })
+              const baseGrowthList = growthMode === 'gainers' ? (growthData.gainers || []) : (growthData.losers || [])
+              const filtered = baseGrowthList
 
               if (filtered.length === 0) {
                 return (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-                    No profiles match the filter criteria
+                  <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--surface2)', borderRadius: 16, border: '1px dashed var(--border)' }}>
+                    <div style={{ fontSize: 28, marginBottom: 10 }}>🔍</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>No profiles found</div>
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+                      {searchQuery ? `No ${growthMode === 'gainers' ? 'gainers' : 'unfollowed'} match "${searchQuery}"` : `No 24-hour momentum data available.`}
+                    </p>
+                    {searchQuery && (
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => setSearchQuery('')}
+                        style={{ fontSize: 12, padding: '6px 14px' }}
+                      >
+                        Clear Search
+                      </button>
+                    )}
                   </div>
                 )
               }
+
               return (
-                <div style={{ border: 'none', borderRadius: 0, background: 'transparent', overflow: 'hidden' }}>
-                  {filtered.slice(0, displayLimit).map((profile, index) => {
-                    const rankToDisplay = profile.categoryRank
+                <div style={{
+                  border: 'none',
+                  borderRadius: 0,
+                  background: 'transparent',
+                  overflow: 'hidden',
+                }}>
+                  {filtered.slice(0, growthLimit).map((profile, index) => {
+                    const rank = profile.rank || index + 1
+                    const parsedCategory = parseCategoryAndTag(profile.category)
+                    const categoryStyle = getCategoryStyle(parsedCategory.tabCategory)
 
                     return (
-                      <Fragment key={profile.id}>
-                        <div
-                          key={profile.id}
-                          className="table-row table-row-hover"
-                          onClick={() => router.push(`/profile/${getProfileSlug(profile)}`)}
-                          style={{
+                      <div
+                        key={profile.id}
+                        className="table-row table-row-hover"
+                        onClick={() => router.push(`/profile/${getProfileSlug(profile)}`)}
+                        style={{
                           display: 'flex',
                           alignItems: 'center',
                           padding: '12px 20px',
@@ -2494,24 +2657,39 @@ export default function LivePage({ initialLiveData = null }) {
                           cursor: 'pointer'
                         }}
                       >
-                        {/* Rank Position */}
+                        {/* Normal Rank Position */}
                         <div className="col-rank" style={{
-                          fontSize: 17,
-                          fontWeight: 750,
-                          color: 'var(--text)',
-                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
-                          fontVariantNumeric: 'tabular-nums',
-                          letterSpacing: '-0.02em',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
                           width: 60,
-                          textAlign: 'center',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          alignSelf: 'center',
+                          textAlign: 'center'
                         }}>
-                          #{rankToDisplay}
+                          <div style={{
+                            fontSize: 17,
+                            fontWeight: 750,
+                            color: 'var(--text)',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+                            fontVariantNumeric: 'tabular-nums',
+                            letterSpacing: '-0.02em',
+                            lineHeight: 1
+                          }}>
+                            #{rank}
+                          </div>
                         </div>
 
-                        {/* Profile Info (Avatar + Name) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                          {/* Avatar */}
+                        {/* Profile Info (Avatar + Name + Tag) */}
+                        <div className="col-account-info" style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          flex: 1,
+                          minWidth: 0,
+                          paddingLeft: 12
+                        }}>
+                          {/* Circular Avatar */}
                           <div style={{
                             width: 44,
                             height: 44,
@@ -2543,54 +2721,100 @@ export default function LivePage({ initialLiveData = null }) {
                             </div>
                           </div>
 
-                          {/* Name */}
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span className="profile-name" style={{
-                              fontWeight: 700,
-                              fontSize: 16,
-                              color: 'var(--text)',
-                              whiteSpace: 'normal',
-                              wordBreak: 'break-word',
-                              lineHeight: 1.25,
-                            }}>
-                              {profile.name}
-                            </span>
+                          {/* Name & Category Tag */}
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <span className="profile-name" style={{
+                                fontWeight: 700,
+                                fontSize: 16,
+                                color: 'var(--text)',
+                                whiteSpace: 'normal',
+                                wordBreak: 'break-word',
+                                lineHeight: 1.25,
+                              }}>
+                                {profile.name}
+                              </span>
+                            </div>
 
+                            {profile.category && (
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                                {profile.category.split(',').map((catStr, cIdx) => {
+                                  const parsed = parseCategoryAndTag(catStr);
+                                  if (!parsed.describingTag) return null;
+                                  const style = getCategoryStyle(parsed.tabCategory);
+                                  return (
+                                    <span key={cIdx} style={{
+                                      alignSelf: 'flex-start',
+                                      fontFamily: "'Caveat', cursive, sans-serif",
+                                      fontSize: 11.5,
+                                      fontWeight: 700,
+                                      padding: '0px 7px',
+                                      borderRadius: '100px',
+                                      lineHeight: '1.25',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      color: style.color,
+                                      background: style.background,
+                                      border: 'none',
+                                    }}>
+                                      <span style={{
+                                        width: '4px',
+                                        height: '4px',
+                                        borderRadius: '50%',
+                                        background: style.color,
+                                        display: 'inline-block',
+                                        flexShrink: 0
+                                      }} />
+                                      {parsed.describingTag}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Votes Count (Voting Number) */}
-                        <div style={{
-                          width: 80,
+                        {/* Daily Growth Followers Column */}
+                        <div className="col-followers" style={{
+                          width: 140,
                           textAlign: 'right',
-                          fontWeight: 700,
-                          fontSize: 14.5,
-                          color: (profile.votes || 0) > 0 ? '#10b981' : (profile.votes || 0) < 0 ? '#dc2626' : 'var(--text)',
-                          fontFamily: 'var(--font-body)',
                           flexShrink: 0,
-                        }}>
-                          {formatVotes(profile.votes)}
-                        </div>
-
-                        {/* Indicator (Rank Movement) */}
-                        <div style={{
-                          width: 70,
                           display: 'flex',
-                          justifyContent: 'flex-end',
-                          alignItems: 'center',
-                          flexShrink: 0,
-                          paddingLeft: 10
+                          flexDirection: 'column',
+                          alignItems: 'flex-end',
+                          justifyContent: 'center',
                         }}>
-                          {renderMovement(profile)}
+                          <div style={{
+                            fontSize: 15,
+                            fontWeight: 800,
+                            color: profile.is_gainer ? '#00c853' : '#ff1744',
+                            fontVariantNumeric: 'tabular-nums',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            lineHeight: 1.2
+                          }}>
+                            {profile.is_gainer ? <TrendingUp size={14} strokeWidth={2.5} /> : <TrendingDown size={14} strokeWidth={2.5} />}
+                            <span>{profile.formatted_change}</span>
+                          </div>
+                          <div style={{
+                            fontSize: 12,
+                            color: 'var(--text-muted)',
+                            fontWeight: 600,
+                            marginTop: 2,
+                            fontVariantNumeric: 'tabular-nums'
+                          }}>
+                            {profile.followers_text || formatFollowersText(profile.followers_count)} ({profile.formatted_percent})
+                          </div>
                         </div>
-
                       </div>
-                    </Fragment>
-                  )
-                })}
+                    )
+                  })}
 
-                  {filtered.length > displayLimit && (
-                    <div ref={loaderRef} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface2)', gap: 8 }}>
+                  {/* Automatic Infinite Scroll Sentinel */}
+                  {filtered.length > growthLimit && (
+                    <div ref={growthLoaderRef} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface2)', gap: 8 }}>
                       <div className="spinner" style={{ width: 18, height: 18 }} />
                       <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Loading more profiles...</span>
                     </div>
@@ -2920,6 +3144,16 @@ export default function LivePage({ initialLiveData = null }) {
             </button>
           </div>
         )}
+
+        {/* Zoom-Style Community Celebrity Suggestions Chat Drawer */}
+        <CelebritySuggestionChat
+          isOpen={isSuggestionChatOpen}
+          onClose={() => {
+            setIsSuggestionChatOpen(false)
+            setSuggestionPrefill('')
+          }}
+          initialPrefill={suggestionPrefill}
+        />
       </main>
 
       <style jsx global>{`
@@ -3324,8 +3558,11 @@ export default function LivePage({ initialLiveData = null }) {
   )
 }
 
-export async function getServerSideProps() {
+export async function getServerSideProps(context) {
   try {
+    const queryTab = context?.query?.tab
+    const initialTab = (queryTab === 'voting' || queryTab === 'daily_growth') ? 'daily_growth' : 'most_followed'
+
     const [
       settingsResult, 
       profilesResult1, 
@@ -3378,6 +3615,7 @@ export async function getServerSideProps() {
 
     return {
       props: {
+        initialTab,
         initialLiveData: {
           live_date: settingsData?.live_date || currentDate,
           most_followed: profilesData || [],
@@ -3389,6 +3627,7 @@ export async function getServerSideProps() {
     console.error('Live getServerSideProps error:', err)
     return {
       props: {
+        initialTab: 'most_followed',
         initialLiveData: null
       }
     }

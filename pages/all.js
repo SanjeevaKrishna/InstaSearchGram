@@ -4,6 +4,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import CelebritySuggestionChat, { CelebritySuggestionBanner, CelebrityEmptySearchCard } from '../components/CelebritySuggestionChat'
 
 const formatCount = (num) => {
   if (!num) return '0'
@@ -24,6 +25,8 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
   const [originalCelebrity, setOriginalCelebrity] = useState(initialOriginalCelebrity)
   const [selectedCel, setSelectedCel] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSuggestionChatOpen, setIsSuggestionChatOpen] = useState(false)
+  const [suggestionPrefill, setSuggestionPrefill] = useState('')
 
   // Fetch original celebrity if comparison mode is active
   useEffect(() => {
@@ -338,24 +341,43 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
             })()}
 
             {celebrities.length > 0 && sortedLetters.length > 0 && (
-              <div style={{
-                textAlign: 'center',
-                padding: '24px 20px',
-                color: 'var(--accent)',
-                fontWeight: 600,
-                fontSize: 14,
-                letterSpacing: '0.02em',
-                fontFamily: 'Roboto, "Segoe UI", sans-serif',
-                marginTop: 20
-              }}>
-                ✨ More profiles will be added soon!
-              </div>
+              <>
+                <CelebritySuggestionBanner
+                  onOpenChat={() => {
+                    setSuggestionPrefill('')
+                    setIsSuggestionChatOpen(true)
+                  }}
+                  style={{ margin: '18px 16px 10px', width: 'auto' }}
+                />
+                <div style={{
+                  textAlign: 'center',
+                  padding: '12px 20px 20px',
+                  color: 'var(--accent)',
+                  fontWeight: 600,
+                  fontSize: 13.5,
+                  letterSpacing: '0.02em',
+                  fontFamily: 'Roboto, "Segoe UI", sans-serif'
+                }}>
+                  ✨ More profiles will be added soon!
+                </div>
+              </>
             )}
             
             {(celebrities.length === 0 || sortedLetters.length === 0) && (
-              <div style={{ textAlign: 'center', color: '#757575', padding: 40 }}>
-                No profiles found.
-              </div>
+              searchQuery.trim() ? (
+                <CelebrityEmptySearchCard
+                  searchQuery={searchQuery}
+                  onOpenChat={(prefill) => {
+                    setSuggestionPrefill(prefill || `Please feature: ${searchQuery}`)
+                    setIsSuggestionChatOpen(true)
+                  }}
+                  style={{ margin: '30px 16px' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center', color: '#757575', padding: 40 }}>
+                  No profiles found.
+                </div>
+              )
             )}
 
             {/* Alphabet Scrubber */}
@@ -424,6 +446,16 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
             Compare
           </button>
         )}
+
+        {/* Zoom-Style Community Celebrity Suggestions Chat Drawer */}
+        <CelebritySuggestionChat
+          isOpen={isSuggestionChatOpen}
+          onClose={() => {
+            setIsSuggestionChatOpen(false)
+            setSuggestionPrefill('')
+          }}
+          initialPrefill={suggestionPrefill}
+        />
       </main>
     </>
   )

@@ -21,6 +21,7 @@ import {
   CheckCircle2
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import CommentSection from '../../components/CommentSection'
 
 const InstagramIcon = ({ size = 24, style = {} }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
@@ -181,7 +182,7 @@ export default function ProfilePage({ profile, slug }) {
     return Array.from(monthsSet).sort().reverse()
   }, [profile.follower_history])
 
-  // Full Time-of-Day Follower Progression (Morning -> Afternoon -> Night)
+  // Full Time-of-Day & Multi-Day Progressive Follower Progression (Morning -> Afternoon -> Night -> Next Day)
   // Purely client-side calculation based on daily velocity (Zero Vercel/Supabase requests)
   const timeAdjustedBase = useMemo(() => {
     const base = profile.followers_count || 0
@@ -192,33 +193,50 @@ export default function ProfilePage({ profile, slug }) {
     const hour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600
 
     let diurnalFraction = 0
-    if (hour < 6) {
-      diurnalFraction = (hour / 6) * 0.08 // 00:00 - 06:00 (Night slow period: ~8%)
+    if (hour < 7) {
+      // Midnight 12:00 AM to 07:00 AM: constant (0% diurnal gain during sleeping hours)
+      diurnalFraction = 0
     } else if (hour < 12) {
-      diurnalFraction = 0.08 + ((hour - 6) / 6) * 0.35 // 06:00 - 12:00 (Morning wave: ~43%)
+      // 07:00 AM to 12:00 PM: Morning wave (0% -> 35%)
+      diurnalFraction = ((hour - 7) / 5) * 0.35
     } else if (hour < 18) {
-      diurnalFraction = 0.43 + ((hour - 12) / 6) * 0.32 // 12:00 - 18:00 (Afternoon stream: ~75%)
+      // 12:00 PM to 18:00 (6 PM): Afternoon stream (35% -> 73%)
+      diurnalFraction = 0.35 + ((hour - 12) / 6) * 0.38
     } else {
-      diurnalFraction = 0.75 + ((hour - 18) / 6) * 0.25 // 18:00 - 24:00 (Evening prime peak: ~100%)
+      // 18:00 (6 PM) to 24:00 (12 AM): Evening prime peak (73% -> 100%)
+      diurnalFraction = 0.73 + ((hour - 18) / 6) * 0.27
     }
 
     // Determine estimated daily velocity from recent velocity (weighted blend of recent day & 3-day average)
     const rate = recentVelocity !== 0 ? recentVelocity : dailyGain !== 0 ? dailyGain : Math.round((monthlyGain || 0) / 30)
-    
-    // Add the full daytime progress smoothly based on the profile's average daily growth rate
+
+    // Check if multiple days elapsed since the latest recorded history date in the database
+    const historyEntries = (profile.follower_history || []).filter(e => e && e.date && e.count > 0 && !e.serverFailed && e.status !== 'Server Failed')
+    let elapsedDays = 0
+    if (historyEntries.length > 0) {
+      const sortedHistory = [...historyEntries].sort((a, b) => new Date(a.date) - new Date(b.date))
+      const latestDateStr = sortedHistory[sortedHistory.length - 1].date
+      const latestDate = new Date(latestDateStr + 'T00:00:00Z')
+      const todayDate = new Date(now.toISOString().split('T')[0] + 'T00:00:00Z')
+      const diffMs = todayDate.getTime() - latestDate.getTime()
+      elapsedDays = Math.max(0, Math.floor(diffMs / (24 * 60 * 60 * 1000)))
+    }
+
+    // Past full days accumulated growth + today's daytime progress (from morning to night)
+    const pastDaysGrowth = elapsedDays * rate
     const daytimeGrowth = Math.round(rate * diurnalFraction)
 
-    return Math.max(0, base + daytimeGrowth)
-  }, [profile.followers_count, recentVelocity, dailyGain, monthlyGain])
+    return Math.max(0, base + pastDaysGrowth + daytimeGrowth)
+  }, [profile.followers_count, profile.follower_history, recentVelocity, dailyGain, monthlyGain])
 
-  // 1. Initial Odometer Count-Up Animation
+  // 1. Initial Odometer Count-Up Animation (Gracefully paced, smooth ease-out)
   useEffect(() => {
     if (!timeAdjustedBase) return
 
     setLiveFollowers(0)
     setIsCountingUp(true)
 
-    const duration = 2400 // 2.4 seconds count up
+    const duration = 3800 // Paced at 3.8 seconds for a smooth, relaxed count-up
     const start = 0
     const end = timeAdjustedBase
     const startTime = performance.now()
@@ -227,7 +245,8 @@ export default function ProfilePage({ profile, slug }) {
     const animate = (currentTime) => {
       const elapsed = currentTime - startTime
       const progress = Math.min(elapsed / duration, 1)
-      const easeProgress = Math.pow(progress, 3.5) // Easing curve: slow start, then super fast acceleration
+      // Smooth cubic ease-out: starts smoothly, runs steadily, and decelerates gently to exact value
+      const easeProgress = 1 - Math.pow(1 - progress, 3)
       const current = Math.floor(start + (end - start) * easeProgress)
       
       setLiveFollowers(current)
@@ -244,7 +263,7 @@ export default function ProfilePage({ profile, slug }) {
     return () => cancelAnimationFrame(animationFrame)
   }, [timeAdjustedBase])
 
-  // 2. Continuous Micro-Fluctuation simulation with granular tier-based realism & variable speeds
+  // 2. Continuous Micro-Fluctuation simulation with night-time freeze and relaxed realistic speeds
   useEffect(() => {
     if (isCountingUp || !timeAdjustedBase) return
 
@@ -253,57 +272,79 @@ export default function ProfilePage({ profile, slug }) {
     // Initialize display count to the time-adjusted base when counting finishes
     setLiveFollowers(baseCount)
 
-    // Determine scale tier and speed based on account size
-    let maxDrift = 15
-    let minStep = 1
-    let maxStep = 3
-    let intervalMs = 4000
+    // Check time of day: 12:00 AM (00:00) to 07:00 AM is sleeping/night hours
+    const now = new Date()
+    const currentHour = now.getHours() + now.getMinutes() / 60
+    const isNight = currentHour >= 0 && currentHour < 7
 
-    if (baseCount >= 20_000_000) {
-      // 20M+ top accounts (Samantha 38M, Virat 270M) -> fastest, bustling momentum jumps up to ~1100
-      maxDrift = 4500
-      minStep = 250
-      maxStep = 1100
-      intervalMs = 1500
-    } else if (baseCount >= 5_000_000) {
-      // 5M - 20M -> fast momentum
-      maxDrift = 1800
-      minStep = 100
-      maxStep = 450
-      intervalMs = 1800
-    } else if (baseCount >= 1_000_000) {
-      // 1M - 5M -> good momentum (takes 1 lakh to change 1.2M -> 1.3M)
-      maxDrift = 600
-      minStep = 35
-      maxStep = 150
-      intervalMs = 2200
-    } else if (baseCount >= 700_000) {
-      // 700K - 1M -> steady increase/decrease (strictly < 90 cap)
-      maxDrift = 85
-      minStep = 15
-      maxStep = 45
-      intervalMs = 2500
-    } else if (baseCount >= 300_000) {
-      // 300K - 700K -> moderate increase/decrease
-      maxDrift = 75
-      minStep = 6
-      maxStep = 20
-      intervalMs = 3000
-    } else if (baseCount >= 100_000) {
-      // 100K - 300K -> very low activity, strictly protected from rolling over 131.2k -> 131.3k
-      maxDrift = 45
-      minStep = 2
-      maxStep = 8
-      intervalMs = 3500
-    } else {
-      // < 100K small accounts -> very slight micro fluctuations
-      maxDrift = 15
+    // Night Rule:
+    // 1) For accounts < 500k followers: ZERO up or down from midnight 12 to morning 7 (completely constant)
+    if (isNight && baseCount < 500_000) {
+      return
+    }
+
+    // Determine scale tier and speed based on account size & time of day
+    let maxDrift = 12
+    let minStep = 1
+    let maxStep = 2
+    let intervalMs = 10000
+
+    if (isNight) {
+      // 2) For accounts >= 500k during midnight to morning 7:
+      // Very subtle up/down (±1 to ±2 max) with slow 12-second intervals
+      maxDrift = 2
       minStep = 1
-      maxStep = 3
-      intervalMs = 4000
+      maxStep = 2
+      intervalMs = 12000
+    } else {
+      // Daytime realistic relaxed speeds (slower and steadier)
+      if (baseCount >= 20_000_000) {
+        maxDrift = 2500
+        minStep = 100
+        maxStep = 400
+        intervalMs = 4500
+      } else if (baseCount >= 5_000_000) {
+        maxDrift = 1200
+        minStep = 50
+        maxStep = 200
+        intervalMs = 5000
+      } else if (baseCount >= 1_000_000) {
+        maxDrift = 400
+        minStep = 15
+        maxStep = 60
+        intervalMs = 6000
+      } else if (baseCount >= 700_000) {
+        maxDrift = 75
+        minStep = 5
+        maxStep = 20
+        intervalMs = 7000
+      } else if (baseCount >= 300_000) {
+        maxDrift = 50
+        minStep = 2
+        maxStep = 10
+        intervalMs = 8000
+      } else if (baseCount >= 100_000) {
+        maxDrift = 30
+        minStep = 1
+        maxStep = 4
+        intervalMs = 9000
+      } else {
+        maxDrift = 12
+        minStep = 1
+        maxStep = 2
+        intervalMs = 10000
+      }
     }
 
     const interval = setInterval(() => {
+      // Dynamically check if night status changes during a long session
+      const checkNow = new Date()
+      const liveHour = checkNow.getHours() + checkNow.getMinutes() / 60
+      if (liveHour >= 0 && liveHour < 7 && baseCount < 500_000) {
+        setLiveFollowers(baseCount)
+        return
+      }
+
       setLiveFollowers((prev) => {
         const currentDrift = prev - baseCount
 
@@ -574,23 +615,35 @@ export default function ProfilePage({ profile, slug }) {
         .timeline-row {
           display: flex;
           align-items: center;
-          height: 38px;
+          min-height: 38px;
+          height: auto;
           border-radius: 8px;
           transition: background 0.15s ease;
           cursor: pointer;
-          padding: 0 6px;
+          padding: 3px 6px;
           margin: 1px 0;
         }
 
-        .seo-overview-card {
-          margin-top: 36px;
-          padding: 24px 20px;
-          background: rgba(15, 23, 42, 0.6);
-          border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          color: #94a3b8;
-          font-size: 13px;
-          line-height: 1.7;
+        .timeline-bar-track {
+          width: 130px;
+          height: 14px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+        }
+
+        .timeline-bar-track-left {
+          justify-content: flex-end;
+        }
+
+        .timeline-bar-track-right {
+          justify-content: flex-start;
+        }
+
+        @media (min-width: 768px) {
+          .timeline-bar-track {
+            width: 180px;
+          }
         }
 
         /* ─── Mobile View Enhancements (Max-Width 640px) ─── */
@@ -705,18 +758,6 @@ export default function ProfilePage({ profile, slug }) {
             padding: 0 8px !important;
             margin: 2px 0 !important;
           }
-
-          .seo-overview-card {
-            margin-top: 24px !important;
-            padding: 18px 14px !important;
-            border-radius: 14px !important;
-          }
-
-          .seo-overview-paragraph {
-            line-height: 1.75 !important;
-            font-size: 12.5px !important;
-            margin-bottom: 14px !important;
-          }
         }
 
         .tooltip-box {
@@ -740,9 +781,12 @@ export default function ProfilePage({ profile, slug }) {
         <div className="tooltip-box" style={{ left: tooltip.x + 14, top: tooltip.y - 60 }}>
           <div style={{ fontWeight: 700, marginBottom: 2, color: '#e2e8f0' }}>{tooltip.date}</div>
           {tooltip.isFailed ? (
-            <div style={{ color: '#f87171', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
+            <div style={{ color: '#f87171', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
               <AlertTriangle size={13} color="#f87171" />
               <span>Server Failed</span>
+              <span style={{ fontSize: 10, color: '#f59e0b', marginLeft: 4, fontWeight: 800 }}>
+                ({tooltip.failureDaysCount || 2} days follower count)
+              </span>
             </div>
           ) : (
             <>
@@ -995,6 +1039,39 @@ export default function ProfilePage({ profile, slug }) {
                 }
 
                 cur.setDate(cur.getDate() + 1)
+              }
+            }
+
+            // Calculate failureDaysCount for each failed day:
+            // When server fails, how many days does the subsequent sync represent? (e.g. 2 days or 3 days)
+            for (let i = 0; i < dailyHistoryItems.length; i++) {
+              if (dailyHistoryItems[i].isFailed) {
+                let nextValid = null
+                for (let j = i + 1; j < dailyHistoryItems.length; j++) {
+                  if (!dailyHistoryItems[j].isFailed) {
+                    nextValid = dailyHistoryItems[j]
+                    break
+                  }
+                }
+                if (nextValid && nextValid.diffDays > 1) {
+                  dailyHistoryItems[i].failureDaysCount = nextValid.diffDays
+                } else {
+                  let prevValid = null
+                  for (let j = i - 1; j >= 0; j--) {
+                    if (!dailyHistoryItems[j].isFailed) {
+                      prevValid = dailyHistoryItems[j]
+                      break
+                    }
+                  }
+                  if (prevValid) {
+                    const dCur = new Date(dailyHistoryItems[i].date)
+                    const dPrev = new Date(prevValid.date)
+                    const days = Math.max(2, Math.round(Math.abs(dCur - dPrev) / (1000 * 60 * 60 * 24)) + 1)
+                    dailyHistoryItems[i].failureDaysCount = days
+                  } else {
+                    dailyHistoryItems[i].failureDaysCount = 2
+                  }
+                }
               }
             }
 
@@ -1258,9 +1335,11 @@ export default function ProfilePage({ profile, slug }) {
                         scrollbarWidth: 'thin',
                         scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
                       }}>
-                        <div style={{ minWidth: 460, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 6 }}>
+                        <div style={{ minWidth: 600, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 6 }}>
                           {[...filteredDailyGains].reverse().map((day, idx) => {
-                            const barPct = day.isFirst ? 0 : Math.min(96, Math.max(6, (Math.abs(day.increment) / maxAbs) * 96))
+                            const barPct = day.isFirst || day.increment === 0
+                              ? 0
+                              : Math.min(100, Math.max(6, (Math.abs(day.increment) / maxAbs) * 100))
                             const isGain = day.increment > 0
                             const isLoss = day.increment < 0
                             const dateObj = new Date(day.date)
@@ -1284,6 +1363,7 @@ export default function ProfilePage({ profile, slug }) {
                                     increment: day.increment,
                                     hasIncrement: !day.isFirst && !day.isFailed,
                                     diffDays: day.diffDays,
+                                    failureDaysCount: day.failureDaysCount,
                                     isFailed: day.isFailed
                                   })
                                 }}
@@ -1298,9 +1378,18 @@ export default function ProfilePage({ profile, slug }) {
                                   </div>
                                 </div>
 
-                                {day.isFailed ? (
-                                  /* SERVER FAILED STATE */
-                                  <div style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 12 }}>
+                                {/* LEFT — Drop Area / Server Failed */}
+                                <div style={{
+                                  flex: 1,
+                                  display: 'flex',
+                                  justifyContent: day.isFailed ? 'flex-start' : 'flex-end',
+                                  alignItems: 'center',
+                                  paddingLeft: day.isFailed ? 8 : 0,
+                                  paddingRight: day.isFailed ? 0 : 8,
+                                  gap: 8,
+                                  minWidth: 0
+                                }}>
+                                  {day.isFailed ? (
                                     <div style={{
                                       display: 'inline-flex',
                                       alignItems: 'center',
@@ -1312,96 +1401,128 @@ export default function ProfilePage({ profile, slug }) {
                                       color: '#f87171',
                                       fontSize: 11,
                                       fontWeight: 800,
-                                      letterSpacing: '0.03em'
+                                      letterSpacing: '0.03em',
+                                      flexShrink: 0
                                     }}>
                                       <AlertTriangle size={12} color="#f87171" />
                                       <span>Server Failed</span>
                                     </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    {/* LEFT — Drop bar & Negative Value */}
-                                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: 8, gap: 8 }}>
-                                      {isLoss && !day.isFirst && (
-                                        <>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                                            <span style={{
-                                              fontSize: 11.5,
-                                              fontWeight: 900,
-                                              color: '#fb7185',
-                                              fontFamily: 'var(--font-display)',
-                                              flexShrink: 0
-                                            }}>
-                                              {valueLabel}
-                                            </span>
-                                            {day.diffDays > 1 && (
-                                              <span style={{
-                                                fontSize: 9.5,
-                                                fontWeight: 800,
-                                                color: '#f59e0b',
-                                                background: 'rgba(245, 158, 11, 0.14)',
-                                                border: '1px solid rgba(245, 158, 11, 0.3)',
-                                                padding: '1px 5px',
-                                                borderRadius: 4,
-                                                whiteSpace: 'nowrap'
-                                              }}>
-                                                ({day.diffDays} day follower count)
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div style={{
-                                            width: `${barPct}%`,
-                                            height: 14,
-                                            borderRadius: '6px 0 0 6px',
-                                            background: 'linear-gradient(270deg, #f43f5e 0%, #be123c 100%)',
-                                            position: 'relative',
-                                            overflow: 'hidden'
+                                  ) : isLoss && !day.isFirst ? (
+                                    <>
+                                      <div style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'flex-end',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                        gap: 2
+                                      }}>
+                                        <span style={{
+                                          fontSize: 11.5,
+                                          fontWeight: 900,
+                                          color: '#fb7185',
+                                          fontFamily: 'var(--font-display)',
+                                          lineHeight: 1.1,
+                                          flexShrink: 0
+                                        }}>
+                                          {valueLabel}
+                                        </span>
+                                        {day.diffDays > 1 && (
+                                          <span style={{
+                                            fontSize: 9,
+                                            fontWeight: 800,
+                                            color: '#f59e0b',
+                                            background: 'rgba(245, 158, 11, 0.14)',
+                                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                                            padding: '0.5px 5px',
+                                            borderRadius: 4,
+                                            whiteSpace: 'nowrap',
+                                            lineHeight: 1.2,
+                                            flexShrink: 0
                                           }}>
-                                            <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: '#fda4af' }} />
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
+                                            ({day.diffDays} days follower count)
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="timeline-bar-track timeline-bar-track-left">
+                                        <div style={{
+                                          width: `${barPct}%`,
+                                          height: 14,
+                                          borderRadius: '6px 0 0 6px',
+                                          background: 'linear-gradient(270deg, #f43f5e 0%, #be123c 100%)',
+                                          position: 'relative',
+                                          overflow: 'hidden',
+                                          boxShadow: '0 0 8px rgba(244, 63, 94, 0.3)'
+                                        }}>
+                                          <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: '#fda4af' }} />
+                                        </div>
+                                      </div>
+                                    </>
+                                  ) : null}
+                                </div>
 
-                                    {/* CENTER Hairline Axis */}
-                                    <div style={{ width: 1, height: 22, background: 'rgba(255, 255, 255, 0.15)', flexShrink: 0 }} />
+                                {/* CENTER Hairline Axis */}
+                                <div style={{ width: 1, height: 22, background: 'rgba(255, 255, 255, 0.15)', flexShrink: 0 }} />
 
-                                    {/* RIGHT — Gain bar & Positive Value */}
-                                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', paddingLeft: 8, gap: 8 }}>
+                                {/* RIGHT — Gain Area */}
+                                <div style={{
+                                  flex: 1,
+                                  display: 'flex',
+                                  justifyContent: 'flex-start',
+                                  alignItems: 'center',
+                                  paddingLeft: 8,
+                                  gap: 8,
+                                  minWidth: 0
+                                }}>
+                                  {!day.isFailed && (
+                                    <>
                                       {isGain && !day.isFirst && (
                                         <>
-                                          <div style={{
-                                            width: `${barPct}%`,
-                                            height: 14,
-                                            borderRadius: '0 6px 6px 0',
-                                            background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-                                            position: 'relative',
-                                            overflow: 'hidden'
-                                          }}>
-                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6ee7b7' }} />
+                                          <div className="timeline-bar-track timeline-bar-track-right">
+                                            <div style={{
+                                              width: `${barPct}%`,
+                                              height: 14,
+                                              borderRadius: '0 6px 6px 0',
+                                              background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                                              position: 'relative',
+                                              overflow: 'hidden',
+                                              boxShadow: '0 0 8px rgba(16, 185, 129, 0.3)'
+                                            }}>
+                                              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6ee7b7' }} />
+                                            </div>
                                           </div>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                          <div style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'flex-start',
+                                            justifyContent: 'center',
+                                            flexShrink: 0,
+                                            gap: 2
+                                          }}>
                                             <span style={{
                                               fontSize: 11.5,
                                               fontWeight: 900,
                                               color: '#34d399',
                                               fontFamily: 'var(--font-display)',
+                                              lineHeight: 1.1,
                                               flexShrink: 0
                                             }}>
                                               {valueLabel}
                                             </span>
                                             {day.diffDays > 1 && (
                                               <span style={{
-                                                fontSize: 9.5,
+                                                fontSize: 9,
                                                 fontWeight: 800,
                                                 color: '#f59e0b',
                                                 background: 'rgba(245, 158, 11, 0.14)',
                                                 border: '1px solid rgba(245, 158, 11, 0.3)',
-                                                padding: '1px 5px',
+                                                padding: '0.5px 5px',
                                                 borderRadius: 4,
-                                                whiteSpace: 'nowrap'
+                                                whiteSpace: 'nowrap',
+                                                lineHeight: 1.2,
+                                                flexShrink: 0
                                               }}>
-                                                ({day.diffDays} day follower count)
+                                                ({day.diffDays} days follower count)
                                               </span>
                                             )}
                                           </div>
@@ -1411,28 +1532,39 @@ export default function ProfilePage({ profile, slug }) {
                                         <div style={{ fontSize: 9.5, color: '#64748b', fontWeight: 700, letterSpacing: '0.06em', paddingLeft: 4 }}>BASELINE</div>
                                       )}
                                       {!day.isFirst && day.increment === 0 && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 4 }}>
-                                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.25)' }} />
-                                          <span style={{ fontSize: 11, fontWeight: 750, color: '#64748b', fontFamily: 'var(--font-display)' }}>±0</span>
+                                        <div style={{
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          alignItems: 'flex-start',
+                                          justifyContent: 'center',
+                                          paddingLeft: 4,
+                                          gap: 2
+                                        }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.25)' }} />
+                                            <span style={{ fontSize: 11, fontWeight: 750, color: '#64748b', fontFamily: 'var(--font-display)' }}>±0</span>
+                                          </div>
                                           {day.diffDays > 1 && (
                                             <span style={{
-                                              fontSize: 9.5,
+                                              fontSize: 9,
                                               fontWeight: 800,
                                               color: '#f59e0b',
                                               background: 'rgba(245, 158, 11, 0.14)',
                                               border: '1px solid rgba(245, 158, 11, 0.3)',
-                                              padding: '1px 5px',
+                                              padding: '0.5px 5px',
                                               borderRadius: 4,
-                                              whiteSpace: 'nowrap'
+                                              whiteSpace: 'nowrap',
+                                              lineHeight: 1.2,
+                                              flexShrink: 0
                                             }}>
-                                              ({day.diffDays} day follower count)
+                                              ({day.diffDays} days follower count)
                                             </span>
                                           )}
                                         </div>
                                       )}
-                                    </div>
-                                  </>
-                                )}
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             )
                           })}
@@ -1458,29 +1590,12 @@ export default function ProfilePage({ profile, slug }) {
             )
           })()}
 
-          {/* SEO Content & Semantic Overview Section for Search Engines */}
-          <div className="seo-overview-card">
-            <h2 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 16,
-              fontWeight: 800,
-              color: '#f8fafc',
-              marginBottom: 12,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              lineHeight: 1.3
-            }}>
-              <CheckCircle2 size={16} color="#38bdf8" />
-              <span>About {profile.name} Instagram Follower Analytics</span>
-            </h2>
-            <p className="seo-overview-paragraph" style={{ margin: '0 0 14px' }}>
-              <strong>{profile.name}</strong> ({profile.instagram_handle ? `@${profile.instagram_handle}` : 'creator'}) has a current follower base of <strong>{formatNumber(profile.followers_count)} followers</strong> on Instagram. Spialr tracks real-time live follower count, hourly velocity, and 31-day progressive momentum for {profile.name}.
-            </p>
-            <p className="seo-overview-paragraph" style={{ margin: 0 }}>
-              Over the last recorded period, {profile.name} experienced a daily gain of <strong>{dailyGain >= 0 ? `+${formatNumber(dailyGain)}` : formatNumber(dailyGain)} followers</strong> and an estimated monthly growth of <strong>{monthlyGain >= 0 ? `+${formatNumber(monthlyGain)}` : formatNumber(monthlyGain)} followers</strong>. View interactive weekly heatmaps, timeline races, and comparative benchmarks across top creators on Spialr.
-            </p>
-          </div>
+          {/* Community Comments Section */}
+          <CommentSection
+            targetType="profile"
+            targetSlug={profile.instagram_handle || slug}
+            targetName={profile.name || profile.instagram_handle}
+          />
 
         </div>
       </div>

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import Head from 'next/head'
 import PostCard from '../../components/PostCard'
 import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
+import { calculateGrowthVelocity, formatSignedChange, formatSignedPercent } from '../../lib/growthVelocity'
+import AdminCommentManager from '../../components/AdminCommentManager'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'is_admin_token'
@@ -992,6 +994,16 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
       return setError('Followers Count must be a valid number or shorthand (e.g., 270M, 229.1K, 500K)');
     }
 
+    // Validate duplicate Instagram handle
+    if (form.instagram_handle) {
+      const handleClean = form.instagram_handle.trim().toLowerCase()
+      const currentId = initial?.id || form.id
+      const duplicate = profiles.find(p => p.instagram_handle && p.instagram_handle.toLowerCase().trim() === handleClean && p.id !== currentId)
+      if (duplicate) {
+        return setError(`Instagram handle @${handleClean} is already assigned to "${duplicate.name}". Each profile must have a unique Instagram handle.`)
+      }
+    }
+
     // Validate categories
     if (selectedCategories.length === 0) return setError('At least one category is required')
     for (let i = 0; i < selectedCategories.length; i++) {
@@ -1063,6 +1075,20 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           onChange={e => set('instagram_handle', e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))} 
           placeholder="e.g. virat.kohli" 
         />
+        {(() => {
+          if (!form.instagram_handle) return null;
+          const h = form.instagram_handle.trim().toLowerCase();
+          const currentId = initial?.id || form.id;
+          const match = profiles.find(p => p.instagram_handle && p.instagram_handle.toLowerCase().trim() === h && p.id !== currentId);
+          if (match) {
+            return (
+              <div style={{ color: '#ff5252', fontSize: 12, marginTop: 4, fontWeight: 600 }}>
+                ⚠️ Warning: @{h} is already assigned to "{match.name}". Using it here will cause duplicate statistics!
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
         <div>
@@ -1748,6 +1774,18 @@ export default function AdminPanel() {
   const [batchErrorLog, setBatchErrorLog] = useState('')
   const abortBatchRef = useRef(false)
 
+  // Daily Follower Growth publisher states
+  const [growthSettings, setGrowthSettings] = useState(null)
+  const [loadingGrowthSettings, setLoadingGrowthSettings] = useState(false)
+  const [savingGrowthDate, setSavingGrowthDate] = useState(false)
+  const [adminGrowthMode, setAdminGrowthMode] = useState('gainers')
+
+  // Precompute growth velocity for admin review
+  const adminGrowthData = useMemo(() => {
+    return calculateGrowthVelocity(mostFollowed, growthSettings?.configured_date === 'auto' ? null : growthSettings?.configured_date)
+  }, [mostFollowed, growthSettings])
+
+
   // "Scrape ALL accounts" server-side batch state
   const [allScrapeRunning, setAllScrapeRunning] = useState(false)
   const [allScrapeProgress, setAllScrapeProgress] = useState({ current: 0, total: 0, percent: 0, currentName: '', currentHandle: '', status: '', updated: 0, failed: 0 })
@@ -2377,6 +2415,7 @@ export default function AdminPanel() {
           const data = await res.json()
           setMostFollowed(data.profiles || [])
         }
+        loadGrowthSettings()
       }
       if (tab === 'voting_management') {
         const res = await adminFetch('/api/admin/most_followed')
@@ -2384,12 +2423,30 @@ export default function AdminPanel() {
           const data = await res.json()
           setMostFollowed(data.profiles || [])
         }
+        loadGrowthSettings()
       }
       if (tab === 'visitors') {
         const res = await adminFetch('/api/admin/visits')
         if (res.ok) {
           const data = await res.json()
           setVisits(data.visits || [])
+        }
+      }
+
+      if (tab === 'profile_comments') {
+        if (mostFollowed.length === 0) {
+          const mfRes = await adminFetch('/api/admin/most_followed')
+          if (mfRes.ok) {
+            const data = await mfRes.json()
+            setMostFollowed(data.profiles || [])
+          }
+        }
+        if (celebrities.length === 0) {
+          const celRes = await adminFetch('/api/admin/celebrities')
+          if (celRes.ok) {
+            const celData = await celRes.json()
+            setCelebrities(celData.celebrities || [])
+          }
         }
       }
 
@@ -2432,6 +2489,39 @@ export default function AdminPanel() {
       console.error('Failed to load admin data:', err)
     } finally {
       setLoadingData(false)
+    }
+  }
+
+  const loadGrowthSettings = async () => {
+    setLoadingGrowthSettings(true)
+    try {
+      const res = await adminFetch('/api/admin/growth_settings')
+      if (res.ok) {
+        const data = await res.json()
+        setGrowthSettings(data)
+      }
+    } catch (e) {
+      console.error('Error loading growth settings:', e)
+    } finally {
+      setLoadingGrowthSettings(false)
+    }
+  }
+
+  const handleSetGrowthDate = async (targetDate) => {
+    setSavingGrowthDate(true)
+    try {
+      const res = await adminFetch('/api/admin/growth_settings', {
+        method: 'POST',
+        body: { live_date: targetDate }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      showToast('✅ ' + (data.message || 'Growth snapshot updated!'))
+      await loadGrowthSettings()
+    } catch (e) {
+      alert('Error updating growth date: ' + e.message)
+    } finally {
+      setSavingGrowthDate(false)
     }
   }
 
@@ -3254,8 +3344,9 @@ export default function AdminPanel() {
             { id: 'most_liked_reels', label: '🎬 Most Liked Reels' },
             { id: 'most_liked_posts', label: '❤️ Most Liked Posts' },
             { id: 'most_liked_comments', label: '💬 Most Liked Comments' },
+            { id: 'profile_comments', label: '💬 Profile Comments' },
             { id: 'most_followed', label: '📊 Most Followed' },
-            { id: 'voting_management', label: '🏆 Voting Management' },
+            { id: 'voting_management', label: '📈 Daily Growth & Momentum' },
             { id: 'visitors', label: '👥 Visitors' },
             
             { id: 'settings', label: '⚙️ Settings' },
@@ -4225,17 +4316,151 @@ export default function AdminPanel() {
 
 
 
-        {/* ── LIVE DATE CARD (Only visible in Live-related tabs) ────────── */}
+        {/* ── ⚡ DAILY FOLLOWER GROWTH PUBLISHER CARD ────────── */}
         {(tab === 'most_followed' || tab === 'voting_management') && (
-          <div className="card" style={{ marginBottom: 28, padding: '20px' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
-              📅 Live Page Date
-            </h3>
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: 12 }}>
-              The date on the top-right corner of the <span style={{ color: 'var(--accent)', fontWeight: 700 }}>/live</span> page is now <strong>fully automated</strong> by calendar time. It dynamically displays the current local date to visitors.
+          <div className="card" style={{ marginBottom: 28, padding: '24px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 14, marginBottom: 16 }}>
+              <div style={{ flex: '1 1 320px' }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>⚡ Daily Follower Growth Publisher</span>
+                  <span style={{ fontSize: 11, background: 'rgba(16,185,129,0.15)', color: '#059669', padding: '3px 9px', borderRadius: 100, fontWeight: 700 }}>
+                    Live on /live?tab=daily_growth
+                  </span>
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '8px 0 0 0', lineHeight: 1.5 }}>
+                  Publishes the 24-hour gainers & losers leaderboard snapshot date across all 1,110+ creators. When you click <strong>"Show Today's Follower Growth"</strong>, the public leaderboard immediately targets today's date. If scraping for today hasn't finished or failed, the system automatically falls back to the previous complete date so visitors never see an empty table!
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    handleSetGrowthDate(todayStr);
+                  }}
+                  disabled={savingGrowthDate || loadingGrowthSettings}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    padding: '10px 18px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    border: 'none',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  {savingGrowthDate ? 'Publishing...' : "⚡ Show Today's Follower Growth"}
+                </button>
+
+                <button
+                  className="btn"
+                  onClick={() => handleSetGrowthDate('auto')}
+                  disabled={savingGrowthDate || loadingGrowthSettings}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    padding: '10px 16px',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                  title="Auto-detect dynamically displays the newest verified complete date in database"
+                >
+                  🔄 Auto-Detect Latest
+                </button>
+              </div>
             </div>
+
+            {/* Snapshot Status & Metrics Grid */}
+            {growthSettings && (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: 12,
+                padding: '16px',
+                background: 'var(--surface2)',
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                marginBottom: 16
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Configured Snapshot</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginTop: 4 }}>
+                    {growthSettings.configured_date === 'auto' ? '⚡ Dynamic Auto-Detect' : `📅 ${growthSettings.configured_date}`}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {growthSettings.configured_date === 'auto' ? 'Always publishes newest date' : 'Fixed to selected date'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Currently Published</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#059669', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{growthSettings.active_date || '—'}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>vs</span>
+                    <span>{growthSettings.prev_date || '—'}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: growthSettings.is_fallback ? '#d97706' : 'var(--text-dim)', marginTop: 2 }}>
+                    {growthSettings.is_fallback ? '⚠️ Fallback active (today scraping in progress)' : '✅ Verified 24h baseline cycle'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active 24h Momentum</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginTop: 4, display: 'flex', gap: 10 }}>
+                    <span style={{ color: '#059669' }}>+{growthSettings.gainers_count || 0} gainers</span>
+                    <span style={{ color: '#dc2626' }}>-{growthSettings.losers_count || 0} unfollowed</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {growthSettings.total_profiles || 0} creators indexed
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Snapshot Date Selector Dropdown */}
+            {growthSettings?.available_dates?.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)' }}>
+                  Manually Select Snapshot Date:
+                </label>
+                <select
+                  value={growthSettings.configured_date || 'auto'}
+                  onChange={(e) => handleSetGrowthDate(e.target.value)}
+                  disabled={savingGrowthDate}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface2)',
+                    color: 'var(--text)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="auto">⚡ Dynamic Auto-Detect (Recommended)</option>
+                  {growthSettings.available_dates.map(d => (
+                    <option key={d.date} value={d.date}>
+                      📅 {d.date} ({d.profile_count} creators recorded)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div style={{ 
-              fontSize: 13, 
+              fontSize: 12.5, 
               padding: '12px 14px', 
               background: 'rgba(245,158,11,0.08)', 
               border: '1px dashed rgba(245,158,11,0.3)', 
@@ -4750,13 +4975,61 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* ── VOTING MANAGEMENT TAB ───────────────────────────────────────────── */}
+        {/* ── DAILY GROWTH & MOMENTUM TAB ─────────────────────────────── */}
         {tab === 'voting_management' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22 }}>
-                Voting Leaderboard Management ({mostFollowed.length})
-              </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, margin: 0 }}>
+                  Daily Growth & Momentum Analytics ({mostFollowed.length})
+                </h2>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
+                  Real-time momentum inspection for verified 24h snapshots across India.
+                </div>
+              </div>
+              <a
+                href="/live?tab=daily_growth"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+                style={{ fontSize: 12.5, fontWeight: 700, textDecoration: 'none', border: '1px solid var(--border)' }}
+              >
+                ↗️ View Public Leaderboard
+              </a>
+            </div>
+
+            {/* Mode Switcher Toggle */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+              <button
+                className="btn"
+                onClick={() => setAdminGrowthMode('gainers')}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: '8px 16px',
+                  background: adminGrowthMode === 'gainers' ? 'rgba(16,185,129,0.15)' : 'var(--surface2)',
+                  color: adminGrowthMode === 'gainers' ? '#059669' : 'var(--text-dim)',
+                  border: '1px solid ' + (adminGrowthMode === 'gainers' ? 'rgba(16,185,129,0.4)' : 'var(--border)'),
+                  cursor: 'pointer'
+                }}
+              >
+                🟢 Top Gainers ({adminGrowthData.gainersCount || 0})
+              </button>
+              <button
+                className="btn"
+                onClick={() => setAdminGrowthMode('losers')}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: '8px 16px',
+                  background: adminGrowthMode === 'losers' ? 'rgba(239,68,68,0.15)' : 'var(--surface2)',
+                  color: adminGrowthMode === 'losers' ? '#dc2626' : 'var(--text-dim)',
+                  border: '1px solid ' + (adminGrowthMode === 'losers' ? 'rgba(239,68,68,0.4)' : 'var(--border)'),
+                  cursor: 'pointer'
+                }}
+              >
+                🔴 Most Unfollowed ({adminGrowthData.losersCount || 0})
+              </button>
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -4764,7 +5037,7 @@ export default function AdminPanel() {
                 className="input-field"
                 value={searchMostFollowed}
                 onChange={e => setSearchMostFollowed(e.target.value)}
-                placeholder="🔍 Search profiles by name, handle or category..."
+                placeholder="🔍 Search creators by name, @handle or category..."
               />
             </div>
 
@@ -4773,78 +5046,92 @@ export default function AdminPanel() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(() => {
-                  const filtered = mostFollowed.filter(profile => {
-                    const query = searchMostFollowed.toLowerCase();
-                    return profile.name?.toLowerCase().includes(query) ||
-                           profile.instagram_handle?.toLowerCase().includes(query) ||
-                           profile.category?.toLowerCase().includes(query);
-                  })
-                  const sortedFiltered = [...filtered].sort((a, b) => (b.votes || 0) - (a.votes || 0))
+                  const baseList = adminGrowthMode === 'gainers' ? (adminGrowthData.gainers || []) : (adminGrowthData.losers || [])
+                  const query = searchMostFollowed.toLowerCase().trim()
+                  const filtered = query
+                    ? baseList.filter(p => p.name?.toLowerCase().includes(query) || p.instagram_handle?.toLowerCase().includes(query) || p.category?.toLowerCase().includes(query))
+                    : baseList
 
-                  if (sortedFiltered.length === 0) {
+                  if (filtered.length === 0) {
                     return (
                       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                        {mostFollowed.length === 0 ? "No profiles found in Most Followed database." : "No matching profiles found."}
+                        {searchMostFollowed ? "No matching creators found for this filter." : "No growth momentum records found for this snapshot."}
                       </div>
                     )
                   }
 
-                  return sortedFiltered.map((profile) => (
-                    <div key={profile.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                  return filtered.slice(0, 100).map((profile) => (
+                    <div key={profile.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', padding: '14px 18px' }}>
+                      {/* Rank */}
+                      <div style={{
+                        width: 48,
+                        fontSize: profile.rank <= 3 ? 15 : 14,
+                        fontWeight: 800,
+                        color: profile.rank === 1 ? '#d97706' : profile.rank === 2 ? '#64748b' : profile.rank === 3 ? '#b45309' : 'var(--text-dim)',
+                        textAlign: 'center',
+                        flexShrink: 0
+                      }}>
+                        {profile.rank === 1 ? '🥇 #1' : profile.rank === 2 ? '🥈 #2' : profile.rank === 3 ? '🥉 #3' : `#${profile.rank}`}
+                      </div>
+
+                      {/* Avatar */}
                       {profile.photo_url ? (
-                        <img src={profile.photo_url} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)' }} />
+                        <img src={profile.photo_url} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: 'var(--surface2)', flexShrink: 0 }} />
                       ) : (
-                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👤</div>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>👤</div>
                       )}
 
+                      {/* Info */}
                       <div style={{ flex: 1, minWidth: 200 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>{profile.name}</div>
-                        <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
-                          Current Rank: <strong style={{ color: 'var(--accent)' }}>#{profile.current_vote_rank || '—'}</strong> | Votes: <strong style={{ color: (profile.votes || 0) > 0 ? '#10b981' : (profile.votes || 0) < 0 ? '#dc2626' : 'var(--text)' }}>{(profile.votes || 0) > 0 ? '+' : ''}{profile.votes || 0}</strong>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{profile.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {profile.instagram_handle && <span>@{profile.instagram_handle}</span>}
+                          <span>·</span>
+                          <span>Category: <strong style={{ color: 'var(--text)' }}>{profile.category || 'Creator'}</strong></span>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <input
-                          type="number"
-                          placeholder="Votes"
-                          id={`votes-input-${profile.id}`}
-                          defaultValue={profile.votes || 0}
-                          style={{
-                            width: 80,
-                            height: 36,
-                            padding: '0 8px',
-                            borderRadius: 8,
-                            border: '1px solid var(--border)',
-                            background: 'var(--surface2)',
-                            color: 'var(--text)',
-                            fontSize: 13,
-                            textAlign: 'center'
-                          }}
-                        />
-                        <button
-                          className="btn btn-primary"
-                          style={{ padding: '6px 12px', fontSize: 12, height: 36 }}
-                          onClick={() => {
-                            const input = document.getElementById(`votes-input-${profile.id}`);
-                            const val = input ? input.value : 0;
-                            updateVotes(profile.id, val);
-                          }}
-                        >
-                          Set Votes
-                        </button>
-                        <button
-                          className="btn btn-ghost"
-                          style={{ padding: '6px 12px', fontSize: 12, height: 36, border: '1px solid var(--border)' }}
-                          onClick={() => {
-                            const input = document.getElementById(`votes-input-${profile.id}`);
-                            if (input) input.value = 0;
-                            updateVotes(profile.id, 0);
-                          }}
-                        >
-                          Reset
-                        </button>
+                      {/* Followers */}
+                      <div style={{ textAlign: 'right', minWidth: 100, flexShrink: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                          {profile.followers_text}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          prev: {profile.prev_text}
+                        </div>
                       </div>
+
+                      {/* 24h Change Badge */}
+                      <div style={{ textAlign: 'right', minWidth: 120, flexShrink: 0 }}>
+                        <div style={{
+                          display: 'inline-block',
+                          padding: '4px 10px',
+                          borderRadius: 100,
+                          fontSize: 13,
+                          fontWeight: 800,
+                          background: profile.is_gainer ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                          color: profile.is_gainer ? '#059669' : '#dc2626',
+                          border: '1px solid ' + (profile.is_gainer ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)')
+                        }}>
+                          {profile.formatted_change}
+                        </div>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: profile.is_gainer ? '#10b981' : '#ef4444', marginTop: 2 }}>
+                          {profile.formatted_percent}
+                        </div>
+                      </div>
+
+                      {/* Link to Instagram */}
+                      {profile.instagram_handle && (
+                        <a
+                          href={`https://instagram.com/${profile.instagram_handle}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-ghost"
+                          style={{ padding: '6px 10px', fontSize: 12, textDecoration: 'none', border: '1px solid var(--border)' }}
+                        >
+                          IG Profile ↗
+                        </a>
+                      )}
                     </div>
                   ))
                 })()}
@@ -6186,6 +6473,15 @@ export default function AdminPanel() {
               </button>
             </div>
           </div>
+        )}
+
+        {/* Profile Comments Management Tab */}
+        {tab === 'profile_comments' && (
+          <AdminCommentManager
+            mostFollowed={mostFollowed}
+            celebrities={celebrities}
+            adminFetch={adminFetch}
+          />
         )}
       </main>
     </>

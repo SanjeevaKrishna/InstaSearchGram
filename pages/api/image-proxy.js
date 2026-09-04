@@ -7,8 +7,8 @@ export default async function handler(req, res) {
 
   try {
     let decoded = decodeURIComponent(url)
-    if (decoded.includes('cloudinary.com') && decoded.includes('/upload/') && !decoded.includes('w_120')) {
-      decoded = decoded.replace('/upload/', '/upload/w_120,h_120,c_fill,g_face,q_auto,f_auto/')
+    if (decoded.includes('cloudinary.com') && decoded.includes('/upload/') && !decoded.includes('w_200')) {
+      decoded = decoded.replace('/upload/', '/upload/w_200,h_200,c_fill,g_face,q_auto,f_auto/')
     }
     const response = await fetch(decoded, {
       headers: {
@@ -25,6 +25,12 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(arrayBuffer)
 
     res.setHeader('Access-Control-Allow-Origin', '*')
+
+    if (req.query.format === 'base64') {
+      const dataUrl = `data:${contentType};base64,${buffer.toString('base64')}`
+      return res.status(200).json({ dataUrl })
+    }
+
     res.setHeader('Content-Type', contentType)
     res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
     return res.send(buffer)
