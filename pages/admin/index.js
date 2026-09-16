@@ -1794,6 +1794,11 @@ export default function AdminPanel() {
   const [skipLoading, setSkipLoading] = useState(false)
   const allScrapeAbortRef = useRef(null)
 
+  // 🔴 Live Follower Fetch state (laptop-based)
+  const [liveFetchJob, setLiveFetchJob] = useState({ status: 'idle', progress: 0, total: 0, updated: 0, failed: 0, last_completed_at: null })
+  const [liveFetchTriggering, setLiveFetchTriggering] = useState(false)
+  const liveFetchPollRef = useRef(null)
+
   // Trending Reels batch scraper state
   const [trendingScrapeRunning, setTrendingScrapeRunning] = useState(false)
   const [trendingScrapeProgress, setTrendingScrapeProgress] = useState({ current: 0, total: 0, percent: 0, currentTitle: '', status: '', updated: 0, failed: 0 })
@@ -1830,6 +1835,43 @@ export default function AdminPanel() {
 
   const [storageUsage, setStorageUsage] = useState(null)
   const [loadingStorage, setLoadingStorage] = useState(false)
+
+  // 🔴 Live Fetch handlers
+  const pollLiveFetchStatus = async () => {
+    try {
+      const res = await adminFetch('/api/admin/live-fetch-status')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success) {
+          setLiveFetchJob(data.job)
+          // Stop polling if done or idle
+          if (data.job.status === 'done' || data.job.status === 'idle') {
+            if (liveFetchPollRef.current) {
+              clearInterval(liveFetchPollRef.current)
+              liveFetchPollRef.current = null
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const triggerLiveFetch = async () => {
+    setLiveFetchTriggering(true)
+    try {
+      const res = await adminFetch('/api/admin/trigger-live-fetch', { method: 'POST' })
+      if (res.ok) {
+        setLiveFetchJob(prev => ({ ...prev, status: 'queued', progress: 0 }))
+        // Start polling status every 5s
+        if (liveFetchPollRef.current) clearInterval(liveFetchPollRef.current)
+        liveFetchPollRef.current = setInterval(pollLiveFetchStatus, 5000)
+      }
+    } catch (e) {
+      console.error('triggerLiveFetch error:', e)
+    } finally {
+      setLiveFetchTriggering(false)
+    }
+  }
 
   const fetchStorageUsage = async (force = false) => {
     try {
@@ -4907,6 +4949,68 @@ export default function AdminPanel() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* 🔴 Live Follower Count Fetch — Laptop-Based */}
+            <div className="card" style={{ marginBottom: 24, padding: '24px', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444' }}>
+                  🔴 Fetch Live Follower Counts
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Status badge */}
+                  <span style={{
+                    padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                    background: liveFetchJob.status === 'done' ? 'rgba(16,185,129,0.15)' : liveFetchJob.status === 'running' ? 'rgba(234,179,8,0.15)' : liveFetchJob.status === 'queued' ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.07)',
+                    color: liveFetchJob.status === 'done' ? '#34d399' : liveFetchJob.status === 'running' ? '#fbbf24' : liveFetchJob.status === 'queued' ? '#818cf8' : 'var(--text-muted)',
+                    border: `1px solid ${liveFetchJob.status === 'done' ? 'rgba(16,185,129,0.3)' : liveFetchJob.status === 'running' ? 'rgba(234,179,8,0.3)' : liveFetchJob.status === 'queued' ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                  }}>
+                    {liveFetchJob.status === 'idle' ? '⚪ Idle' : liveFetchJob.status === 'queued' ? '🟣 Queued — waiting for laptop...' : liveFetchJob.status === 'running' ? `🟡 Running (${liveFetchJob.progress}/${liveFetchJob.total})` : `✅ Done`}
+                  </span>
+                  <button
+                    onClick={triggerLiveFetch}
+                    disabled={liveFetchTriggering || liveFetchJob.status === 'running' || liveFetchJob.status === 'queued'}
+                    style={{
+                      background: liveFetchTriggering || liveFetchJob.status === 'running' || liveFetchJob.status === 'queued' ? 'rgba(239,68,68,0.3)' : '#ef4444',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '8px 18px',
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: 800,
+                      cursor: liveFetchTriggering || liveFetchJob.status === 'running' || liveFetchJob.status === 'queued' ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6
+                    }}
+                  >
+                    {liveFetchTriggering ? '⏳ Sending...' : liveFetchJob.status === 'running' ? '🔄 Running...' : liveFetchJob.status === 'queued' ? '⏳ Queued...' : '🔴 Fetch All Live Counts'}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Sends a request to your laptop script (<code>laptop-server/run.mjs</code>) via Supabase queue.
+                Your laptop fetches live Instagram follower counts and saves to database.
+                {liveFetchJob.status === 'running' && liveFetchJob.total > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, overflow: 'hidden', height: 8, marginBottom: 6 }}>
+                      <div style={{ width: `${Math.round((liveFetchJob.progress / liveFetchJob.total) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #ef4444, #f97316)', transition: 'width 0.5s ease' }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      {liveFetchJob.progress}/{liveFetchJob.total} profiles — ✅ {liveFetchJob.updated || 0} updated · ❌ {liveFetchJob.failed || 0} failed
+                      {liveFetchJob.last_handle && <> · Processing: <strong style={{ color: '#38bdf8' }}>@{liveFetchJob.last_handle}</strong></>}
+                    </div>
+                  </div>
+                )}
+                {liveFetchJob.status === 'done' && liveFetchJob.last_completed_at && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: '#34d399' }}>
+                    ✅ Last completed: {new Date(liveFetchJob.last_completed_at).toLocaleString()} · {liveFetchJob.updated || 0} updated · {liveFetchJob.failed || 0} failed
+                  </div>
+                )}
+              </div>
+              <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, fontSize: 11.5, color: 'var(--text-muted)' }}>
+                ⚠️ Make sure your laptop is on and <strong>node laptop-server/run.mjs</strong> is running before clicking.
+                The laptop script picks up requests within ~30 seconds.
+              </div>
             </div>
 
             {/* 🌐 Scrape ALL Accounts — Server-Side Nightly Run */}

@@ -26,6 +26,18 @@ const normalizeBioText = (text) => {
     .replace(/\bExceptional Talent\b/g, 'exceptional talent');
 }
 
+function formatStaticDate(dateStr) {
+  if (!dateStr) return 'Recent';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Recent';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  } catch {
+    return 'Recent';
+  }
+}
+
 // ─── Data-driven profile narrative generator ────────────────────────────────
 // Produces structurally different text for each follower tier, account age,
 // and posting behaviour. Deterministic: same inputs → same output every render.
@@ -58,12 +70,12 @@ function generateProfileNarrative(cel, liveRank, postsCount, posts = []) {
     if (age >= 10) {
       parts.push(
         `The account dates back to ${year}, making it over a decade old. Across that time, ${name} has published around ${fmt(postsNum)} posts` +
-        ` — an average of roughly ${postsPerYear.toLocaleString()} posts per year. This level of longevity on the platform signals sustained audience investment rather than a short-term viral spike.`
+        ` — an average of roughly ${postsPerYear.toString()} posts per year. This level of longevity on the platform signals sustained audience investment rather than a short-term viral spike.`
       )
     } else if (age >= 5) {
       parts.push(
         `Active since ${year} (${age} years on the platform), ${name} has built up a library of approximately ${fmt(postsNum)} posts,` +
-        ` averaging around ${postsPerYear.toLocaleString()} per year. This steady publishing cadence suggests deliberate, consistent content strategy rather than purely reactive posting.`
+        ` averaging around ${postsPerYear.toString()} per year. This steady publishing cadence suggests deliberate, consistent content strategy rather than purely reactive posting.`
       )
     } else if (age >= 2) {
       parts.push(
@@ -929,7 +941,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               justifyContent: 'center'
             }}>
               <ShieldCheck size={16} style={{ color: '#10b981' }} />
-              <span>Manually verified as of {new Date(celebrity.updated_at || new Date()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, across <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts.</span>
+              <span suppressHydrationWarning>Manually verified as of {formatStaticDate(celebrity.updated_at)}, across <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts.</span>
             </div>
           </div>
         ) : null}

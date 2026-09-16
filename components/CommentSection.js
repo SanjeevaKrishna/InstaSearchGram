@@ -47,7 +47,7 @@ export default function CommentSection({ targetType, targetSlug, targetName }) {
   // Main input state
   const [content, setContent] = useState('')
   const [authorName, setAuthorName] = useState('')
-  const [selectedAvatar, setSelectedAvatar] = useState(getRandomAvatar())
+  const [selectedAvatar, setSelectedAvatar] = useState({ emoji: '🔥', bg: AVATAR_GRADIENTS[0] })
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
   const [customEmojiInput, setCustomEmojiInput] = useState('')
   const [emojiInputError, setEmojiInputError] = useState('')
@@ -91,9 +91,8 @@ export default function CommentSection({ targetType, targetSlug, targetName }) {
           setSelectedAvatar(parsed.avatar)
         }
       } else {
-        // By default assign random emoji
-        const initialRandom = getRandomAvatar()
-        setSelectedAvatar(initialRandom)
+        // No saved user — assign a random avatar client-side only
+        setSelectedAvatar(getRandomAvatar())
       }
 
       const savedVotes = localStorage.getItem('spialr_comment_votes')

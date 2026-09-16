@@ -171,6 +171,11 @@ export default function ProfilePage({ profile, slug }) {
   const [changeDir, setChangeDir] = useState(null)
   const [isCountingUp, setIsCountingUp] = useState(true)
 
+  // Live follower count from laptop fetch
+  const [liveFetchedCount, setLiveFetchedCount] = useState(null) // null = not yet received
+  const [isLiveFetched, setIsLiveFetched] = useState(false)      // true = laptop returned fresh data
+  const [liveFetchPending, setLiveeFetchPending] = useState(true) // still waiting for laptop
+
   // Extract distinct available months from history (always including Sep & Aug 2026)
   const availableMonths = useMemo(() => {
     const monthsSet = new Set(['2026-09', '2026-08'])
@@ -379,6 +384,76 @@ export default function ProfilePage({ profile, slug }) {
     return () => clearInterval(interval)
   }, [isCountingUp, timeAdjustedBase, dailyGain])
 
+  // 3. Live follower fetch: polls /api/live-count → laptop fetches Instagram
+  //    Polls every 2.5s while user is on page. When fresh data arrives, smoothly updates to real count.
+  useEffect(() => {
+    const handle = profile.instagram_handle
+    if (!handle) return
+
+    let attempts = 0
+    const MAX_ATTEMPTS = 14 // 14 * 2.5s = 35s max polling
+    let stopped = false
+
+    async function checkLiveCount() {
+      if (stopped) return
+      try {
+        const res = await fetch(`/api/live-count?handle=${encodeURIComponent(handle)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const receivedCount = data.count || data.live_count
+
+        if (data.fresh && receivedCount && receivedCount > 0) {
+          setLiveFetchedCount(receivedCount)
+          setIsLiveFetched(true)
+          setLiveeFetchPending(false)
+          stopped = true
+
+          // Smoothly animate towards receivedCount if currently counting or drifted
+          setLiveFollowers((prev) => {
+            const startVal = prev || 0
+            const diff = receivedCount - startVal
+            if (Math.abs(diff) <= 2) return receivedCount
+
+            const startTime = performance.now()
+            const duration = 1200
+            const animateTo = (now) => {
+              if (stopped) return
+              const elapsed = now - startTime
+              const prog = Math.min(elapsed / duration, 1)
+              const ease = 1 - Math.pow(1 - prog, 3)
+              setLiveFollowers(Math.floor(startVal + diff * ease))
+              if (prog < 1) requestAnimationFrame(animateTo)
+              else setLiveFollowers(receivedCount)
+            }
+            requestAnimationFrame(animateTo)
+            return prev
+          })
+          return
+        }
+      } catch {}
+
+      attempts++
+      if (attempts >= MAX_ATTEMPTS) {
+        setLiveeFetchPending(false)
+      }
+    }
+
+    // Check immediately, then poll every 2.5s
+    checkLiveCount()
+    const interval = setInterval(() => {
+      if (stopped || attempts >= MAX_ATTEMPTS) {
+        clearInterval(interval)
+        return
+      }
+      checkLiveCount()
+    }, 2500)
+
+    return () => {
+      stopped = true
+      clearInterval(interval)
+    }
+  }, [profile.instagram_handle])
+
   return (
     <>
       <Head>
@@ -498,7 +573,10 @@ export default function ProfilePage({ profile, slug }) {
       <style>{`
         .grid-square { transition: transform 0.15s ease, filter 0.15s ease; cursor: pointer; }
         .grid-square:hover { transform: scale(1.35); filter: brightness(1.25); z-index: 10; position: relative; }
-        
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.7); }
+        }
         .profile-page-wrapper {
           min-height: 100vh;
           background: var(--background);
@@ -841,11 +919,15 @@ export default function ProfilePage({ profile, slug }) {
                 </a>
               )}
               <div className="profile-tags-container" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
-                {profile.category?.split(',').map((cat, idx) => (
-                  <span key={idx} style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)', padding: '4px 11px', borderRadius: 100, fontSize: 11, fontWeight: 600 }}>
-                    {cat.includes(':') ? cat.split(':')[1].trim() : cat.trim()}
-                  </span>
-                ))}
+                {profile.category && (() => {
+                  const firstCat = profile.category.split(',')[0].trim();
+                  const tagText = firstCat.includes(':') ? firstCat.split(':')[1].trim() : firstCat;
+                  return (
+                    <span style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)', padding: '4px 11px', borderRadius: 100, fontSize: 11, fontWeight: 600 }}>
+                      {tagText}
+                    </span>
+                  );
+                })()}
                 {profile.language && (
                   <span style={{ background: 'var(--surface2)', color: 'var(--text-muted)', border: '1px solid var(--border)', padding: '4px 11px', borderRadius: 100, fontSize: 11, fontWeight: 600 }}>
                     {profile.language}
@@ -855,11 +937,11 @@ export default function ProfilePage({ profile, slug }) {
 
               {/* Responsive Stats Grid */}
               <div className="profile-stats-grid">
-                <div className="profile-stat-box profile-stat-box-featured" style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                <div className="profile-stat-box profile-stat-box-featured" style={{ background: isLiveFetched ? 'rgba(16,185,129,0.08)' : 'rgba(99,102,241,0.07)', border: `1px solid ${isLiveFetched ? 'rgba(16,185,129,0.35)' : 'rgba(99,102,241,0.2)'}`, transition: 'background 0.5s ease, border-color 0.5s ease' }}>
                   <div style={{ 
                     fontSize: 20, 
                     fontWeight: 850, 
-                    color: changeDir === 'up' ? '#10b981' : changeDir === 'down' ? '#ef4444' : '#818cf8', 
+                    color: isLiveFetched ? '#34d399' : changeDir === 'up' ? '#10b981' : changeDir === 'down' ? '#ef4444' : '#818cf8', 
                     fontFamily: 'var(--font-display)', 
                     marginBottom: 4,
                     transition: 'color 0.2s ease',
@@ -869,13 +951,27 @@ export default function ProfilePage({ profile, slug }) {
                     gap: 5
                   }}>
                     <span>{liveFollowers ? liveFollowers.toLocaleString() : '—'}</span>
-                    {changeDir && (
+                    {changeDir && !isLiveFetched && (
                       <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.9 }}>
                         {changeDir === 'up' ? '▲' : '▼'}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Real Time Followers</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    {isLiveFetched ? (
+                      <>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981', display: 'inline-block', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
+                        <span style={{ fontSize: 9.5, color: '#6ee7b7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Live Followers</span>
+                      </>
+                    ) : liveFetchPending ? (
+                      <>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', boxShadow: '0 0 5px #f59e0b88', display: 'inline-block', animation: 'pulse-dot 1s ease-in-out infinite' }} />
+                        <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fetching Live...</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Real Time Followers</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Dynamic Relatable Daily Change Card */}
@@ -990,6 +1086,43 @@ export default function ProfilePage({ profile, slug }) {
             })
 
             if (sourceList.length > 0) {
+              // Interpolate any gaps between valid scrape dates with daily average values
+              const validPoints = sourceList.filter(h => h && h.date && h.count && h.status !== 'Server Failed' && !h.serverFailed);
+              validPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
+              if (validPoints.length >= 2) {
+                for (let i = 0; i < validPoints.length - 1; i++) {
+                  const pPrev = validPoints[i];
+                  const pNext = validPoints[i + 1];
+                  const dP = new Date(pPrev.date + 'T00:00:00Z');
+                  const dN = new Date(pNext.date + 'T00:00:00Z');
+                  const diffDays = Math.round((dN - dP) / (1000 * 60 * 60 * 24));
+                  if (diffDays > 1) {
+                    const delta = pNext.count - pPrev.count;
+                    const seed = (profile.instagram_handle || profile.name || 'default');
+                    let hash = 0;
+                    for (let c = 0; c < seed.length; c++) {
+                      hash = ((hash << 5) - hash) + seed.charCodeAt(c);
+                      hash |= 0;
+                    }
+                    const rawWeights = [];
+                    for (let w = 0; w < diffDays; w++) {
+                      const x = Math.sin(hash + (w + 1) * 1337) * 10000;
+                      const rnd = x - Math.floor(x);
+                      rawWeights.push(0.65 + rnd * 0.70);
+                    }
+                    const sumRaw = rawWeights.reduce((a, b) => a + b, 0);
+                    const normWeights = rawWeights.map(w => w / sumRaw);
+
+                    let runningCount = pPrev.count;
+                    for (let step = 1; step < diffDays; step++) {
+                      const intDate = new Date(dP.getTime() + step * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      runningCount += Math.round(delta * normWeights[step - 1]);
+                      entriesByDate[intDate] = { date: intDate, count: runningCount };
+                    }
+                  }
+                }
+              }
+
               const firstDateStr = sourceList[0].date
               const lastDateStr = sourceList[sourceList.length - 1].date
               const cur = new Date(firstDateStr)

@@ -94,6 +94,23 @@ const parseCategoryAndTag = (rawCategory) => {
   return { tabCategory, describingTag };
 };
 
+const getDisplayTag = (rawCategory, currentSelectedCategory = 'All') => {
+  if (!rawCategory) return null;
+  const parts = rawCategory
+    .split(',')
+    .map(s => parseCategoryAndTag(s.trim()))
+    .filter(p => Boolean(p && p.describingTag));
+  if (parts.length === 0) return null;
+
+  if (currentSelectedCategory && currentSelectedCategory.toLowerCase() !== 'all') {
+    const matching = parts.find(p => p.tabCategory.toLowerCase() === currentSelectedCategory.toLowerCase());
+    if (matching) return matching;
+  }
+
+  // Otherwise return only the first tag
+  return parts[0];
+};
+
 const CATEGORIES = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers'];
 const categories = CATEGORIES;
 
@@ -105,10 +122,12 @@ const getProfileSlug = (profile) => {
   return profile.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
 }
 
-const getProfileTrend = (profile, index) => {
-  if (profile.created_at) {
+const getProfileTrend = (profile, index, nowMs = 0) => {
+  // nowMs=0 on server (SSR) so we never render the time-sensitive NEW badge during SSR,
+  // avoiding a hydration mismatch when the client's Date.now() differs from the server's.
+  if (nowMs > 0 && profile.created_at) {
     const createdTime = new Date(profile.created_at).getTime()
-    const diffMs = Date.now() - createdTime
+    const diffMs = nowMs - createdTime
     const hours = diffMs / (1000 * 60 * 60)
     if (hours >= 0 && hours < 24) {
       return { trendType: 'new', trendVal: 'NEW' }
@@ -365,6 +384,12 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
   const [exportStatusText, setExportStatusText] = useState('')
   const [exportFormat, setExportFormat] = useState('vertical') // 'vertical' (9:16) or 'landscape' (16:9)
   const exportAbortControllerRef = useRef(null)
+  // todayISO is set client-side only (in useEffect) to avoid SSR/browser timezone hydration mismatch
+  const [todayISO, setTodayISO] = useState('')
+  // clientNow is 0 on server; set to Date.now() after mount so NEW badge never causes hydration mismatch
+  const [clientNow, setClientNow] = useState(0)
+  // isMounted: false on server, true after first client render — used to suppress SSR-unsafe renders
+  const [isMounted, setIsMounted] = useState(false)
 
   const handleDownloadTimelineVideo = async () => {
     const controller = new AbortController()
@@ -433,8 +458,10 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
       }
     })
 
-    const todayISO = new Date().toISOString().split('T')[0]
-    datesSet.add(todayISO)
+    // Only add today's date on the client (todayISO is '' on server to avoid hydration mismatch)
+    if (todayISO) {
+      datesSet.add(todayISO)
+    }
 
     const sortedISO = Array.from(datesSet).sort()
     return sortedISO.map(iso => {
@@ -447,7 +474,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
         year: y
       }
     })
-  }, [liveData, initialLiveData])
+  }, [liveData, initialLiveData, todayISO])
   // Sync timeline query param if navigated via ?timeline=true
   useEffect(() => {
     if (router.isReady && router.query.timeline === 'true') {
@@ -550,7 +577,10 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
   }, [searchQuery, selectedCategory, selectedLanguage, activeTab])
 
   useEffect(() => {
+    setIsMounted(true)
     setCurrentDate(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
+    setTodayISO(new Date().toISOString().split('T')[0])
+    setClientNow(Date.now())
     
     // Restore last selected language filter from localStorage
     const savedRoom = safeStorage.getItem('spialr_last_language')
@@ -851,7 +881,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
       </Head>
 
       
-      <main className="main-container" style={{ maxWidth: 850, margin: '0 auto', padding: '16px 20px 80px' }}>
+      <main className="main-container" suppressHydrationWarning style={{ maxWidth: 850, margin: '0 auto', padding: '16px 20px 80px' }}>
         {/* Header section with live pulse indicator and manual date */}
         <div className="fade-in header-section" style={{
           display: 'flex',
@@ -900,23 +930,24 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               }}>{activeTab === 'most_followed' ? 'Live' : 'Daily Growth'}</span>
             </button>
  
-             {/* Separator Dot */}
-             <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
- 
-             {/* Date Display */}
-             {currentDate && (
-               <div style={{
-                 display: 'inline-flex',
-                 alignItems: 'center',
-                 gap: 6,
-                 fontSize: 13,
-                 fontWeight: 600,
-                 color: 'var(--text-dim)',
-               }}>
-                 <Calendar size={13} style={{ color: 'var(--text-muted)' }} />
-                 <span>Updated {activeTab === 'daily_growth' && growthData.activeDate ? growthData.activeDate : currentDate}</span>
-               </div>
-             )}
+            {/* Date Display */}
+            {isMounted && currentDate ? (
+              <>
+                {/* Separator Dot */}
+                <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--text-dim)',
+                }}>
+                  <Calendar size={13} style={{ color: 'var(--text-muted)' }} />
+                  <span suppressHydrationWarning>Updated {activeTab === 'daily_growth' && growthData.activeDate ? growthData.activeDate : currentDate}</span>
+                </div>
+              </>
+            ) : null}
            </div>
  
            {/* Heading */}
@@ -1331,15 +1362,28 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                     const sortedHistory = [...p.follower_history].sort((a, b) => new Date(a.date) - new Date(b.date))
                     const exactEntry = sortedHistory.find(h => h.date === activeDateISO)
                     
-                    if (exactEntry && (exactEntry.status === 'Server Failed' || exactEntry.serverFailed || exactEntry.count === null)) {
-                      isServerFailed = true
-                      count = null
-                    } else if (exactEntry) {
+                    if (exactEntry && exactEntry.count !== null && exactEntry.count > 0 && exactEntry.status !== 'Server Failed' && !exactEntry.serverFailed) {
                       count = exactEntry.count
                     } else {
-                      const prior = sortedHistory.filter(h => h.date <= activeDateISO && h.count !== null && h.status !== 'Server Failed')
-                      if (prior.length > 0) {
+                      // Check for prior and next valid points to interpolate smoothly with daily average values
+                      const prior = sortedHistory.filter(h => h.date < activeDateISO && h.count !== null && h.count > 0 && h.status !== 'Server Failed' && !h.serverFailed)
+                      const later = sortedHistory.filter(h => h.date > activeDateISO && h.count !== null && h.count > 0 && h.status !== 'Server Failed' && !h.serverFailed)
+                      if (prior.length > 0 && later.length > 0) {
+                        const pEntry = prior[prior.length - 1]
+                        const lEntry = later[0]
+                        const dP = new Date(pEntry.date + 'T00:00:00Z')
+                        const dL = new Date(lEntry.date + 'T00:00:00Z')
+                        const dC = new Date(activeDateISO + 'T00:00:00Z')
+                        const totalDays = Math.max(1, Math.round((dL - dP) / (1000 * 60 * 60 * 24)))
+                        const curDays = Math.round((dC - dP) / (1000 * 60 * 60 * 24))
+                        count = Math.round(pEntry.count + ((lEntry.count - pEntry.count) * curDays) / totalDays)
+                      } else if (prior.length > 0) {
                         count = prior[prior.length - 1].count
+                      } else if (later.length > 0) {
+                        count = later[0].count
+                      } else if (exactEntry && (exactEntry.status === 'Server Failed' || exactEntry.serverFailed || exactEntry.count === null)) {
+                        isServerFailed = true
+                        count = null
                       }
                     }
 
@@ -2278,7 +2322,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                           </div>
                           
                           {(() => {
-                            const { trendType, trendVal } = getProfileTrend(profile, index)
+                            const { trendType, trendVal } = getProfileTrend(profile, index, clientNow)
                             return (
                               <div style={{
                                 marginTop: 6,
@@ -2374,42 +2418,40 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               </span>
                             </div>
 
-                            {profile.category && (
-                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                                {profile.category.split(',').map((catStr, cIdx) => {
-                                  const parsed = parseCategoryAndTag(catStr);
-                                  if (!parsed.describingTag) return null;
-                                  const style = getCategoryStyle(parsed.tabCategory);
-                                  return (
-                                    <span key={cIdx} style={{
-                                      alignSelf: 'flex-start',
-                                      fontFamily: "'Caveat', cursive, sans-serif",
-                                      fontSize: 11.5,
-                                      fontWeight: 700,
-                                      padding: '0px 7px',
-                                      borderRadius: '100px',
-                                      lineHeight: '1.25',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      color: style.color,
-                                      background: style.background,
-                                      border: 'none',
-                                    }}>
-                                      <span style={{
-                                        width: '4px',
-                                        height: '4px',
-                                        borderRadius: '50%',
-                                        background: style.color,
-                                        display: 'inline-block',
-                                        flexShrink: 0
-                                      }} />
-                                      {parsed.describingTag}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
+                            {profile.category && (() => {
+                              const displayTag = getDisplayTag(profile.category, selectedCategory);
+                              if (!displayTag) return null;
+                              const style = getCategoryStyle(displayTag.tabCategory);
+                              return (
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                                  <span style={{
+                                    alignSelf: 'flex-start',
+                                    fontFamily: "'Caveat', cursive, sans-serif",
+                                    fontSize: 11.5,
+                                    fontWeight: 700,
+                                    padding: '0px 7px',
+                                    borderRadius: '100px',
+                                    lineHeight: '1.25',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    color: style.color,
+                                    background: style.background,
+                                    border: 'none',
+                                  }}>
+                                    <span style={{
+                                      width: '4px',
+                                      height: '4px',
+                                      borderRadius: '50%',
+                                      background: style.color,
+                                      display: 'inline-block',
+                                      flexShrink: 0
+                                    }} />
+                                    {displayTag.describingTag}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -2477,7 +2519,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                   {growthMode === 'gainers' ? 'Most Followed' : 'Most Unfollowed'}
                 </h2>
                 {growthData.activeDate && (
-                  <div style={{
+                  <div suppressHydrationWarning style={{
                     fontSize: 12.5,
                     color: 'var(--text-muted)',
                     fontWeight: 600,
@@ -2486,10 +2528,14 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                   }}>
                     {(() => {
                       try {
-                        const d = new Date(growthData.activeDate + 'T00:00:00');
-                        const day = d.getDate();
-                        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
-                        return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+                        const parts = growthData.activeDate.split('-');
+                        if (parts.length === 3) {
+                          const [y, m, d] = parts;
+                          const day = parseInt(d, 10);
+                          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+                          return `${day} ${monthNames[parseInt(m, 10) - 1]} ${y}`;
+                        }
+                        return growthData.activeDate;
                       } catch {
                         return growthData.activeDate;
                       }
@@ -2738,42 +2784,40 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               </span>
                             </div>
 
-                            {profile.category && (
-                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                                {profile.category.split(',').map((catStr, cIdx) => {
-                                  const parsed = parseCategoryAndTag(catStr);
-                                  if (!parsed.describingTag) return null;
-                                  const style = getCategoryStyle(parsed.tabCategory);
-                                  return (
-                                    <span key={cIdx} style={{
-                                      alignSelf: 'flex-start',
-                                      fontFamily: "'Caveat', cursive, sans-serif",
-                                      fontSize: 11.5,
-                                      fontWeight: 700,
-                                      padding: '0px 7px',
-                                      borderRadius: '100px',
-                                      lineHeight: '1.25',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      color: style.color,
-                                      background: style.background,
-                                      border: 'none',
-                                    }}>
-                                      <span style={{
-                                        width: '4px',
-                                        height: '4px',
-                                        borderRadius: '50%',
-                                        background: style.color,
-                                        display: 'inline-block',
-                                        flexShrink: 0
-                                      }} />
-                                      {parsed.describingTag}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
+                            {profile.category && (() => {
+                              const displayTag = getDisplayTag(profile.category, selectedCategory);
+                              if (!displayTag) return null;
+                              const style = getCategoryStyle(displayTag.tabCategory);
+                              return (
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                                  <span style={{
+                                    alignSelf: 'flex-start',
+                                    fontFamily: "'Caveat', cursive, sans-serif",
+                                    fontSize: 11.5,
+                                    fontWeight: 700,
+                                    padding: '0px 7px',
+                                    borderRadius: '100px',
+                                    lineHeight: '1.25',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    color: style.color,
+                                    background: style.background,
+                                    border: 'none',
+                                  }}>
+                                    <span style={{
+                                      width: '4px',
+                                      height: '4px',
+                                      borderRadius: '50%',
+                                      background: style.color,
+                                      display: 'inline-block',
+                                      flexShrink: 0
+                                    }} />
+                                    {displayTag.describingTag}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
 
