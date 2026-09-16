@@ -19,8 +19,112 @@ export default async function handler(req, res) {
 
     const supabase = getAdminClient()
 
-    // GET - list all celebrities (paginated to fetch all, bypassing 1000-row limit)
+    // GET - list celebrities or fetch single celebrity by id/handle
     if (req.method === 'GET') {
+      const { id, handle } = req.query;
+
+      // Fast path for single celebrity by ID
+      if (id) {
+        let { data, error } = await supabase
+          .from('celebrities')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        // If not found by ID in celebrities, check by handle if provided
+        if (!data && handle) {
+          const clean = handle.trim().toLowerCase().replace(/^@/, '');
+          const byHandle = await supabase
+            .from('celebrities')
+            .select('*')
+            .ilike('instagram_handle', clean)
+            .maybeSingle();
+          if (byHandle.data) data = byHandle.data;
+        }
+
+        // If still not found, check most_followed table
+        if (!data) {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+          if (isUuid) {
+            const mf = await supabase
+              .from('most_followed')
+              .select('*')
+              .eq('id', id)
+              .maybeSingle();
+            if (mf.data) {
+              if (mf.data.instagram_handle) {
+                const cleanMf = mf.data.instagram_handle.trim().toLowerCase().replace(/^@/, '');
+                const celMatch = await supabase
+                  .from('celebrities')
+                  .select('*')
+                  .ilike('instagram_handle', cleanMf)
+                  .maybeSingle();
+                if (celMatch.data) {
+                  data = celMatch.data;
+                } else {
+                  data = {
+                    id: mf.data.id,
+                    name: mf.data.name?.trim(),
+                    instagram_handle: mf.data.instagram_handle?.trim().replace(/^@/, ''),
+                    followers_count: mf.data.followers_count || 0,
+                    posts_count: 0
+                  };
+                }
+              }
+            }
+          }
+        }
+
+        return res.status(200).json({ celebrity: data, celebrities: data ? [data] : [] });
+      }
+
+      // Fast path for single celebrity by Handle
+      if (handle) {
+        const clean = handle.trim().toLowerCase().replace(/^@/, '');
+        let { data } = await supabase
+          .from('celebrities')
+          .select('*')
+          .ilike('instagram_handle', clean)
+          .maybeSingle();
+
+        if (!data) {
+          const partial = await supabase
+            .from('celebrities')
+            .select('*')
+            .ilike('instagram_handle', `%${clean}%`)
+            .limit(1);
+          if (partial.data && partial.data.length > 0) data = partial.data[0];
+        }
+
+        if (!data) {
+          const slugMatch = await supabase
+            .from('celebrities')
+            .select('*')
+            .ilike('slug', clean)
+            .maybeSingle();
+          if (slugMatch.data) data = slugMatch.data;
+        }
+
+        if (!data) {
+          const mf = await supabase
+            .from('most_followed')
+            .select('*')
+            .ilike('instagram_handle', clean)
+            .maybeSingle();
+          if (mf.data) {
+            data = {
+              id: mf.data.id,
+              name: mf.data.name?.trim(),
+              instagram_handle: mf.data.instagram_handle?.trim().replace(/^@/, ''),
+              followers_count: mf.data.followers_count || 0,
+              posts_count: 0
+            };
+          }
+        }
+
+        return res.status(200).json({ celebrity: data, celebrities: data ? [data] : [] });
+      }
+
       let celebritiesData = []
       let from = 0
       let to = 999

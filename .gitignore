@@ -7,3 +7,4 @@ node_modules/
 
 .vercel
 .env*
+scripts/.cloudinary-migration-*.json

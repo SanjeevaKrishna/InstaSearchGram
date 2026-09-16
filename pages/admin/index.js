@@ -384,7 +384,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
                 }
               }
             }} />
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select an image to upload securely to Cloudinary</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Select an image to upload securely to Storage</div>
           </div>
         )}
       </div>
@@ -1791,6 +1791,7 @@ export default function AdminPanel() {
   const [allScrapeProgress, setAllScrapeProgress] = useState({ current: 0, total: 0, percent: 0, currentName: '', currentHandle: '', status: '', updated: 0, failed: 0 })
   const [allScrapeLogs, setAllScrapeLogs] = useState([])
   const [allScrapeResult, setAllScrapeResult] = useState(null)
+  const [skipLoading, setSkipLoading] = useState(false)
   const allScrapeAbortRef = useRef(null)
 
   // Trending Reels batch scraper state
@@ -1826,6 +1827,26 @@ export default function AdminPanel() {
   const [mostLikedComments, setMostLikedComments] = useState([])
   const [showMostLikedCommentsForm, setShowMostLikedCommentsForm] = useState(false)
   const [editingMostLikedComments, setEditingMostLikedComments] = useState(null)
+
+  const [storageUsage, setStorageUsage] = useState(null)
+  const [loadingStorage, setLoadingStorage] = useState(false)
+
+  const fetchStorageUsage = async (force = false) => {
+    try {
+      setLoadingStorage(true)
+      const res = await adminFetch(`/api/admin/storage_usage${force ? '?refresh=true' : ''}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success) {
+          setStorageUsage(data)
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch storage usage:', e)
+    } finally {
+      setLoadingStorage(false)
+    }
+  }
 
   const handleDragStart = (e, index) => {
     setDraggedIndex(index)
@@ -1941,7 +1962,15 @@ export default function AdminPanel() {
 
   const handleRefreshStats = (cel) => {
     if (!cel.instagram_handle) return alert('No Instagram handle set for this profile!');
-    window.open(`/admin/scrape?id=${cel.id}&handle=${encodeURIComponent(cel.instagram_handle)}`, '_blank');
+    const url = `/admin/scrape?id=${cel.id}&handle=${encodeURIComponent(cel.instagram_handle.replace(/^@/, ''))}`;
+    try {
+      const win = window.open(url, '_blank');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        window.location.href = url;
+      }
+    } catch {
+      window.location.href = url;
+    }
   }
 
   // ── Automatic Batch Scraper States ──
@@ -2378,6 +2407,7 @@ export default function AdminPanel() {
   useEffect(() => {
     if (!authed) return
     loadData()
+    fetchStorageUsage()
   }, [authed, tab])
 
   const loadData = async () => {
@@ -2717,17 +2747,43 @@ export default function AdminPanel() {
     setBatchUpdating(false)
   }
 
-  const handleScrapeAllAccounts = async () => {
+  const handleScrapeAllAccounts = async ({ onlyMissing = false } = {}) => {
     const withHandles = mostFollowed.filter(p => p.instagram_handle && p.instagram_handle.trim() !== '')
-    const total = withHandles.length
-    const estMinutes = Math.ceil((total * 1.0) / (4 * 60)) + 1
-    if (!confirm(`⚡ Turbo Scrape ALL ${total} accounts with Instagram handles?\n\nThis runs with parallel 4x multi-threading.\n\nEstimated time: ~${estMinutes} minutes.`)) return
+    let targetList = withHandles
+
+    const now = new Date()
+    const istOffsetMs = 5.5 * 60 * 60 * 1000
+    const istDate = new Date(now.getTime() + istOffsetMs)
+    const istHour = istDate.getUTCHours()
+    const effectiveDate = istHour < 6
+      ? new Date(istDate.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      : istDate.toISOString().split('T')[0]
+
+    if (onlyMissing) {
+      targetList = withHandles.filter(p => !Array.isArray(p.follower_history) || !p.follower_history.some(h => h.date === effectiveDate && h.count))
+    }
+
+    const total = targetList.length
+    if (total === 0) {
+      showToast('All accounts already have follower counts for today! ✨')
+      return
+    }
+
+    const estMinutes = Math.ceil((total * 3.5) / (2 * 60)) + 1
+    const promptMsg = onlyMissing
+      ? `⚡ Resume Scrape for ${total} REMAINING unscraped accounts?\n\nEstimated time: ~${estMinutes} minutes.`
+      : `⚡ Turbo Scrape ALL ${total} accounts with Instagram handles?\n\nEstimated time: ~${estMinutes} minutes.`
+
+    if (!confirm(promptMsg)) return
 
     setAllScrapeRunning(true)
     setAllScrapeResult(null)
     setAllScrapeLogs([])
     setAllScrapeProgress({ current: 0, total, percent: 0, currentName: '', currentHandle: '', status: 'Starting batch scrape...', updated: 0, failed: 0 })
     allScrapeAbortRef.current = new AbortController()
+
+    let receivedComplete = false
+    let lastProgress = { current: 0, total, updated: 0, failed: 0 }
 
     try {
       const token = getToken()
@@ -2737,6 +2793,7 @@ export default function AdminPanel() {
           'Content-Type': 'application/json',
           'x-admin-token': token || ''
         },
+        body: JSON.stringify({ onlyMissing }),
         signal: allScrapeAbortRef.current.signal
       })
 
@@ -2762,7 +2819,14 @@ export default function AdminPanel() {
               const data = JSON.parse(line.slice(6))
               if (data.type === 'start') {
                 setAllScrapeProgress(prev => ({ ...prev, total: data.total }))
+                lastProgress.total = data.total
               } else if (data.type === 'progress') {
+                lastProgress = {
+                  current: data.current,
+                  total: data.total,
+                  updated: data.updated,
+                  failed: data.failed
+                }
                 setAllScrapeProgress({
                   current: data.current,
                   total: data.total,
@@ -2784,7 +2848,36 @@ export default function AdminPanel() {
                     error: data.error
                   }
                 ])
+              } else if (data.type === 'connection_lost') {
+                setAllScrapeProgress(prev => ({
+                  ...prev,
+                  status: data.message,
+                  isOffline: true
+                }))
+                showToast(data.message, 'warning')
+              } else if (data.type === 'connection_restored') {
+                setAllScrapeProgress(prev => ({
+                  ...prev,
+                  status: data.message,
+                  isOffline: false
+                }))
+                showToast(data.message, 'success')
+              } else if (data.type === 'stopped_no_internet') {
+                receivedComplete = true
+                setAllScrapeRunning(false)
+                setAllScrapeResult({
+                  error: data.message,
+                  canResume: true,
+                  updated: lastProgress.updated,
+                  failed: lastProgress.failed,
+                  total: lastProgress.total
+                })
+                showToast('Batch paused safely due to internet disconnection.')
+                const loadRes = await adminFetch('/api/admin/most_followed')
+                const loadData = await loadRes.json()
+                setMostFollowed(loadData.profiles || [])
               } else if (data.type === 'complete') {
+                receivedComplete = true
                 setAllScrapeResult(data)
                 setAllScrapeRunning(false)
                 showToast(`🎉 Batch scrape complete! ${data.updated} updated, ${data.failed} failed.`)
@@ -2799,21 +2892,57 @@ export default function AdminPanel() {
           }
         }
       }
+
+      // If stream ended without an explicit 'complete' event (e.g. browser disconnected / proxy timeout)
+      if (!receivedComplete && !allScrapeAbortRef.current?.signal?.aborted) {
+        setAllScrapeRunning(false)
+        setAllScrapeResult({
+          error: `Stream disconnected at [${lastProgress.current} / ${lastProgress.total}]. Data was saved to database up to this point. You can click "Resume Unscraped" below to continue.`,
+          canResume: true,
+          updated: lastProgress.updated,
+          failed: lastProgress.failed,
+          total: lastProgress.total
+        })
+        const loadRes = await adminFetch('/api/admin/most_followed')
+        const loadData = await loadRes.json()
+        setMostFollowed(loadData.profiles || [])
+      }
     } catch (err) {
       if (err.name === 'AbortError') {
         showToast('Batch scraping stopped by admin.')
       } else {
-        setAllScrapeResult({ error: err.message })
+        setAllScrapeResult({ error: err.message, canResume: true })
       }
       setAllScrapeRunning(false)
     }
   }
 
-  const handleAbortAllScrape = () => {
+  const handleAbortAllScrape = async () => {
     if (allScrapeAbortRef.current) {
       allScrapeAbortRef.current.abort()
     }
+    try {
+      await adminFetch('/api/admin/batch_scrape_followers?action=stop', { method: 'POST' })
+    } catch (e) {}
     setAllScrapeRunning(false)
+  }
+
+  const handleSkipCurrentAccount = async () => {
+    setSkipLoading(true)
+    try {
+      showToast(`⏭️ Skipping @${allScrapeProgress.currentHandle || 'current account'}...`)
+      const res = await adminFetch('/api/admin/batch_scrape_followers?action=skip', {
+        method: 'POST'
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast(`⏭️ Current account skipped! Moving to next...`)
+      }
+    } catch (err) {
+      showToast(`Failed to skip: ${err.message}`, 'error')
+    } finally {
+      setTimeout(() => setSkipLoading(false), 500)
+    }
   }
 
   const handleRefreshTrendingReels = async (targetTable = 'viral_reels') => {
@@ -3204,6 +3333,24 @@ export default function AdminPanel() {
             </div>
           </div>
           <button
+            onClick={handleSkipCurrentAccount}
+            disabled={skipLoading}
+            style={{
+              background: 'rgba(234, 179, 8, 0.25)',
+              border: '1px solid rgba(234, 179, 8, 0.5)',
+              color: '#facc15',
+              padding: '6px 12px',
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 800,
+              cursor: skipLoading ? 'wait' : 'pointer',
+              flexShrink: 0
+            }}
+            title="Skip current account immediately and move to next"
+          >
+            {skipLoading ? '⏳' : '⏭️ Skip'}
+          </button>
+          <button
             onClick={handleAbortAllScrape}
             style={{
               background: 'rgba(239, 68, 68, 0.25)',
@@ -3311,26 +3458,83 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {/* Database Usage Tracker */}
-      <div style={{ maxWidth: 1100, margin: '24px auto 0', padding: '0 20px' }}>
-        <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Usage Trackers */}
+      <div style={{ maxWidth: 1100, margin: '24px auto 0', padding: '0 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+
+        {/* Database Usage */}
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-display)' }}>Database Usage (Estimated)</span>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
-              {(((JSON.stringify(celebrities).length + JSON.stringify(posts).length + JSON.stringify(mostFollowed).length) / 1024 / 1024) || 0).toFixed(2)} MB / 500 MB
+            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)' }}>🗄️ Database Usage</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+              {(((JSON.stringify(celebrities).length + JSON.stringify(posts).length + JSON.stringify(mostFollowed).length) / 1024 / 1024) || 0).toFixed(1)} MB / 500 MB
             </span>
           </div>
           <div style={{ width: '100%', height: 8, background: 'var(--surface2)', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{ 
-              height: '100%', 
-              background: 'var(--gradient)', 
-              width: `${Math.min(100, Math.max(0.5, ((JSON.stringify(celebrities).length + JSON.stringify(posts).length + JSON.stringify(mostFollowed).length) / 1024 / 1024) / 500 * 100))}%` 
+            <div style={{
+              height: '100%',
+              background: 'var(--gradient)',
+              width: `${Math.min(100, Math.max(0.5, ((JSON.stringify(celebrities).length + JSON.stringify(posts).length + JSON.stringify(mostFollowed).length) / 1024 / 1024) / 500 * 100))}%`,
+              transition: 'width 0.4s ease'
             }} />
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-            Rows tracked: {celebrities.length} celebrities, {posts.length} posts, {mostFollowed.length} most followed
+            {celebrities.length} celebrities · {posts.length} posts · {mostFollowed.length} most followed
           </div>
         </div>
+
+        {/* Supabase Storage Usage */}
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)' }}>🪣 Image Storage</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {storageUsage && (
+                <span style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: storageUsage.percentUsed > 85 ? '#ff4444' : storageUsage.percentUsed > 65 ? '#ff9500' : '#22c55e'
+                }}>
+                  {storageUsage.usedMb} MB / {storageUsage.maxMb} MB
+                </span>
+              )}
+              <button
+                onClick={() => fetchStorageUsage(true)}
+                disabled={loadingStorage}
+                style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: loadingStorage ? 'not-allowed' : 'pointer' }}
+              >
+                {loadingStorage ? '⏳' : '🔄'}
+              </button>
+            </div>
+          </div>
+          <div style={{ width: '100%', height: 8, background: 'var(--surface2)', borderRadius: 4, overflow: 'hidden' }}>
+            {storageUsage ? (
+              <div style={{
+                height: '100%',
+                background: storageUsage.percentUsed > 85
+                  ? 'linear-gradient(135deg, #ff4444, #cc0000)'
+                  : storageUsage.percentUsed > 65
+                    ? 'linear-gradient(135deg, #ff9500, #e67e00)'
+                    : 'var(--gradient)',
+                width: `${Math.min(100, Math.max(0.5, storageUsage.percentUsed))}%`,
+                transition: 'width 0.4s ease'
+              }} />
+            ) : (
+              <div style={{ height: '100%', width: loadingStorage ? '30%' : '0%', background: 'var(--surface3)', borderRadius: 4, transition: 'width 0.5s ease' }} />
+            )}
+          </div>
+          {storageUsage ? (
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
+              <span>{storageUsage.totalFiles.toLocaleString()} images · {storageUsage.percentUsed}% used</span>
+              <span style={{ color: storageUsage.remainingMb < 100 ? '#ff9500' : 'var(--text-dim)' }}>
+                {storageUsage.remainingMb} MB free
+              </span>
+            </div>
+          ) : (
+            <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              {loadingStorage ? 'Calculating storage usage...' : 'Click 🔄 to check storage'}
+            </div>
+          )}
+        </div>
+
       </div>
 
       <main style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px' }}>
@@ -3410,7 +3614,13 @@ export default function AdminPanel() {
                 <button 
                   className="btn" 
                   onClick={() => {
-                    window.open('/admin/scrape?mode=daily', '_blank')
+                    const url = '/admin/scrape?mode=daily';
+                    try {
+                      const win = window.open(url, '_blank');
+                      if (!win || win.closed || typeof win.closed === 'undefined') window.location.href = url;
+                    } catch {
+                      window.location.href = url;
+                    }
                   }}
                   style={{ 
                     background: '#10b981', 
@@ -3438,7 +3648,13 @@ export default function AdminPanel() {
                       alert('All ' + celebrities.length + ' profiles in your database are already scraped! There are 0 unscraped profiles.')
                       return
                     }
-                    window.open('/admin/scrape?mode=unscraped', '_blank')
+                    const url = '/admin/scrape?mode=unscraped';
+                    try {
+                      const win = window.open(url, '_blank');
+                      if (!win || win.closed || typeof win.closed === 'undefined') window.location.href = url;
+                    } catch {
+                      window.location.href = url;
+                    }
                   }}
                   style={{ 
                     background: unscrapedCelebrities.length > 0 ? '#38bdf8' : '#27272a', 
@@ -3462,7 +3678,13 @@ export default function AdminPanel() {
                 <button 
                   className="btn" 
                   onClick={() => {
-                    window.open('/admin/scrape?mode=full', '_blank')
+                    const url = '/admin/scrape?mode=full';
+                    try {
+                      const win = window.open(url, '_blank');
+                      if (!win || win.closed || typeof win.closed === 'undefined') window.location.href = url;
+                    } catch {
+                      window.location.href = url;
+                    }
                   }}
                   style={{ 
                     background: '#e1306c', 
@@ -4694,21 +4916,41 @@ export default function AdminPanel() {
                   🌐 Scrape ALL Accounts — Nightly Batch Run
                 </h3>
                 {allScrapeRunning && (
-                  <button
-                    onClick={handleAbortAllScrape}
-                    style={{
-                      background: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      padding: '6px 14px',
-                      borderRadius: 8,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ⏹️ Stop Batch
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button
+                      onClick={handleSkipCurrentAccount}
+                      disabled={skipLoading}
+                      style={{
+                        background: '#eab308',
+                        color: '#713f12',
+                        border: 'none',
+                        padding: '6px 14px',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        cursor: skipLoading ? 'wait' : 'pointer',
+                        boxShadow: '0 2px 8px rgba(234, 179, 8, 0.3)'
+                      }}
+                      title="Skip this account and move to next immediately"
+                    >
+                      {skipLoading ? '⏳ Skipping...' : `⏭️ Skip Account (${allScrapeProgress.currentHandle ? `@${allScrapeProgress.currentHandle}` : 'Current'})`}
+                    </button>
+                    <button
+                      onClick={handleAbortAllScrape}
+                      style={{
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        padding: '6px 14px',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⏹️ Stop Batch
+                    </button>
+                  </div>
                 )}
               </div>
               
@@ -4730,6 +4972,26 @@ export default function AdminPanel() {
                       {allScrapeProgress.percent}%
                     </span>
                   </div>
+
+                  {/* Offline Warning Banner */}
+                  {allScrapeProgress.isOffline && (
+                    <div style={{
+                      background: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      borderRadius: 10,
+                      padding: '10px 14px',
+                      color: '#b45309',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: 12
+                    }}>
+                      <span>⚠️ Internet Connection Lost</span>
+                      <span style={{ fontWeight: 500, color: '#92400e' }}>— Scraper paused automatically. Will resume instantly once internet reconnects.</span>
+                    </div>
+                  )}
 
                   {/* Progress Bar */}
                   <div style={{ width: '100%', height: 12, background: '#f4f4f5', borderRadius: 6, overflow: 'hidden', marginBottom: 14 }}>
@@ -4763,7 +5025,7 @@ export default function AdminPanel() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <button
                     className="btn btn-primary"
-                    onClick={handleScrapeAllAccounts}
+                    onClick={() => handleScrapeAllAccounts({ onlyMissing: false })}
                     style={{
                       padding: '12px 24px',
                       fontSize: 14,
@@ -4776,6 +5038,24 @@ export default function AdminPanel() {
                     }}
                   >
                     ⚡ Turbo Scrape All {mostFollowed.filter(p => p.instagram_handle).length} Accounts (~3 mins)
+                  </button>
+
+                  <button
+                    className="btn"
+                    onClick={() => handleScrapeAllAccounts({ onlyMissing: true })}
+                    style={{
+                      padding: '12px 20px',
+                      fontSize: 14,
+                      background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 12,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(2,132,199,0.3)'
+                    }}
+                  >
+                    ▶️ Scrape Only Remaining Unscraped for Today
                   </button>
                 </div>
               )}
@@ -4792,7 +5072,27 @@ export default function AdminPanel() {
                   fontSize: 13
                 }}>
                   {allScrapeResult.error ? (
-                    <div style={{ color: '#dc2626', fontWeight: 700 }}>❌ Error: {allScrapeResult.error}</div>
+                    <div>
+                      <div style={{ color: '#dc2626', fontWeight: 700, marginBottom: 8 }}>❌ Notice: {allScrapeResult.error}</div>
+                      {allScrapeResult.canResume && (
+                        <button
+                          onClick={() => handleScrapeAllAccounts({ onlyMissing: true })}
+                          style={{
+                            background: '#0284c7',
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 18px',
+                            borderRadius: 8,
+                            fontSize: 13,
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            marginTop: 6
+                          }}
+                        >
+                          ▶️ Resume Remaining Unscraped Accounts
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div>
                       <div style={{ fontWeight: 800, color: '#059669', fontSize: 14, marginBottom: 6 }}>

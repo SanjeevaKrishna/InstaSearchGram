@@ -97,12 +97,14 @@ export default function ScrapeConsole() {
     }
     setIsAdmin(true)
 
-    const isBatch = Boolean(queryMode && ['daily', 'unscraped', 'full'].includes(queryMode))
+    const isSingle = Boolean(queryHandle || rawId)
+    const isBatch = !isSingle
+    const batchType = (queryMode && ['daily', 'unscraped', 'full'].includes(queryMode)) ? queryMode : 'full'
     setIsBatchMode(isBatch)
 
     if (isBatch) {
-      setBatchModeType(queryMode)
-      initBatchQueue(queryMode, token)
+      setBatchModeType(batchType)
+      initBatchQueue(batchType, token)
     } else {
       initSingleProfile(token)
     }
@@ -140,6 +142,11 @@ export default function ScrapeConsole() {
       }))
 
       setQueue(q)
+      if (q.length > 0) {
+        setCurrentHandle(q[0].handle)
+        setCurrentCelId(q[0].id)
+        setCurrentCelebrity(q[0])
+      }
       addLog('Loaded ' + q.length + ' profile(s) in queue for 100% Lifetime Depth Scraping. Ready to start.', 'success')
 
       // Check if there was saved state in localStorage
@@ -157,23 +164,28 @@ export default function ScrapeConsole() {
     }
   }
 
-  // Initialize Single Profile
+  // Initialize Single Profile (Fast Direct Lookup)
   const initSingleProfile = async (token) => {
     if (!queryHandle && !rawId) return
+    const cleanHandle = queryHandle ? String(queryHandle).trim().replace(/^@/, '') : ''
+    if (rawId) setCurrentCelId(String(rawId))
+    if (cleanHandle) setCurrentHandle(cleanHandle)
+
     try {
-      const res = await fetch('/api/admin/celebrities', {
+      const url = rawId 
+        ? `/api/admin/celebrities?id=${encodeURIComponent(rawId)}&handle=${encodeURIComponent(cleanHandle || '')}`
+        : `/api/admin/celebrities?handle=${encodeURIComponent(cleanHandle)}`
+
+      const res = await fetch(url, {
         headers: { 'x-admin-token': token || '' }
       })
       if (res.ok) {
         const data = await res.json()
-        const matched = data.celebrities?.find(c => 
-          (rawId && c.id === rawId) || 
-          (queryHandle && c.instagram_handle?.toLowerCase() === queryHandle.toLowerCase())
-        )
+        const matched = data.celebrity || data.celebrities?.[0]
         if (matched) {
           setCurrentCelebrity(matched)
           setCurrentCelId(matched.id)
-          setCurrentHandle(matched.instagram_handle)
+          setCurrentHandle(matched.instagram_handle ? matched.instagram_handle.replace(/^@/, '') : cleanHandle)
           const pCount = matched.posts_count || matched.posts_scraped || 0
           if (pCount > 0) {
             setTotalPosts(pCount)
@@ -191,12 +203,12 @@ export default function ScrapeConsole() {
         }
       }
 
-      if (queryHandle) {
-        const handleKey = queryHandle.toLowerCase()
-        const savedDate = localStorage.getItem('last_scraped_date_' + handleKey)
+      const activeHandleKey = (cleanHandle || currentHandle).toLowerCase()
+      if (activeHandleKey) {
+        const savedDate = localStorage.getItem('last_scraped_date_' + activeHandleKey)
         if (savedDate) setLastScrapedDate(savedDate)
 
-        const pendingStr = localStorage.getItem('pending_progress_' + handleKey)
+        const pendingStr = localStorage.getItem('pending_progress_' + activeHandleKey)
         if (pendingStr) {
           try {
             const saved = JSON.parse(pendingStr)
@@ -444,12 +456,19 @@ export default function ScrapeConsole() {
           const lines = buffer.split('\n\n')
           buffer = lines.pop()
 
-          for (const line of lines) {
+          for (const rawLine of lines) {
+            const line = rawLine.trim()
             if (line.startsWith('data: ')) {
-              const data = JSON.parse(line.slice(6))
+              let data
+              try {
+                data = JSON.parse(line.slice(6).trim())
+              } catch (e) {
+                continue
+              }
+              if (!data) continue
 
               if (data.type === 'progress') {
-                const s = data.stats
+                const s = data.stats || {}
                 setSegmentProgress(Math.min(200, (s.processedItems - (initialStats?.processedItems || 0)) || 0))
                 setTotalLifetimeScraped(s.processedItems || 0)
                 setStats(prev => ({
@@ -478,7 +497,7 @@ export default function ScrapeConsole() {
                   addLog('@' + celHandle + ' | Page ' + (s.page || 1) + ': ' + s.processedItems + ' posts (' + formatCompact(s.totalReelViews) + ' views)', 'success')
                 }
               } else if (data.type === 'complete') {
-                const resResult = data.result
+                const resResult = data.result || {}
                 const finalS = resResult.finalStats || {}
 
                 // Save latest date for daily mode
@@ -511,13 +530,21 @@ export default function ScrapeConsole() {
 
   // Single Profile Full Depth Scraping Handler (Manual Click)
   const executeSingleScrape = async (mode = 'full') => {
-    if (!currentHandle || !currentCelId) return
+    const activeHandle = (currentHandle || (queryHandle ? String(queryHandle).replace(/^@/, '') : '')).trim()
+    const activeCelId = currentCelId || currentCelebrity?.id || (rawId ? String(rawId) : '') || 'auto'
+
+    if (!activeHandle) {
+      alert('Profile handle not yet loaded. Please wait a moment or reload.')
+      return
+    }
+    if (scraping) return
+
     setScraping(true)
     setSegmentProgress(0)
     setSingleCompleted(false)
     setLogs([])
 
-    const handleKey = currentHandle.toLowerCase()
+    const handleKey = activeHandle.toLowerCase()
     let currentNextMaxId = null
     let accumulatedStats = null
     let runNum = 1
@@ -531,15 +558,15 @@ export default function ScrapeConsole() {
       setTotalLifetimeScraped(0)
       setRunIndex(1)
       setStats(prev => ({ ...prev, processedItems: 0 }))
-      addLog('Starting Full Lifetime Depth Scrape for @' + currentHandle + '...', 'info')
+      addLog('Starting Full Lifetime Depth Scrape for @' + activeHandle + '...', 'info')
     }
 
     try {
       while (runNum <= 50) {
         setRunIndex(runNum)
-        addLog('▶️ Run ' + runNum + ' for @' + currentHandle + ' (Posts collected so far: ' + (accumulatedStats?.processedItems || 0) + ')...', 'info')
+        addLog('▶️ Run ' + runNum + ' for @' + activeHandle + ' (Posts collected so far: ' + (accumulatedStats?.processedItems || 0) + ')...', 'info')
 
-        const chunkResult = await scrapeSingleProfileChunkAsync(currentCelId, currentHandle, mode, currentNextMaxId, accumulatedStats)
+        const chunkResult = await scrapeSingleProfileChunkAsync(activeCelId, activeHandle, mode, currentNextMaxId, accumulatedStats)
         if (!chunkResult) break
 
         const finalS = chunkResult.finalStats || {}
@@ -556,14 +583,14 @@ export default function ScrapeConsole() {
           }
           runNum++
         } else {
-          addLog('🌟 100% Lifetime Depth Completed for @' + currentHandle + '! Total Posts: ' + finalS.processedItems + ' | Lifetime Views: ' + formatCompact(finalS.totalReelViews), 'success')
+          addLog('🌟 100% Lifetime Depth Completed for @' + activeHandle + '! Total Posts: ' + (finalS.processedItems || 0) + ' | Lifetime Views: ' + formatCompact(finalS.totalReelViews || 0), 'success')
           break
         }
       }
 
       setSingleCompleted(true)
       setScraping(false)
-      addLog('Scraping finished for @' + currentHandle + '!', 'success')
+      addLog('Scraping finished for @' + activeHandle + '!', 'success')
     } catch (err) {
       setScraping(false)
       addLog('Error: ' + err.message, 'error')
@@ -882,16 +909,18 @@ export default function ScrapeConsole() {
                 {lastScrapedDate && (
                   <button 
                     onClick={() => executeSingleScrape('daily')}
-                    style={{ background: '#10b981', color: 'white', border: 'none', padding: '11px 22px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    disabled={scraping}
+                    style={{ background: scraping ? '#3f3f46' : '#10b981', color: 'white', border: 'none', padding: '11px 22px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: scraping ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
                   >
                     <Zap size={14} /> Daily Scrape (New Posts Only)
                   </button>
                 )}
                 <button 
                   onClick={() => executeSingleScrape('fresh')}
-                  style={{ background: '#e1306c', color: 'white', border: 'none', padding: '11px 24px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  disabled={scraping}
+                  style={{ background: scraping ? '#71717a' : '#e1306c', color: 'white', border: 'none', padding: '11px 24px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: scraping ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
-                  <Play size={14} /> Full Lifetime Scrape (All {maxRunsExpected} Runs)
+                  <Play size={14} /> {scraping ? '⏳ Scraping in Progress...' : `Full Lifetime Scrape (All ${maxRunsExpected} Runs)`}
                 </button>
               </div>
             )}

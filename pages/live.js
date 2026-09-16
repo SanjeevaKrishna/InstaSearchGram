@@ -967,11 +967,11 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               display: 'flex',
               background: 'var(--surface2)',
               borderRadius: '100px',
-              padding: 3,
-              gap: 4,
+              padding: 2.5,
+              gap: 3,
               border: '1px solid var(--border)',
-              maxWidth: 350,
-              flex: '1 1 auto'
+              maxWidth: 270,
+              flex: '0 1 270px'
             }}>
               <button
                 onClick={() => handleTabChange('most_followed')}
@@ -982,20 +982,21 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '8px 12px',
+                  padding: '5px 10px',
                   borderRadius: '100px',
                   border: 'none',
-                  fontSize: 12.5,
-                  fontWeight: 700,
+                  fontSize: 11.5,
+                  fontWeight: 600,
                   cursor: 'pointer',
                   background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
                   color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
-                  boxShadow: activeTab === 'most_followed' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  boxShadow: activeTab === 'most_followed' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
                   transform: hoveredTab === 'most_followed' && activeTab !== 'most_followed' ? 'scale(1.02)' : 'scale(1)',
                   transition: 'all 0.2s ease',
+                  letterSpacing: '-0.01em'
                 }}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 6, flexShrink: 0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 5, flexShrink: 0 }}>
                   <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
                   <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
                   <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
@@ -1012,20 +1013,21 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '8px 12px',
+                  padding: '5px 10px',
                   borderRadius: '100px',
                   border: 'none',
-                  fontSize: 12.5,
-                  fontWeight: 700,
+                  fontSize: 11.5,
+                  fontWeight: 600,
                   cursor: 'pointer',
                   background: activeTab === 'daily_growth' ? 'var(--surface)' : 'transparent',
                   color: activeTab === 'daily_growth' ? 'var(--text)' : 'var(--text-muted)',
-                  boxShadow: activeTab === 'daily_growth' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
+                  boxShadow: activeTab === 'daily_growth' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
                   transform: hoveredTab === 'daily_growth' && activeTab !== 'daily_growth' ? 'scale(1.02)' : 'scale(1)',
                   transition: 'all 0.2s ease',
+                  letterSpacing: '-0.01em'
                 }}
               >
-                <TrendingUp size={14} style={{ marginRight: 6, flexShrink: 0, color: activeTab === 'daily_growth' ? '#10b981' : 'var(--text-muted)' }} />
+                <TrendingUp size={12.5} style={{ marginRight: 5, flexShrink: 0, color: activeTab === 'daily_growth' ? '#10b981' : 'var(--text-muted)' }} />
                 Daily Growth
               </button>
             </div>

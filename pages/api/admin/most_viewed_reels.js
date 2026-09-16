@@ -1,35 +1,11 @@
 import { getAdminClient } from '../../../lib/supabase'
-import { v2 as cloudinary } from 'cloudinary'
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
-
-function getCloudinaryPublicId(url) {
-  if (!url || !url.includes('res.cloudinary.com')) return null
-  try {
-    const parts = url.split('/image/upload/')
-    if (parts.length < 2) return null
-    
-    let path = parts[1]
-    const pathParts = path.split('/')
-    if (pathParts[0].startsWith('v') && !isNaN(pathParts[0].substring(1))) {
-      pathParts.shift()
-      path = pathParts.join('/')
-    }
-    
-    const lastDot = path.lastIndexOf('.')
-    if (lastDot !== -1) {
-      path = path.substring(0, lastDot)
-    }
-    return path
-  } catch (err) {
-    console.error('Error parsing Cloudinary URL:', err)
-    return null
+function getStoragePathFromUrl(url) {
+  if (!url) return null
+  const marker = '/storage/v1/object/public/profile-images/'
+  if (url.includes(marker)) {
+    return decodeURIComponent(url.split(marker)[1])
   }
+  return null
 }
 
 function verifyAdmin(req) {
@@ -183,15 +159,15 @@ export default async function handler(req, res) {
 
       if (error) return res.status(500).json({ error: error.message })
 
-      // Clean up uploaded files in Cloudinary
+      // Clean up uploaded files in Supabase Storage
       if (reel) {
-        if (reel.photo_url) {
-          const publicId = getCloudinaryPublicId(reel.photo_url)
-          if (publicId) await cloudinary.uploader.destroy(publicId).catch(console.error)
-        }
-        if (reel.creator_photo_url) {
-          const publicId = getCloudinaryPublicId(reel.creator_photo_url)
-          if (publicId) await cloudinary.uploader.destroy(publicId).catch(console.error)
+        const filesToRemove = []
+        const p1 = getStoragePathFromUrl(reel.photo_url)
+        if (p1) filesToRemove.push(p1)
+        const p2 = getStoragePathFromUrl(reel.creator_photo_url)
+        if (p2) filesToRemove.push(p2)
+        if (filesToRemove.length > 0) {
+          await supabase.storage.from('profile-images').remove(filesToRemove).catch(console.error)
         }
       }
 

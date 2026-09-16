@@ -2,7 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['instagram.com', 'cdninstagram.com', 'www.instagram.com'],
+    domains: [
+      'instagram.com',
+      'cdninstagram.com',
+      'www.instagram.com',
+      'kmamqlbtiqmfsngovniw.supabase.co'
+    ],
   },
   experimental: {
     scrollRestoration: true,

@@ -32,9 +32,11 @@ export default async function handler(req, res) {
     lastScrapedDate = null
   } = req.body
 
-  if (!celebrityId || !instagram_handle) {
-    return res.status(400).json({ error: 'celebrityId and instagram_handle are required' })
+  if (!instagram_handle || !instagram_handle.trim()) {
+    return res.status(400).json({ error: 'instagram_handle is required' })
   }
+
+  const effectiveCelId = celebrityId || 'auto';
 
   // Load cookies from body if provided, otherwise fallback to Supabase live_settings
   let sessionId = bodySessionId || null;
@@ -66,7 +68,7 @@ export default async function handler(req, res) {
 
   try {
     const result = await refreshInstagramStats(
-      celebrityId, 
+      effectiveCelId, 
       instagram_handle, 
       sessionId, 
       csrfToken,
