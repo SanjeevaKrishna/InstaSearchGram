@@ -234,74 +234,39 @@ export default function ProfilePage({ profile, slug }) {
     return Math.max(0, base + pastDaysGrowth + daytimeGrowth)
   }, [profile.followers_count, profile.follower_history, recentVelocity, dailyGain, monthlyGain])
 
-  const currentLiveValRef = useRef(0)
-  const odometerAnimRef = useRef(null)
-
-  // Function to run a fast sprint from current value to the final count
-  const sprintToCount = (finalCount, duration = 1100) => {
-    if (odometerAnimRef.current) cancelAnimationFrame(odometerAnimRef.current)
-    const startVal = currentLiveValRef.current || 0
-    const diff = finalCount - startVal
-    const startTime = performance.now()
-
-    const animateFast = (now) => {
-      const elapsed = now - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      // Rapid sprint ease-out: rushes fast and snaps cleanly into exact count
-      const easeProgress = 1 - Math.pow(1 - progress, 3)
-      const current = Math.floor(startVal + diff * easeProgress)
-      
-      currentLiveValRef.current = current
-      setLiveFollowers(current)
-
-      if (progress < 1) {
-        odometerAnimRef.current = requestAnimationFrame(animateFast)
-      } else {
-        currentLiveValRef.current = finalCount
-        setLiveFollowers(finalCount)
-        setIsCountingUp(false)
-      }
-    }
-
-    odometerAnimRef.current = requestAnimationFrame(animateFast)
-  }
-
-  // 1. Initial Odometer Count-Up: Slow suspense climb while waiting for laptop fetch
+  // 1. Initial Odometer Count-Up Animation (Original smooth 3.8s count-up from 0 to stored count)
   useEffect(() => {
     if (!timeAdjustedBase) return
 
     setLiveFollowers(0)
-    currentLiveValRef.current = 0
     setIsCountingUp(true)
 
-    // Slow climb duration: takes 15s to reach ~70% if fetch takes time
-    const slowDuration = 15000
-    const slowTarget = Math.floor(timeAdjustedBase * 0.72)
+    const duration = 3800 // Previous smooth 3.8s count-up
+    const start = 0
+    const end = timeAdjustedBase
     const startTime = performance.now()
+    let animationFrame
 
-    const animateSlow = (currentTime) => {
-      // If live count already arrived and took over, stop
-      if (isLiveFetched) return
-
+    const animate = (currentTime) => {
       const elapsed = currentTime - startTime
-      const progress = Math.min(elapsed / slowDuration, 1)
-      // Gentle decelerating curve so it slowly ticks numbers while waiting for laptop
-      const ease = 1 - Math.pow(1 - progress, 2)
-      const current = Math.floor(slowTarget * ease)
-
-      currentLiveValRef.current = current
+      const progress = Math.min(elapsed / duration, 1)
+      // Smooth cubic ease-out: starts smoothly, runs steadily, and decelerates gently to exact value
+      const easeProgress = 1 - Math.pow(1 - progress, 3)
+      const current = Math.floor(start + (end - start) * easeProgress)
+      
       setLiveFollowers(current)
 
       if (progress < 1) {
-        odometerAnimRef.current = requestAnimationFrame(animateSlow)
+        animationFrame = requestAnimationFrame(animate)
+      } else {
+        setLiveFollowers(end)
+        setIsCountingUp(false)
       }
     }
 
-    odometerAnimRef.current = requestAnimationFrame(animateSlow)
+    animationFrame = requestAnimationFrame(animate)
 
-    return () => {
-      if (odometerAnimRef.current) cancelAnimationFrame(odometerAnimRef.current)
-    }
+    return () => cancelAnimationFrame(animationFrame)
   }, [timeAdjustedBase])
 
   // 2. Continuous Micro-Fluctuation simulation with night-time freeze and relaxed realistic speeds
@@ -444,8 +409,29 @@ export default function ProfilePage({ profile, slug }) {
           setLiveeFetchPending(false)
           stopped = true
 
-          // Live count fetched! Sprint fast to the exact live count
-          sprintToCount(receivedCount, 950)
+          // Smoothly glide from current count to newly retrieved live count
+          setLiveFollowers((prev) => {
+            const current = prev || timeAdjustedBase
+            const diff = receivedCount - current
+            if (diff === 0) return receivedCount
+
+            setChangeDir(diff > 0 ? 'up' : 'down')
+            setTimeout(() => setChangeDir(null), 1200)
+
+            const startTime = performance.now()
+            const duration = 700
+            const animateUpdate = (now) => {
+              if (stopped) return
+              const elapsed = now - startTime
+              const prog = Math.min(elapsed / duration, 1)
+              const ease = 1 - Math.pow(1 - prog, 3)
+              setLiveFollowers(Math.floor(current + diff * ease))
+              if (prog < 1) requestAnimationFrame(animateUpdate)
+              else setLiveFollowers(receivedCount)
+            }
+            requestAnimationFrame(animateUpdate)
+            return prev
+          })
           return
         }
       } catch {}
@@ -453,8 +439,6 @@ export default function ProfilePage({ profile, slug }) {
       attempts++
       if (attempts >= MAX_ATTEMPTS) {
         setLiveeFetchPending(false)
-        // Laptop offline or timed out: finish climb smoothly to base count
-        sprintToCount(timeAdjustedBase, 1200)
       }
     }
 
@@ -982,11 +966,6 @@ export default function ProfilePage({ profile, slug }) {
                       <>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981', display: 'inline-block', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
                         <span style={{ fontSize: 9.5, color: '#6ee7b7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Live Followers</span>
-                      </>
-                    ) : liveFetchPending ? (
-                      <>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', boxShadow: '0 0 5px #f59e0b88', display: 'inline-block', animation: 'pulse-dot 1s ease-in-out infinite' }} />
-                        <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fetching Live...</span>
                       </>
                     ) : (
                       <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Real Time Followers</span>
