@@ -165,71 +165,82 @@ function getSectionConfig(category) {
 // ─── Banner Component ─────────────────────────────────────────────────────────
 export function CelebritySuggestionBanner({ onOpenChat, category = 'All', style = {} }) {
   const cfg = getSectionConfig(category)
+  const btnLabel = category === 'All' ? 'Celebrity' : category === 'Meme Pages' ? 'Page' : category.replace(/s$/, '')
   return (
     <div
       onClick={() => onOpenChat()}
       style={{
         width: '100%',
         boxSizing: 'border-box',
-        margin: '18px 0 10px',
-        padding: '12px 18px',
-        borderRadius: 12,
+        margin: '14px 0 8px',
+        padding: '10px 12px',
+        borderRadius: 10,
         background: 'var(--surface, #ffffff)',
         border: `1px solid ${cfg.bannerBorder}`,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 12,
+        gap: 10,
         cursor: 'pointer',
         transition: 'all 0.18s ease',
-        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.03)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         ...style
       }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = cfg.bannerColor
         e.currentTarget.style.background = cfg.bannerBg
-        e.currentTarget.style.boxShadow = `0 3px 12px ${cfg.bannerColor}22`
+        e.currentTarget.style.boxShadow = `0 3px 10px ${cfg.bannerColor}20`
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = cfg.bannerBorder
         e.currentTarget.style.background = 'var(--surface, #ffffff)'
-        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.03)'
+        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+      {/* Icon */}
+      <div style={{
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        background: cfg.bannerBg,
+        border: `1px solid ${cfg.bannerBorder}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 15,
+        flexShrink: 0
+      }}>
+        {cfg.icon}
+      </div>
+
+      {/* Text block — grows, truncates with ellipsis */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          width: 28,
-          height: 28,
-          borderRadius: 8,
-          background: cfg.bannerBg,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 14,
-          flexShrink: 0
+          fontSize: 12.5,
+          fontWeight: 700,
+          color: 'var(--text, #0f172a)',
+          lineHeight: 1.25,
+          letterSpacing: '-0.01em',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }}>
-          {cfg.icon}
+          {cfg.bannerText}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
-          <span style={{
-            fontSize: 13.5,
-            fontWeight: 700,
-            color: 'var(--text, #0f172a)',
-            letterSpacing: '-0.01em'
-          }}>
-            {cfg.bannerText}
-          </span>
-          <span style={{
-            fontSize: 12,
-            color: 'var(--text-muted, #64748b)',
-            fontWeight: 500
-          }}>
-            {cfg.subtitle}
-          </span>
+        <div style={{
+          fontSize: 11,
+          color: 'var(--text-muted, #64748b)',
+          fontWeight: 500,
+          lineHeight: 1.25,
+          marginTop: 2,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          {cfg.subtitle}
         </div>
       </div>
 
+      {/* Compact pill button — never shrinks */}
       <button
         type="button"
         onClick={(e) => {
@@ -237,25 +248,28 @@ export function CelebritySuggestionBanner({ onOpenChat, category = 'All', style 
           onOpenChat()
         }}
         style={{
-          padding: '6px 14px',
-          borderRadius: 8,
+          padding: '5px 11px',
+          borderRadius: 20,
           background: cfg.bannerColor,
           color: '#ffffff',
           border: 'none',
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: 700,
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 5,
+          gap: 4,
           cursor: 'pointer',
           flexShrink: 0,
           transition: 'all 0.15s ease',
           whiteSpace: 'nowrap',
-          boxShadow: `0 2px 6px ${cfg.bannerColor}44`
+          boxShadow: `0 2px 6px ${cfg.bannerColor}44`,
+          letterSpacing: '0.01em'
         }}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
       >
-        <MessageSquare size={13} strokeWidth={2.4} />
-        <span>Suggest {category === 'All' ? 'Celebrity' : (category === 'Meme Pages' ? 'Page' : category.replace(/s$/, ''))}</span>
+        <MessageSquare size={11} strokeWidth={2.5} />
+        <span>Suggest {btnLabel}</span>
       </button>
     </div>
   )

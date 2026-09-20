@@ -99,377 +99,138 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
         {isThinContent && <meta name="robots" content="noindex, follow" />}
       </Head>
 
-      
-      <main style={{ maxWidth: 850, margin: '0 auto', padding: '24px 20px 100px' }}>
-        {/* Back Navigation */}
-        <div style={{ marginBottom: 16 }}>
-          <button 
-            onClick={() => router.back()}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: '6px 12px',
-              borderRadius: 20,
-              transition: 'all 0.2s',
-              marginLeft: -12
-            }}
-            className="back-btn-hover"
-          >
-            <ArrowLeft size={14} />
-            Back to Leaderboard
-          </button>
-        </div>
+      <main style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 100px' }}>
 
-        {/* Content Card */}
+        {/* Back */}
+        <button
+          onClick={() => router.back()}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '6px 10px', borderRadius: 20, marginLeft: -10, marginBottom: 16 }}
+          className="back-btn-hover"
+        >
+          <ArrowLeft size={14} /> Back
+        </button>
+
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
-            <div className="spinner" />
-          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}><div className="spinner" /></div>
         ) : error ? (
-          <div style={{ 
-            textAlign: 'center', 
-            color: '#ff5252', 
-            padding: 40, 
-            background: 'var(--surface)', 
-            borderRadius: 20, 
-            border: '1px solid var(--border)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.02)'
-          }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Unable to load Reel</h2>
+          <div style={{ textAlign: 'center', color: '#ff5252', padding: 40, background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--border)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Unable to load</h2>
             <p style={{ fontSize: 14, opacity: 0.8 }}>{error}</p>
           </div>
         ) : !reel ? (
-          <div style={{ 
-            textAlign: 'center', 
-            color: 'var(--text-muted)', 
-            padding: 40, 
-            background: 'var(--surface)', 
-            borderRadius: 20, 
-            border: '1px solid var(--border)'
-          }}>
-            Reel not found.
-          </div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>Not found.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* ── HERO CARD ── */}
             <div style={{
-              display: 'flex',
-              gap: 32,
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              borderRadius: 24,
-              boxShadow: '0 16px 48px rgba(0,0,0,0.04)',
-              padding: '32px',
+              borderRadius: 20,
+              padding: '24px 20px',
               position: 'relative',
-              overflow: 'hidden',
-            }} className="detail-card-container">
-              {/* Background Decorative Blur */}
-              <div style={{
-                position: 'absolute',
-                top: '-10%',
-                right: '-10%',
-                width: '40%',
-                height: '40%',
-                background: 'radial-gradient(circle, var(--accent-light) 0%, transparent 80%)',
-                filter: 'blur(60px)',
-                opacity: 0.15,
-                pointerEvents: 'none',
-                zIndex: 0
-              }} />
+              overflow: 'hidden'
+            }}>
+              {/* bg glow */}
+              <div style={{ position: 'absolute', top: '-30%', right: '-10%', width: '55%', height: '120%', background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-              {/* Left Column: Small Thumbnail Card */}
-              <div 
-                style={{
-                  width: 88,
-                  height: 132,
-                  borderRadius: 12,
-                  overflow: 'hidden',
-                  position: 'relative',
-                  background: '#09090b',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                  flexShrink: 0,
-                  border: '1px solid var(--border)',
-                  zIndex: 1
-                }}
-              >
-                {reel.photo_url ? (
-                  <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                    <Film size={18} />
+              {/* Creator row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, position: 'relative' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: 'var(--surface2)', border: '2px solid var(--border)', flexShrink: 0 }}>
+                  {reel.photo_url
+                    ? <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'var(--accent)' }}>{initials}</div>
+                  }
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  {reel.creator_slug
+                    ? <a href={'/celebrity/' + reel.creator_slug} style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', textDecoration: 'none', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}</a>
+                    : <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}</span>
+                  }
+                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{reel.category_name || 'Instagram'} · Rank #{reel.rank}</div>
+                </div>
+                {/* Rank badge */}
+                <div style={{ marginLeft: 'auto', flexShrink: 0, background: 'linear-gradient(135deg,#6366f1,#a855f7)', color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 20, letterSpacing: '0.04em', boxShadow: '0 2px 10px rgba(99,102,241,0.35)' }}>
+                  #{reel.rank}
+                </div>
+              </div>
+
+              {/* Big stat number(s) */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20, position: 'relative' }}>
+                {hasLikes && (
+                  <div style={{ flex: 1, minWidth: 130, background: 'linear-gradient(135deg,rgba(255,42,95,0.07),rgba(255,42,95,0.03))', border: '1px solid rgba(255,42,95,0.18)', borderRadius: 14, padding: '16px 18px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#ff2a5f', textTransform: 'uppercase', marginBottom: 4 }}>❤️ Total Likes</div>
+                    <div style={{ fontSize: 30, fontWeight: 900, color: '#ff2a5f', letterSpacing: '-0.03em', lineHeight: 1, textShadow: '0 0 24px rgba(255,42,95,0.28)' }}>{reel.likes_text}</div>
                   </div>
                 )}
-                <div style={{
-                  position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none'
-                }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-                    <Play size={10} fill="currentColor" style={{ marginLeft: 1 }} />
+                {hasViews && (
+                  <div style={{ flex: 1, minWidth: 130, background: 'linear-gradient(135deg,rgba(168,85,247,0.07),rgba(168,85,247,0.03))', border: '1px solid rgba(168,85,247,0.18)', borderRadius: 14, padding: '16px 18px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#a855f7', textTransform: 'uppercase', marginBottom: 4 }}>👁️ Total Views</div>
+                    <div style={{ fontSize: 30, fontWeight: 900, color: '#a855f7', letterSpacing: '-0.03em', lineHeight: 1, textShadow: '0 0 24px rgba(168,85,247,0.28)' }}>{reel.views_text}</div>
                   </div>
-                </div>
+                )}
+                {hasFollowers && (
+                  <div style={{ flex: 1, minWidth: 130, background: 'linear-gradient(135deg,rgba(99,102,241,0.07),rgba(99,102,241,0.03))', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 14, padding: '16px 18px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#6366f1', textTransform: 'uppercase', marginBottom: 4 }}>👤 Followers</div>
+                    <div style={{ fontSize: 30, fontWeight: 900, color: '#6366f1', letterSpacing: '-0.03em', lineHeight: 1, textShadow: '0 0 24px rgba(99,102,241,0.28)' }}>{followersDisplay}</div>
+                  </div>
+                )}
               </div>
 
-              {/* Right Column: Title, Creator, Metadata & CTA */}
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                zIndex: 1,
-                minWidth: 0
-              }}>
-                <div>
-                  {/* Title and Creator (Replaces old avatar header and quote box) */}
-                  <div style={{ marginBottom: 24 }}>
-                    {reel.title && (
-                      <h1 style={{
-                        fontSize: '15px',
-                        fontWeight: 650,
-                        color: 'var(--text)',
-                        margin: '0 0 8px 0',
-                        lineHeight: 1.4,
-                        wordBreak: 'break-word',
-                        whiteSpace: 'pre-wrap',
-                      }}>
-                        {reel.title}
-                      </h1>
-                    )}
-                    
-                    <div style={{
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: 'var(--accent)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                    }}>
-                      {reel.creator_slug ? (
-                        <a href={'/celebrity/' + reel.creator_slug} style={{ color: 'inherit', textDecoration: 'none' }} className="creator-link-hover">
-                          {reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}
-                        </a>
-                      ) : (
-                        <span>{reel.creator_name ? (reel.creator_name.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`) : '@anonymous'}</span>
-                      )}
-                    </div>
-                  </div>
+              {/* Title */}
+              {reel.title && (
+                <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, margin: '0 0 20px', fontStyle: 'italic', position: 'relative' }}>
+                  "{reel.title}"
+                </p>
+              )}
 
-                  {/* Inline Clean Metrics */}
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '16px 28px',
-                    marginBottom: 28,
-                    padding: '4px 0'
-                  }}>
-                    {hasFollowers && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8
-                      }}>
-                        <div style={{ color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Users size={16} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{followersDisplay}</div>
-                          <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.25 }}>Followers</div>
-                        </div>
-                      </div>
-                    )}
+              {/* CTA */}
+              <a
+                href={reel.instagram_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg,#e1306c,#fd1d1d,#f77737)', color: '#fff', padding: '12px 20px', borderRadius: 12, fontWeight: 700, fontSize: 14, textDecoration: 'none', boxShadow: '0 4px 16px rgba(225,48,108,0.35)', transition: 'all 0.2s', position: 'relative' }}
+                className="watch-reel-cta"
+              >
+                <ExternalLink size={16} />
+                Open Post on Instagram
+              </a>
 
-                    {hasViews && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8
-                      }}>
-                        <div style={{ color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Eye size={16} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{reel.views_text}</div>
-                          <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.25 }}>Total Views</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {hasLikes && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8
-                      }}>
-                        <div style={{ color: '#ff2a5f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Heart size={16} fill="currentColor" />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{reel.likes_text}</div>
-                          <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.25 }}>Total Likes</div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8
-                    }}>
-                      <div style={{ color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Calendar size={16} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>{getFormattedDate(reel.created_at)}</div>
-                        <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.25 }}>Published</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Clear Watch on Instagram Call to Action Button */}
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <a 
-                    href={reel.instagram_link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border-bright)',
-                      color: 'var(--text)',
-                      padding: '10px 20px',
-                      borderRadius: '10px',
-                      fontWeight: 600,
-                      fontSize: '13.5px',
-                      textDecoration: 'none',
-                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      boxShadow: 'none'
-                    }}
-                    className="watch-reel-cta"
-                  >
-                    <ExternalLink size={15} />
-                    Watch Reel on Instagram
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* ABOUT THIS REEL SECTION */}
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 24,
-              padding: '28px 32px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
-            }}>
-              <h3 style={{
-                fontSize: 17,
-                fontWeight: 800,
-                fontFamily: 'var(--font-display)',
-                color: 'var(--text)',
-                marginBottom: 12,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8
-              }}>
-                📖 About this Reel
-              </h3>
-              <p style={{
-                fontSize: '14.5px',
-                lineHeight: 1.7,
-                color: 'var(--text-dim)',
-                margin: 0
-              }}>
-                {reel.description || `This viral reel is created by the popular digital content creator ${reel.creator_name || '@anonymous'}. It is benchmarked inside the ${reel.category_name || 'Instagram'} category on Spialr, which tracks and charts top-performing creators in this niche based on views and engagement levels. Marketers and other creators can analyze this performance to understand successful video hooks, layout pacing, and formatting setups.`}
-              </p>
-
-              {reel.why_notable && (
-                <div style={{ 
-                  marginTop: 18, 
-                  paddingTop: 16, 
-                  borderTop: '1px dashed var(--border)', 
-                  display: 'flex', 
-                  alignItems: 'flex-start', 
-                  gap: 8, 
-                  fontSize: '13.5px', 
-                  color: 'var(--text-dim)' 
-                }}>
-                  <span style={{ fontSize: 16, lineHeight: 1 }}>⭐</span>
-                  <div>
-                    <strong>Why Notable:</strong> {reel.why_notable}
-                  </div>
+              {/* Date */}
+              {reel.created_at && (
+                <div style={{ textAlign: 'center', marginTop: 12, fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, position: 'relative' }}>
+                  <Calendar size={11} />
+                  {getFormattedDate(reel.created_at)}
                 </div>
               )}
             </div>
 
-            {/* REEL INSIGHTS SECTION */}
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 24,
-              padding: '28px 32px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
-            }}>
-              <h3 style={{
-                fontSize: 17,
-                fontWeight: 800,
-                fontFamily: 'var(--font-display)',
-                color: 'var(--text)',
-                marginBottom: 12,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8
-              }}>
-                📊 Reel Insights
-              </h3>
-              <p style={{
-                fontSize: '14.5px',
-                lineHeight: 1.7,
-                color: 'var(--text-dim)',
-                margin: 0
-              }} dangerouslySetInnerHTML={{
-                __html: `This reel by <strong>${reel.creator_name || '@anonymous'}</strong> currently ranks <strong>#${reel.rank}</strong> in Spialr’s <strong>${reel.category_name}</strong>${statsPart} based on the latest recorded public metrics.`
-              }} />
-            </div>
-
-            {/* FREQUENTLY ASKED QUESTIONS */}
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 24,
-              padding: '28px 32px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
-            }}>
-              <h3 style={{
-                fontSize: 17,
-                fontWeight: 800,
-                fontFamily: 'var(--font-display)',
-                color: 'var(--text)',
-                marginBottom: 16,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8
-              }}>
-                ❓ Frequently Asked Questions
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* ── FAQ SECTION ── */}
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>❓ Quick Questions</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {[
                   {
-                    q: 'What category does this reel belong to?',
-                    a: `This reel is benchmarked inside the ${reel.category_name || 'Trending'} category on Spialr, which tracks and charts top-performing creators in this niche.`
+                    q: `What is ${reel.creator_name || 'this creator'}'s rank?`,
+                    a: `This post is currently ranked #${reel.rank} in the ${reel.category_name} category on Spialr.`
+                  },
+                  ...(hasLikes ? [{
+                    q: `How many likes does this post have?`,
+                    a: `This post has ${reel.likes_text} likes as recorded by Spialr.`
+                  }] : []),
+                  ...(hasViews ? [{
+                    q: `How many views does this reel have?`,
+                    a: `This reel has ${reel.views_text} views based on the latest public metrics.`
+                  }] : []),
+                  {
+                    q: 'How do I view this post on Instagram?',
+                    a: 'Click the "Open Post on Instagram" button above to open the official post directly.'
                   },
                   {
-                    q: 'How can I view the actual reel on Instagram?',
-                    a: 'You can click the "Watch Reel on Instagram" button on this page, which will open a secure link directly to the official post on the Instagram platform.'
+                    q: `Which category does this belong to?`,
+                    a: `This post is listed under the ${reel.category_name || 'Instagram'} category on Spialr, which tracks top-performing content in this niche.`
                   }
                 ].map((faq, idx) => (
                   <ReelFAQItem key={idx} faq={faq} />
@@ -477,59 +238,23 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               </div>
             </div>
 
-            {/* RANKING CONTEXT METHODOLOGY */}
-            <div style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 20,
-              padding: '24px 30px',
-              fontSize: 13,
-              color: 'var(--text-muted)',
-              lineHeight: 1.6
-            }}>
-              <div style={{ fontWeight: 700, color: 'var(--text-dim)', marginBottom: 6, fontSize: 13.5 }}>Ranking Context & Stats</div>
-              Rankings are based on publicly observed social-media metrics recorded by Spialr and may change as engagement increases. We collect public data from current viral cycles to offer benchmarking services for content creators and marketers.
-              {reel.created_at && (
-                <div style={{ marginTop: 10, fontSize: 11, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
-                  Last Updated: {getFormattedDate(reel.created_at)}
-                </div>
-              )}
-            </div>
-
-            {/* RELATED CONTENT SECTIONS */}
+            {/* ── MORE FROM CREATOR ── */}
             {moreFromCreator.length > 0 && (
               <div>
-                <h3 style={{ fontSize: 17, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 16, color: 'var(--text)' }}>
-                  🎥 More Reels by {reel.creator_name || 'Creator'}
+                <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🎥 More from {reel.creator_name || 'Creator'}
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
                   {moreFromCreator.map(item => (
                     <a key={item.id} href={`/reel/${generateReelSlug(item)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <div style={{
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 14,
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-                      }} onMouseEnter={e => {
-                        e.currentTarget.style.transform = 'translateY(-3px)'
-                        e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.06)'
-                      }} onMouseLeave={e => {
-                        e.currentTarget.style.transform = 'none'
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.02)'
-                      }}>
-                        <div style={{ height: 180, position: 'relative', background: 'var(--surface2)' }}>
+                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', transition: 'all 0.2s' }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)' }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
+                        <div style={{ height: 160, position: 'relative', background: 'var(--surface2)' }}>
                           <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <div style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
-                            {item.views_text || item.likes_text}
-                          </div>
+                          <div style={{ position: 'absolute', bottom: 5, right: 5, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{item.views_text || item.likes_text}</div>
                         </div>
-                        <div style={{ padding: '10px', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 38, lineHeight: 1.4 }}>
-                          {item.title || 'Watch Reel'}
-                        </div>
+                        <div style={{ padding: '8px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>{item.title || 'Watch'}</div>
                       </div>
                     </a>
                   ))}
@@ -537,38 +262,23 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               </div>
             )}
 
+            {/* ── TOP IN CATEGORY ── */}
             {topCategoryReels.length > 0 && (
               <div>
-                <h3 style={{ fontSize: 17, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 16, color: 'var(--text)' }}>
-                  🔥 Top Trending in {reel.category_name}
+                <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🔥 Top in {reel.category_name}
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
                   {topCategoryReels.map(item => (
                     <a key={item.id} href={`/reel/${generateReelSlug(item)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <div style={{
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 14,
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-                      }} onMouseEnter={e => {
-                        e.currentTarget.style.transform = 'translateY(-3px)'
-                        e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.06)'
-                      }} onMouseLeave={e => {
-                        e.currentTarget.style.transform = 'none'
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.02)'
-                      }}>
-                        <div style={{ height: 180, position: 'relative', background: 'var(--surface2)' }}>
+                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', transition: 'all 0.2s' }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)' }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
+                        <div style={{ height: 160, position: 'relative', background: 'var(--surface2)' }}>
                           <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <div style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
-                            {item.views_text || item.likes_text}
-                          </div>
+                          <div style={{ position: 'absolute', bottom: 5, right: 5, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{item.views_text || item.likes_text}</div>
                         </div>
-                        <div style={{ padding: '10px', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: 38, lineHeight: 1.4 }}>
-                          {item.title || 'Watch Reel'}
-                        </div>
+                        <div style={{ padding: '8px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>{item.title || 'Watch'}</div>
                       </div>
                     </a>
                   ))}
@@ -576,53 +286,22 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               </div>
             )}
 
-            {/* Creator Spialr Profile Banner */}
+            {/* ── VIEW FULL PROFILE ── */}
             {reel.creator_slug && (
-              <div 
+              <div
                 onClick={() => router.push(`/celebrity/${reel.creator_slug}`)}
-                style={{
-                  background: 'linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 20,
-                  padding: '24px 30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
-                  marginTop: 8
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.borderColor = 'var(--accent)'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'none'
-                  e.currentTarget.style.borderColor = 'var(--border)'
-                }}
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none' }}
               >
-                <div style={{ paddingRight: 16 }}>
-                  <h4 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>
-                    Looking for full social analytics?
-                  </h4>
-                  <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
-                    Explore the complete benchmark details, metrics, and content monitors of <strong>{reel.creator_name || 'this creator'}</strong> on their dedicated Spialr Profile.
-                  </p>
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>View Full Profile</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Follower growth & stats for {reel.creator_name || 'this creator'}</div>
                 </div>
-                <div style={{
-                  fontSize: 13.5,
-                  fontWeight: 750,
-                  color: 'var(--accent)',
-                  whiteSpace: 'nowrap',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}>
-                  View Profile →
-                </div>
+                <span style={{ fontSize: 18, color: 'var(--accent)' }}>→</span>
               </div>
             )}
+
           </div>
         )}
       </main>
@@ -630,33 +309,9 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
       <BottomNav />
 
       <style jsx global>{`
-        .back-btn-hover:hover {
-          background: var(--surface2) !important;
-          color: var(--text) !important;
-        }
-        .detail-card-container {
-          flex-direction: row;
-        }
-        .creator-link-hover:hover {
-          color: var(--accent-hover) !important;
-        }
-        .watch-reel-cta:hover {
-          background-color: var(--surface2) !important;
-          border-color: var(--accent) !important;
-          color: var(--accent) !important;
-          transform: translateY(-1px);
-        }
-        .watch-reel-cta:active {
-          transform: translateY(0);
-        }
-        @media (max-width: 680px) {
-          .detail-card-container {
-            flex-direction: row !important;
-            padding: 16px !important;
-            gap: 16px !important;
-            align-items: flex-start !important;
-          }
-        }
+        .back-btn-hover:hover { background: var(--surface2) !important; color: var(--text) !important; }
+        .watch-reel-cta:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(225,48,108,0.45) !important; }
+        .watch-reel-cta:active { transform: translateY(0); }
       `}</style>
     </>
   )

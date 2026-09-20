@@ -4,7 +4,7 @@ import Head from 'next/head'
 import PostCard from '../components/PostCard'
 import { supabase } from '../lib/supabase'
 import { safeStorage } from '../lib/storage'
-import { Lightbulb, Search, Heart, MessageSquare, Eye, Star, ChevronDown } from 'lucide-react'
+import { Lightbulb, Search, Heart, MessageSquare, Eye, Star, ChevronDown, ExternalLink } from 'lucide-react'
 
 
 export default function ResultsPage({ initialCelebrity = null, initialPosts = [], initialVotingInfo = null }) {
@@ -39,259 +39,232 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
   const generateDynamicContent = () => {
     if (!celebrity || posts.length === 0) return null;
     const post = posts[0];
-    const postTypeLabel = post.post_type === 'reel' ? 'Instagram Reel' : 'Instagram Post';
-    const tagListText = post.tags && post.tags.length > 0 ? post.tags.slice(0, 5).join(', ') : '';
+    const postTypeLabel = post.post_type === 'reel' ? 'Reel' : 'Post';
 
-    // Create a deterministic index from the celebrity name to select sentence variations
-    const seed = (celebrity.name || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const selectVariation = (arr) => arr[seed % arr.length];
-
-    // Bio Integration (injects 100% unique text)
-    const bioText = celebrity.description 
-      ? `As one of the prominent figures in the industry, ${celebrity.name} has built a massive footprint. Our database highlights: "${celebrity.description.trim()}" This background explains the massive scale of public interest in their social updates.`
-      : `${celebrity.name} has cultivated a highly active audience online. Their posts draw massive engagement due to their high visibility in the entertainment space.`;
-
-    // Intro Paragraph Variations
-    const introVariations = {
-      most_liked: [
-        `This section presents a deep-dive analysis of the highest-rated upload by ${celebrity.name} on Instagram, which has achieved the absolute peak of user likes. With a massive following of ${celebrity.followers_text || formatFollowers(celebrity.followers_count) || 'millions'}, this specific ${postTypeLabel} stands out as a primary benchmark for audience approval.`,
-        `Analyzing the performance metrics of ${celebrity.name}, we highlight their most liked Instagram update. Given their influence over ${celebrity.followers_text || formatFollowers(celebrity.followers_count)} fans, this content represents the pinnacle of viewer satisfaction and digital engagement.`,
-        `Here we spotlight the most liked post by ${celebrity.name}. Securing maximum positive reactions across their feed, this ${postTypeLabel} offers crucial benchmarking data for creators studying high-performance social media positioning.`
-      ],
-      most_commented: [
-        `Comments represent the most active form of audience participation. This page examines the most commented post by ${celebrity.name}, which generated the highest level of community discussions and user dialogue.`,
-        `We explore ${celebrity.name}'s most conversational update, which has accumulated the peak number of comments. With an audience of ${celebrity.followers_text || 'millions'}, this post serves as a primary hub for fan debates and interactions.`,
-        `Highlighting the most commented content from ${celebrity.name}, this analysis looks at why this specific upload triggered such high conversational interest among fans and followers.`
-      ],
-      most_viewed: [
-        `Views are a direct indicator of algorithmic reach and virality. This page analyzes the most viewed video post by ${celebrity.name}, demonstrating outstanding public reach beyond their immediate follower base.`,
-        `We examine the most viewed content uploaded by ${celebrity.name}. Achieving stellar impressions, this specific video reel indicates strong viewer retention and explore-page distribution.`,
-        `This spotlight focuses on ${celebrity.name}'s highest-viewed Instagram update, highlighting the visual cues and hooks that enabled it to achieve such broad digital circulation.`
-      ],
-      first_post: [
-        `Taking a look back, we highlight the earliest recorded post of ${celebrity.name} in our benchmarking archive. Tracking a creator's history shows their creative development over time.`,
-        `This page showcases the initial content update archived for ${celebrity.name}. Analyzing early posts offers a valuable perspective on how their overall brand and aesthetic evolved.`,
-        `We review the earliest archived post by ${celebrity.name}, tracing the baseline of their engagement metrics and visual storytelling style before reaching their current scale.`
-      ],
-      default: [
-        `This collection displays curated public content from ${celebrity.name}'s feed matching your search filter. Spialr indexes these statistics to assist in creator benchmarking.`,
-        `We list verified content updates from ${celebrity.name}'s profile. These highlights serve as benchmarks for analyzing digital engagement trends over a timeline.`,
-        `Explore matching Instagram updates from ${celebrity.name}'s feed, providing clean tracking metrics for marketing analysis.`
-      ]
-    };
-
-    // Engagement Paragraph Variations
-    const engagementVariations = {
-      most_liked: [
-        `Securing peak engagement requires an alignment of content timing and audience sentiment. Across ${celebrity.name}'s catalog of ${celebrity.posts_count || 'several'} updates, this item secured the highest approval rating, indicating a highly successful content hook.`,
-        `Among their total of ${celebrity.posts_count || 'many'} posts, this specific upload represents the maximum positive sentiment. Marketers study these top-performing posts to evaluate successful brand collaboration placements.`,
-        `This post showcases the standard of digital reach for ${celebrity.name}. The high count of likes indicates that the creative layout and caption structure resonated exceptionally well.`
-      ],
-      most_commented: [
-        `Posts that trigger heavy discussion often address highly relatable or trending topics. For ${celebrity.name}, this upload sparked the most active debate, making it a valuable case study in audience engagement.`,
-        `Analyzing why this caption or visual prompted so many of their ${celebrity.followers_text || 'fans'} to write reveals key content hooks that drive user feedback and commentary.`,
-        `This high-comment post indicates strong emotional resonance. It stands out in their feed as a major point of community interaction.`
-      ],
-      most_viewed: [
-        `Virality is driven by high watch-time metrics and loops. For ${celebrity.name}, this video captured the highest attention span, illustrating effective viewer retention.`,
-        `This video achieved maximum viral distribution, breaking through standard feed limitations. It illustrates how the initial hooks captured search algorithm recommendations.`,
-        `Strong reach metrics indicate that this content was widely shared. It represents the highest scale of brand impressions in their catalog.`
-      ],
-      first_post: [
-        `Comparing early content to current updates shows a significant shift in production quality and audience targeting, illustrating how ${celebrity.name} scaled their presence.`,
-        `Every large account started with a single upload. This post serves as a benchmarking baseline, illustrating how creative consistency builds long-term success.`,
-        `This baseline archive shows early content formats, illustrating how audience demographics and engagement rates evolved over subsequent years.`
-      ],
-      default: [
-        `Analyzing these search highlights provides a clear overview of how engagement rates fluctuate depending on the publication date and hashtags used.`,
-        `These filtered metrics represent a valuable data set for competitive analysis, outlining standard performance margins for top-tier creators.`,
-        `By tracking these specific updates, marketers can build realistic KPIs for campaigns based on historical content trends.`
-      ]
-    };
-
-    // Content Paragraph Variations
-    const contentParagraphs = [
-      post.caption 
-        ? `The upload features a structured caption starting with: "${post.caption.substring(0, 80).trim()}...". This textual context, combined with visual hooks, contributed significantly to its high rank.`
-        : `This content relies on high-impact visual media without a heavy text description. The premium visual framing drove immediate viewer retention and action.`,
-      tagListText
-        ? `Categorized using key tags such as [${tagListText}], the post successfully indexed itself within trending topic pages, capturing organic search queries.`
-        : `The publication strategy focused on direct creator branding, relying on high feed authority and visual placement rather than heavy hashtag categorization.`,
-      `Published on ${new Date(post.post_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}, the timing aligned with active user hours to maximize immediate interaction during the first critical hours.`
-    ];
-
-    const introPara = selectVariation(introVariations[filter] || introVariations.default);
-    const engagementPara = selectVariation(engagementVariations[filter] || engagementVariations.default);
-    const contentPara = selectVariation(contentParagraphs);
-    const valuePara = `At Spialr, we compile these metrics as part of our social benchmarking toolset. This enables content creators, marketers, and agencies to audit public performances, identify high-performing content patterns, and make data-driven decisions.`;
-
-    const filterTitle = filter === 'most_liked' ? `Analysis of ${celebrity.name}'s Most Liked ${postTypeLabel}`
-                      : filter === 'most_commented' ? `Engagement Analysis: ${celebrity.name}'s Most Commented ${postTypeLabel}`
-                      : filter === 'most_viewed' ? `Viral Analytics: ${celebrity.name}'s Most Viewed ${postTypeLabel}`
-                      : filter === 'first_post' ? `Archive Spotlight: ${celebrity.name}'s Earliest Post`
-                      : `Curated Highlights for ${celebrity.name}`;
-
-    // Determine metric value & label
-    let metricLabel = '';
-    let metricValue = '';
-    let metricIcon = null;
+    let metricLabel = 'Highlights';
+    let metricValue = 'Featured';
+    let metricIcon = '✨';
+    let gradient = 'linear-gradient(135deg, #6366f1, #a855f7)';
+    let glowColor = 'rgba(99, 102, 241, 0.3)';
+    let accentColor = '#6366f1';
+    let badgeText = 'Featured Highlight';
 
     if (filter === 'most_liked') {
       metricLabel = 'Total Likes';
-      metricValue = celebrity.most_liked_count || (post?.like_count ? formatCount(post.like_count) : (celebrity.most_likes ? formatCount(celebrity.most_likes) : 'Pending Audit'));
-      metricIcon = <Heart size={20} style={{ color: '#ff2a5f' }} />;
+      metricValue = celebrity.most_liked_count || (post?.like_count ? formatCount(post.like_count) : (celebrity.most_likes ? formatCount(celebrity.most_likes) : 'Verified'));
+      metricIcon = '❤️';
+      gradient = 'linear-gradient(135deg, #ff2a5f, #e1306c)';
+      glowColor = 'rgba(255, 42, 95, 0.32)';
+      accentColor = '#ff2a5f';
+      badgeText = 'Most Liked Post';
     } else if (filter === 'most_commented') {
       metricLabel = 'Total Comments';
-      metricValue = celebrity.most_commented_count || (post?.comment_count ? formatCount(post.comment_count) : 'Pending Audit');
-      metricIcon = <MessageSquare size={20} style={{ color: '#8f00ff' }} />;
+      metricValue = celebrity.most_commented_count || (post?.comment_count ? formatCount(post.comment_count) : 'Verified');
+      metricIcon = '💬';
+      gradient = 'linear-gradient(135deg, #8b5cf6, #d946ef)';
+      glowColor = 'rgba(139, 92, 246, 0.32)';
+      accentColor = '#8b5cf6';
+      badgeText = 'Most Commented Post';
     } else if (filter === 'most_viewed') {
       metricLabel = 'Total Views';
-      metricValue = celebrity.most_viewed_count || (post?.view_count ? formatCount(post.view_count) : 'Pending Audit');
-      metricIcon = <Eye size={20} style={{ color: '#ff6b35' }} />;
+      metricValue = celebrity.most_viewed_count || (post?.view_count ? formatCount(post.view_count) : 'Verified');
+      metricIcon = '👁️';
+      gradient = 'linear-gradient(135deg, #ff6b35, #f59e0b)';
+      glowColor = 'rgba(255, 107, 53, 0.32)';
+      accentColor = '#ff6b35';
+      badgeText = 'Most Viewed Reel';
     } else if (filter === 'first_post') {
-      metricLabel = 'First Upload Date';
-      metricValue = post?.post_date ? new Date(post.post_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Pending Audit';
-      metricIcon = <Star size={20} style={{ color: '#ffa751' }} />;
+      metricLabel = 'First Post Date';
+      metricValue = post?.post_date ? new Date(post.post_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Verified Archive';
+      metricIcon = '⭐';
+      gradient = 'linear-gradient(135deg, #f59e0b, #d97706)';
+      glowColor = 'rgba(245, 158, 11, 0.32)';
+      accentColor = '#f59e0b';
+      badgeText = 'First Upload Archive';
     }
 
     return (
       <div style={{
-        marginTop: 40,
+        marginTop: 20,
         background: 'var(--surface)',
         border: '1px solid var(--border)',
         borderRadius: 24,
-        padding: '32px',
+        padding: '28px 24px',
+        position: 'relative',
+        overflow: 'hidden',
         boxShadow: '0 12px 36px rgba(0,0,0,0.03)',
-        color: 'var(--text)',
       }}>
-        <h2 style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 800,
-          fontSize: 20,
-          color: 'var(--accent)',
-          marginBottom: 20,
-          borderBottom: '1px solid var(--border)',
-          paddingBottom: 12
-        }}>
-          {filterTitle}
-        </h2>
+        {/* Decorative background glow */}
+        <div style={{
+          position: 'absolute',
+          top: '-20%',
+          right: '-10%',
+          width: '50%',
+          height: '140%',
+          background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
+          pointerEvents: 'none',
+        }} />
 
-        {/* 📊 High-impact Metric Banner */}
-        {metricLabel && (
+        {/* Top Tag & Context Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, position: 'relative', flexWrap: 'wrap', gap: 10 }}>
           <div style={{
-            background: 'var(--surface2)',
-            border: '1px solid var(--border)',
-            borderRadius: 16,
-            padding: '16px 20px',
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: 16,
-            marginBottom: 24,
-            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+            gap: 6,
+            background: `linear-gradient(135deg, ${accentColor}18, ${accentColor}0a)`,
+            border: `1px solid ${accentColor}33`,
+            color: accentColor,
+            padding: '5px 12px',
+            borderRadius: 100,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '0.02em'
           }}>
-            <div style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
+            <span>{metricIcon}</span>
+            <span>{badgeText}</span>
+          </div>
+
+          {post?.post_date && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+              Uploaded {new Date(post.post_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+          )}
+        </div>
+
+        {/* Big Decorative Metric Showcase */}
+        <div style={{
+          background: `linear-gradient(135deg, ${accentColor}0f, ${accentColor}04)`,
+          border: `1px solid ${accentColor}25`,
+          borderRadius: 20,
+          padding: '26px 20px',
+          textAlign: 'center',
+          marginBottom: 20,
+          position: 'relative',
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: accentColor, textTransform: 'uppercase', marginBottom: 6 }}>
+            {metricLabel}
+          </div>
+          <div style={{
+            fontSize: 40,
+            fontWeight: 900,
+            color: accentColor,
+            letterSpacing: '-0.03em',
+            lineHeight: 1.1,
+            textShadow: `0 0 28px ${glowColor}`,
+            fontFamily: 'var(--font-display)',
+          }}>
+            {metricValue}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 8, fontWeight: 600 }}>
+            {celebrity.name} · {postTypeLabel}
+          </div>
+        </div>
+
+        {/* Caption Snippet */}
+        {post?.caption && (
+          <p style={{
+            fontSize: 13,
+            color: 'var(--text-dim)',
+            lineHeight: 1.55,
+            margin: '0 0 20px',
+            fontStyle: 'italic',
+            position: 'relative',
+          }}>
+            "{post.caption.substring(0, 160)}{post.caption.length > 160 ? '...' : ''}"
+          </p>
+        )}
+
+        {/* Direct Link CTA Button */}
+        {post?.post_url && (
+          <a
+            href={post.post_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
-            }}>
-              {metricIcon}
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
-                {metricLabel}
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2, marginTop: 2 }}>
-                {metricValue}
-              </div>
-            </div>
-          </div>
+              gap: 8,
+              background: gradient,
+              color: '#ffffff',
+              padding: '12px 20px',
+              borderRadius: 12,
+              fontWeight: 700,
+              fontSize: 14,
+              textDecoration: 'none',
+              boxShadow: `0 4px 18px ${glowColor}`,
+              transition: 'all 0.2s',
+              cursor: 'pointer',
+              position: 'relative',
+            }}
+          >
+            <ExternalLink size={16} />
+            <span>Open Post on Instagram</span>
+          </a>
         )}
-
-        <h3 style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 16 }}>
-          📊 Analytical Report
-        </h3>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Card 1: Executive Overview */}
-          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', lineHeight: 1.6 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>📝</span> Executive Overview
-            </div>
-            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: 0 }}>{introPara} {bioText}</p>
-          </div>
-
-          {/* Card 2: Engagement Insights */}
-          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', lineHeight: 1.6 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>📈</span> Engagement Dynamics & Reach
-            </div>
-            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: 0 }}>{engagementPara}</p>
-          </div>
-
-          {/* Card 3: Creative & Formatting Strategy */}
-          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', lineHeight: 1.6 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>✍️</span> Content & Formatting Strategy
-            </div>
-            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: 0 }}>{contentPara}</p>
-          </div>
-
-          {/* Card 4: Platform Benchmarks */}
-          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', lineHeight: 1.6 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🌐</span> Platform Benchmarks
-            </div>
-            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: 0 }}>{valuePara}</p>
-          </div>
-        </div>
       </div>
     );
   }
 
   const generateFaqContent = () => {
     if (!celebrity || posts.length === 0) return null;
+    const post = posts[0];
+    const currentFilterDesc = filter === 'most_liked' ? 'Most Liked Post'
+      : filter === 'most_commented' ? 'Most Commented Post'
+      : filter === 'most_viewed' ? 'Most Viewed Reel'
+      : filter === 'first_post' ? 'Earliest Post'
+      : 'Featured Post';
+
     const faqs = [
       {
-        q: 'Why is this specific post highlighted by Spialr?',
-        a: `Spialr tracks public engagement metrics for major profiles. This post is highlighted because it mathematically represents the highest score for the selected filter (${filterDesc}) across the celebrity's recorded uploads.`
+        q: `Why is this post highlighted for ${celebrity.name}?`,
+        a: `This upload represents ${celebrity.name}'s verified ${currentFilterDesc.toLowerCase()} according to public engagement statistics on Spialr.`
+      },
+      ...(filter === 'most_liked' ? [{
+        q: `How many likes does this post have?`,
+        a: `This post has accumulated ${celebrity.most_liked_count || (post?.like_count ? formatCount(post.like_count) : 'millions of')} likes on Instagram.`
+      }] : []),
+      ...(filter === 'most_commented' ? [{
+        q: `How many comments does this post have?`,
+        a: `This post recorded ${celebrity.most_commented_count || (post?.comment_count ? formatCount(post.comment_count) : 'thousands of')} comments.`
+      }] : []),
+      ...(filter === 'most_viewed' ? [{
+        q: `How many views did this reel receive?`,
+        a: `This viral reel has accumulated ${celebrity.most_viewed_count || (post?.view_count ? formatCount(post.view_count) : 'millions of')} total views.`
+      }] : []),
+      {
+        q: 'How can I view the actual post on Instagram?',
+        a: 'Click the "Open Post on Instagram" button or tap the post card to view the official post directly on Instagram.'
       },
       {
-        q: 'How can creators use these insights?',
-        a: `By examining the hashtags, caption structures, and media formats of ${celebrity.name}'s top posts, other creators can identify successful patterns, hooks, and content structures to test on their own accounts.`
-      },
-      {
-        q: 'Are these statistics updated in real-time?',
-        a: `Social media metrics fluctuate constantly. Spialr updates engagement statistics periodically. To view the current real-time counts, likes, and comments, you can click the "Watch" button on the card to navigate directly to the official post on Instagram.`
+        q: 'Are these statistics up to date?',
+        a: 'Spialr routinely monitors public engagement data to keep rankings and creator milestones accurate and current.'
       }
     ];
 
     return (
       <div style={{
-        marginTop: 40,
+        marginTop: 32,
         background: 'var(--surface)',
         border: '1px solid var(--border)',
-        borderRadius: 24,
-        padding: '32px',
-        boxShadow: '0 12px 36px rgba(0,0,0,0.03)',
-        color: 'var(--text)',
+        borderRadius: 20,
+        padding: '24px 20px',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.02)',
       }}>
         <h3 style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 800,
-          fontSize: 16,
+          fontSize: 15,
           color: 'var(--text)',
-          marginBottom: 16
+          marginBottom: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6
         }}>
           ❓ Frequently Asked Questions
         </h3>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {faqs.map((faq, idx) => (
             <ResultsFAQItem key={idx} faq={faq} />
           ))}
