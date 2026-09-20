@@ -75,7 +75,7 @@ const getSquareColor = (increment, hasData) => {
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-const getFollowerStats = (history = [], currentCount = 0) => {
+const getFollowerStats = (history = [], currentCount = 0, createdAt = null) => {
   // Systematic tracking begins from Aug 28 or 29 (2026-08-28). Remove old pre-Aug 28 test dates.
   const postAug28 = history.filter(h => h && h.date && h.date >= '2026-08-28')
   const activeHistory = postAug28.length > 0 ? postAug28 : history
@@ -109,6 +109,8 @@ const getFollowerStats = (history = [], currentCount = 0) => {
   let dailyGain = 0
   let dailyGainDays = 1
   let isLatestFailed = false
+  let isSynchronizedOnly = false
+
   if (sorted.length > 0) {
     const latestRaw = sorted[sorted.length - 1]
     if (latestRaw.status === 'Server Failed' || latestRaw.serverFailed || latestRaw.count === null) {
@@ -116,15 +118,27 @@ const getFollowerStats = (history = [], currentCount = 0) => {
     }
   }
 
+  // Check if this account only has 1 scrape (first scrape value should be Synchronized, not fake delta)
+  const createdDateStr = createdAt ? createdAt.split('T')[0] : null
   if (valid.length >= 2) {
     const latest = valid[valid.length - 1]
     const prev = valid[valid.length - 2]
-    dailyGain = latest.count - prev.count
-    const d1 = new Date(latest.date)
-    const d2 = new Date(prev.date)
-    dailyGainDays = Math.max(1, Math.round(Math.abs(d1 - d2) / (1000 * 60 * 60 * 24)))
-  } else if (valid.length === 1 && currentCount) {
-    dailyGain = currentCount - valid[0].count
+    const isPrevBeforeCreation = createdDateStr && prev.date < createdDateStr
+    const isPrevInitial = prev.is_initial || prev.scraped === false
+    const isLatestFirstScrape = latest.is_first_scrape
+
+    if (isPrevBeforeCreation || isPrevInitial || isLatestFirstScrape) {
+      isSynchronizedOnly = true
+      dailyGain = 0
+    } else {
+      dailyGain = latest.count - prev.count
+      const d1 = new Date(latest.date)
+      const d2 = new Date(prev.date)
+      dailyGainDays = Math.max(1, Math.round(Math.abs(d1 - d2) / (1000 * 60 * 60 * 24)))
+    }
+  } else if (valid.length === 1) {
+    isSynchronizedOnly = true
+    dailyGain = 0
   }
 
   // Calculate smart weighted velocity (recent day + 3-day moving average) to handle viral spikes smoothly:
@@ -141,7 +155,7 @@ const getFollowerStats = (history = [], currentCount = 0) => {
     recentVelocity = Math.round(inc1 * 0.7 + inc2 * 0.3)
   }
 
-  return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed }
+  return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed, isSynchronizedOnly }
 }
 
 export default function ProfilePage({ profile, slug }) {
@@ -157,7 +171,7 @@ export default function ProfilePage({ profile, slug }) {
     )
   }
 
-  const { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed } = getFollowerStats(profile.follower_history || [], profile.followers_count || 0)
+  const { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed, isSynchronizedOnly } = getFollowerStats(profile.follower_history || [], profile.followers_count || 0, profile.created_at)
   const last12 = getLast12Months()
 
   const historyEntries = profile.follower_history || []
@@ -880,7 +894,12 @@ export default function ProfilePage({ profile, slug }) {
                   </span>
                 )}
               </div>
-              {tooltip.hasIncrement && (
+              {tooltip.isSynchronized ? (
+                <div style={{ color: '#38bdf8', fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle2 size={13} color="#38bdf8" />
+                  <span>Status: Synchronized</span>
+                </div>
+              ) : tooltip.hasIncrement ? (
                 <div style={{ color: tooltip.increment > 0 ? '#34d399' : tooltip.increment < 0 ? '#fb7185' : '#64748b' }}>
                   Growth: <span style={{ fontWeight: 700 }}>{tooltip.increment > 0 ? `+${tooltip.increment.toLocaleString()}` : tooltip.increment.toLocaleString()}</span>
                   {tooltip.diffDays > 1 && (
@@ -889,7 +908,7 @@ export default function ProfilePage({ profile, slug }) {
                     </span>
                   )}
                 </div>
-              )}
+              ) : null}
             </>
           )}
         </div>
@@ -978,6 +997,8 @@ export default function ProfilePage({ profile, slug }) {
                   let badgeLabel = 'Daily Gain'
                   if (isLatestFailed) {
                     badgeLabel = 'Server Failed'
+                  } else if (isSynchronizedOnly) {
+                    badgeLabel = 'Initial Setup'
                   } else if (dailyGain > 0) {
                     badgeLabel = 'Gained Today'
                   } else if (dailyGain < 0) {
@@ -986,38 +1007,43 @@ export default function ProfilePage({ profile, slug }) {
                     badgeLabel = 'Stable Today'
                   }
 
-                  if (!isLatestFailed && dailyGainDays > 1) {
+                  if (!isLatestFailed && !isSynchronizedOnly && dailyGainDays > 1) {
                     badgeLabel = `${badgeLabel} (${dailyGainDays} day follower count)`
                   }
 
                   return (
                     <div className="profile-stat-box" style={{ 
-                      background: isLatestFailed ? 'rgba(239, 68, 68, 0.1)' : dailyGain > 0 ? 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(6,182,212,0.06) 100%)' : dailyGain < 0 ? 'linear-gradient(135deg, rgba(244,63,94,0.14) 0%, rgba(225,29,72,0.06) 100%)' : 'var(--surface2)', 
-                      border: `1px solid ${isLatestFailed ? 'rgba(239, 68, 68, 0.4)' : dailyGain > 0 ? 'rgba(52,211,153,0.4)' : dailyGain < 0 ? 'rgba(251,113,133,0.4)' : 'var(--border)'}`,
-                      boxShadow: isLatestFailed ? 'none' : dailyGain !== 0 ? `0 4px 14px -2px ${dailyGain > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}` : 'none'
+                      background: isLatestFailed ? 'rgba(239, 68, 68, 0.1)' : isSynchronizedOnly ? 'rgba(56, 189, 248, 0.08)' : dailyGain > 0 ? 'linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(6,182,212,0.06) 100%)' : dailyGain < 0 ? 'linear-gradient(135deg, rgba(244,63,94,0.14) 0%, rgba(225,29,72,0.06) 100%)' : 'var(--surface2)', 
+                      border: `1px solid ${isLatestFailed ? 'rgba(239, 68, 68, 0.4)' : isSynchronizedOnly ? 'rgba(56, 189, 248, 0.35)' : dailyGain > 0 ? 'rgba(52,211,153,0.4)' : dailyGain < 0 ? 'rgba(251,113,133,0.4)' : 'var(--border)'}`,
+                      boxShadow: isLatestFailed ? 'none' : isSynchronizedOnly ? 'none' : dailyGain !== 0 ? `0 4px 14px -2px ${dailyGain > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}` : 'none'
                     }}>
                       <div style={{ 
-                        fontSize: isLatestFailed ? 15 : 19, 
+                        fontSize: isLatestFailed ? 15 : isSynchronizedOnly ? 15 : 19, 
                         fontWeight: 800, 
-                        color: isLatestFailed ? '#f87171' : dailyGain > 0 ? '#34d399' : dailyGain < 0 ? '#fb7185' : 'var(--text-muted)', 
+                        color: isLatestFailed ? '#f87171' : isSynchronizedOnly ? '#38bdf8' : dailyGain > 0 ? '#34d399' : dailyGain < 0 ? '#fb7185' : 'var(--text-muted)', 
                         fontFamily: 'var(--font-display)', 
                         marginBottom: 4,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 4,
-                        textShadow: !isLatestFailed && dailyGain !== 0 ? `0 0 10px ${dailyGain > 0 ? '#34d399' : '#fb7185'}44` : 'none'
+                        textShadow: !isLatestFailed && !isSynchronizedOnly && dailyGain !== 0 ? `0 0 10px ${dailyGain > 0 ? '#34d399' : '#fb7185'}44` : 'none'
                       }}>
                         {isLatestFailed ? (
                           <>
                             <AlertTriangle size={15} color="#f87171" />
                             <span>Server Failed</span>
                           </>
+                        ) : isSynchronizedOnly ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            <CheckCircle2 size={15} color="#38bdf8" />
+                            <span>Synchronized</span>
+                          </div>
                         ) : (
                           <span>{dailyGain > 0 ? `+${formatNumber(dailyGain)}` : dailyGain < 0 ? `-${formatNumber(Math.abs(dailyGain))}` : '±0'}</span>
                         )}
                       </div>
-                      <div style={{ fontSize: 9.5, color: isLatestFailed ? '#fca5a5' : dailyGain > 0 ? '#6ee7b7' : dailyGain < 0 ? '#fda4af' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center', lineHeight: 1.3 }}>
+                      <div style={{ fontSize: 9.5, color: isLatestFailed ? '#fca5a5' : isSynchronizedOnly ? '#7dd3fc' : dailyGain > 0 ? '#6ee7b7' : dailyGain < 0 ? '#fda4af' : 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center', lineHeight: 1.3 }}>
                         {badgeLabel}
                       </div>
                     </div>
@@ -1150,12 +1176,24 @@ export default function ProfilePage({ profile, slug }) {
                   let diffDays = 1
                   let inc = 0
                   const isFirst = lastValidCount === null
+                  let isSynchronized = isFirst
+
+                  const createdDateStr = profile.created_at ? profile.created_at.split('T')[0] : null
+                  const isPrevSynthetic = Boolean(createdDateStr && lastValidDate && lastValidDate < createdDateStr)
+                  const isEntryFirstScrape = Boolean(entry.is_first_scrape || entry.is_initial)
+
                   if (!isFirst && lastValidDate) {
                     const dCur = new Date(dateStr)
                     const dPrev = new Date(lastValidDate)
                     diffDays = Math.max(1, Math.round(Math.abs(dCur - dPrev) / (1000 * 60 * 60 * 24)))
-                    inc = entry.count - lastValidCount
+                    if (isPrevSynthetic || isEntryFirstScrape) {
+                      isSynchronized = true
+                      inc = 0
+                    } else {
+                      inc = entry.count - lastValidCount
+                    }
                   }
+
                   lastValidCount = entry.count
                   lastValidDate = dateStr
 
@@ -1164,6 +1202,7 @@ export default function ProfilePage({ profile, slug }) {
                     count: entry.count,
                     increment: inc,
                     isFirst,
+                    isSynchronized,
                     isFailed: false,
                     diffDays,
                     lastValidDate
@@ -1225,7 +1264,7 @@ export default function ProfilePage({ profile, slug }) {
               periodTitle = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
             }
 
-            const nonFirstGains = filteredDailyGains.filter(d => !d.isFirst && !d.isFailed)
+            const nonFirstGains = filteredDailyGains.filter(d => !d.isFirst && !d.isSynchronized && !d.isFailed)
             const netChange = nonFirstGains.reduce((s, d) => s + d.increment, 0)
             const bestDay = nonFirstGains.reduce((best, d) => (d.increment > (best?.increment ?? -Infinity) ? d : best), nonFirstGains[0] || { increment: 0, date: '' })
             const worstDay = nonFirstGains.reduce((worst, d) => (d.increment < (worst?.increment ?? Infinity) ? d : worst), nonFirstGains[0] || { increment: 0, date: '' })
@@ -1469,17 +1508,18 @@ export default function ProfilePage({ profile, slug }) {
                       }}>
                         <div style={{ minWidth: 600, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 6 }}>
                           {[...filteredDailyGains].reverse().map((day, idx) => {
-                            const barPct = day.isFirst || day.increment === 0
+                            const isSync = day.isFirst || day.isSynchronized
+                            const barPct = isSync || day.increment === 0
                               ? 0
                               : Math.min(100, Math.max(6, (Math.abs(day.increment) / maxAbs) * 100))
-                            const isGain = day.increment > 0
-                            const isLoss = day.increment < 0
+                            const isGain = !isSync && day.increment > 0
+                            const isLoss = !isSync && day.increment < 0
                             const dateObj = new Date(day.date)
                             const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                             const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
                             const displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
                             const isToday = day.date === new Date().toISOString().split('T')[0]
-                            const valueLabel = day.isFirst ? 'BASELINE' : (isGain ? `+${formatNumber(day.increment)}` : isLoss ? `-${formatNumber(Math.abs(day.increment))}` : '±0')
+                            const valueLabel = isSync ? 'Synchronized' : (isGain ? `+${formatNumber(day.increment)}` : isLoss ? `-${formatNumber(Math.abs(day.increment))}` : '±0')
 
                             return (
                               <div
@@ -1493,7 +1533,8 @@ export default function ProfilePage({ profile, slug }) {
                                     date: displayDate,
                                     count: day.count,
                                     increment: day.increment,
-                                    hasIncrement: !day.isFirst && !day.isFailed,
+                                    hasIncrement: !isSync && !day.isFailed,
+                                    isSynchronized: isSync,
                                     diffDays: day.diffDays,
                                     failureDaysCount: day.failureDaysCount,
                                     isFailed: day.isFailed

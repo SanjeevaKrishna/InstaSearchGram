@@ -210,17 +210,22 @@ async function saveLiveCount(handle, liveCount) {
   let history = Array.isArray(profile.follower_history) ? [...profile.follower_history] : []
   const todayIdx = history.findIndex((h) => h && h.date === today)
 
+  const isFirstScrape = history.length === 0 || (history.length === 1 && history[0].is_initial);
   if (todayIdx >= 0) {
     history[todayIdx] = {
       ...history[todayIdx],
       count: liveCount,
       live_at: nowMs,
+      scraped: true,
+      ...(isFirstScrape ? { is_first_scrape: true } : {})
     }
   } else {
     history.push({
       date: today,
       count: liveCount,
       live_at: nowMs,
+      scraped: true,
+      ...(isFirstScrape ? { is_first_scrape: true } : {})
     })
   }
 

@@ -1333,6 +1333,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                         setSuggestionPrefill(prefill || `Please feature: ${searchQuery}`)
                         setIsSuggestionChatOpen(true)
                       }}
+                      category={selectedCategory}
                       style={{ margin: '30px auto' }}
                     />
                   )
@@ -2485,6 +2486,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                       setSuggestionPrefill('')
                       setIsSuggestionChatOpen(true)
                     }}
+                    category={selectedCategory}
                     style={{ margin: '18px 16px 10px', width: 'auto' }}
                   />
                 </div>
@@ -3199,6 +3201,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
             setSuggestionPrefill('')
           }}
           initialPrefill={suggestionPrefill}
+          category={selectedCategory}
         />
       </main>
 

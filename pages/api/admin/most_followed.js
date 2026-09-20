@@ -101,7 +101,16 @@ export default async function handler(req, res) {
       if (!name) return res.status(400).json({ error: 'Name is required' })
 
       const calculatedFollowersCount = parseCountText(followers_text)
-      const initialHistory = generateRealisticBaselineHistory(calculatedFollowersCount)
+      const now = new Date()
+      const todayStr = now.toISOString().split('T')[0]
+      const initialHistory = calculatedFollowersCount > 0 ? [
+        {
+          date: todayStr,
+          count: calculatedFollowersCount,
+          is_initial: true,
+          scraped: false
+        }
+      ] : []
 
       const payload = {
         name,
@@ -281,20 +290,22 @@ export default async function handler(req, res) {
           targetDate = yesterday.toISOString().split('T')[0];
         }
 
+        const isFirstScrape = history.length === 0 || (history.length === 1 && history[0].is_initial);
         const existingIdx = history.findIndex(h => h.date === targetDate);
         if (existingIdx !== -1) {
-          history[existingIdx].count = count;
+          history[existingIdx] = {
+            ...history[existingIdx],
+            count: count,
+            scraped: true,
+            ...(isFirstScrape ? { is_first_scrape: true } : {})
+          };
         } else {
-          history.push({ date: targetDate, count: count });
-        }
-
-        // If newly added profile with only 1 history date, automatically seed yesterday's baseline
-        if (history.length === 1) {
-          const delta = getRealisticDelta(count);
-          const parsedTarget = new Date(targetDate);
-          const priorDate = new Date(parsedTarget.getTime() - 24 * 60 * 60 * 1000);
-          const priorDateStr = priorDate.toISOString().split('T')[0];
-          history.unshift({ date: priorDateStr, count: Math.max(100, count - delta) });
+          history.push({
+            date: targetDate,
+            count: count,
+            scraped: true,
+            ...(isFirstScrape ? { is_first_scrape: true } : {})
+          });
         }
 
         // Sort history by date ascending

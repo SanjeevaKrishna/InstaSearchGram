@@ -3,17 +3,168 @@ import { MessageSquare, Send, X, ThumbsUp, Sparkles, User, Smile, Check, Chevron
 
 const EMOJI_OPTIONS = ['⭐', '🔥', '👑', '🎬', '💎', '🚀', '✨', '⚡', '🌟', '🎯', '❤️', '🏆', '🎉', '🕶️', '🍿', '🎸']
 
-const QUICK_SUGGESTIONS = [
-  '🎬 Actor / Actress',
-  '🎤 Singer / Musician',
-  '🏏 Sports / Athlete',
-  '📱 Creator / Influencer',
-  '🎙️ Standup / Host'
-]
+// ─── Section Config ───────────────────────────────────────────────────────────
+// Each category has: slug (DB key), bannerText, subtitle, header, welcomeMsg,
+// placeholder, emptyMsg, chips, icon
+const SECTION_CONFIG = {
+  Sports: {
+    slug: 'featured_sports',
+    icon: '🏅',
+    bannerText: 'Enter your favourite player to get featured',
+    subtitle: '• Suggest athletes & sports stars you want tracked',
+    header: 'Sports Requests',
+    welcomeMsg: "Can't find your favourite player? Type their name or Instagram handle below. Suggest athletes you want tracked on Spialr!",
+    placeholder: 'Type player name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest a sports star you want featured on Spialr!',
+    chips: ['🏏 Cricket', '⚽ Football', '🎾 Tennis', '🏸 Badminton', '🤼 Wrestling', '🏊 Other Sport'],
+    bannerColor: '#059669',
+    bannerBg: 'rgba(5, 150, 105, 0.08)',
+    bannerBorder: '#d1fae5',
+  },
+  Creators: {
+    slug: 'featured_creators',
+    icon: '📱',
+    bannerText: 'Enter your favourite creator to get featured',
+    subtitle: '• Suggest content creators & influencers you want tracked',
+    header: 'Creator Requests',
+    welcomeMsg: "Can't find your favourite creator? Type their name or Instagram handle below. Suggest creators you want tracked on Spialr!",
+    placeholder: 'Type creator name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest a creator you want featured on Spialr!',
+    chips: ['📱 Reels Creator', '🎮 Gaming', '😂 Comedy', '🍳 Food', '✈️ Travel', '💄 Beauty'],
+    bannerColor: '#7c3aed',
+    bannerBg: 'rgba(124, 58, 237, 0.08)',
+    bannerBorder: '#ede9fe',
+  },
+  Influencers: {
+    slug: 'featured_influencers',
+    icon: '✨',
+    bannerText: 'Enter your favourite influencer to get featured',
+    subtitle: '• Suggest influencers & models you want tracked',
+    header: 'Influencer Requests',
+    welcomeMsg: "Can't find your favourite influencer? Type their name or Instagram handle below. Suggest influencers you want tracked on Spialr!",
+    placeholder: 'Type influencer name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest an influencer you want featured on Spialr!',
+    chips: ['💄 Fashion', '💪 Fitness', '🌿 Lifestyle', '🍕 Foodie', '🎨 Art', '📸 Photography'],
+    bannerColor: '#db2777',
+    bannerBg: 'rgba(219, 39, 119, 0.08)',
+    bannerBorder: '#fce7f3',
+  },
+  Actors: {
+    slug: 'featured_actors',
+    icon: '🎬',
+    bannerText: 'Enter your favourite actor/actress to get featured',
+    subtitle: '• Suggest Bollywood & regional film stars you want tracked',
+    header: 'Actor / Actress Requests',
+    welcomeMsg: "Can't find your favourite actor or actress? Type their name or Instagram handle below. Suggest film stars you want tracked on Spialr!",
+    placeholder: 'Type actor/actress name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest a film star you want featured on Spialr!',
+    chips: ['🎬 Bollywood', '🎭 Hindi', '🌟 Telugu', '🌺 Tamil', '🎪 Kannada', '🎵 Malayalam'],
+    bannerColor: '#b45309',
+    bannerBg: 'rgba(180, 83, 9, 0.08)',
+    bannerBorder: '#fef3c7',
+  },
+  Singers: {
+    slug: 'featured_singers',
+    icon: '🎤',
+    bannerText: 'Enter your favourite singer to get featured',
+    subtitle: '• Suggest singers & musicians you want tracked',
+    header: 'Singer / Musician Requests',
+    welcomeMsg: "Can't find your favourite singer? Type their name or Instagram handle below. Suggest musicians you want tracked on Spialr!",
+    placeholder: 'Type singer name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest a singer you want featured on Spialr!',
+    chips: ['🎤 Bollywood Singer', '🎸 Band', '🎵 Indie', '🎼 Classical', '🎧 Rapper', '🎹 Composer'],
+    bannerColor: '#0891b2',
+    bannerBg: 'rgba(8, 145, 178, 0.08)',
+    bannerBorder: '#cffafe',
+  },
+  Politicians: {
+    slug: 'featured_politicians',
+    icon: '🏛️',
+    bannerText: 'Enter your favourite leader to get featured',
+    subtitle: '• Suggest political leaders & public figures you want tracked',
+    header: 'Leader / Politician Requests',
+    welcomeMsg: "Can't find your favourite political leader? Type their name or Instagram handle below. Suggest leaders you want tracked on Spialr!",
+    placeholder: 'Type leader name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest a political figure you want featured on Spialr!',
+    chips: ['🏛️ National Leader', '🗳️ State Leader', '🌐 International', '📢 Activist', '🏙️ Local Leader', '📰 Journalist'],
+    bannerColor: '#dc2626',
+    bannerBg: 'rgba(220, 38, 38, 0.08)',
+    bannerBorder: '#fee2e2',
+  },
+  Personalities: {
+    slug: 'featured_personalities',
+    icon: '🌟',
+    bannerText: 'Enter your favourite personality to get featured',
+    subtitle: '• Suggest public figures & personalities you want tracked',
+    header: 'Personality Requests',
+    welcomeMsg: "Can't find your favourite personality? Type their name or Instagram handle below. Suggest public figures you want tracked on Spialr!",
+    placeholder: 'Type personality name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest a personality you want featured on Spialr!',
+    chips: ['🎙️ Podcaster', '📚 Author', '💼 Entrepreneur', '🎤 Stand-up', '🧘 Motivator', '🎥 Film Maker'],
+    bannerColor: '#7c3aed',
+    bannerBg: 'rgba(124, 58, 237, 0.08)',
+    bannerBorder: '#ede9fe',
+  },
+  'Meme Pages': {
+    slug: 'featured_meme_pages',
+    icon: '😂',
+    bannerText: 'Enter your favourite meme page to get featured',
+    subtitle: '• Suggest funny pages & meme accounts you want tracked',
+    header: 'Meme Page Requests',
+    welcomeMsg: "Can't find your favourite meme page? Type their Instagram handle below. Suggest funny accounts you want tracked on Spialr!",
+    placeholder: 'Type meme page name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest a meme page you want featured on Spialr!',
+    chips: ['😂 Desi Memes', '🎭 Bollywood Memes', '🏏 Cricket Memes', '🌍 Relatable', '🐈 Animal Memes', '😆 Roast Page'],
+    bannerColor: '#06b6d4',
+    bannerBg: 'rgba(6, 182, 212, 0.08)',
+    bannerBorder: '#cffafe',
+  },
+  Handles: {
+    slug: 'featured_handles',
+    icon: '📌',
+    bannerText: 'Enter your favourite page to get featured',
+    subtitle: '• Suggest interesting Instagram pages you want tracked',
+    header: 'Handle / Page Requests',
+    welcomeMsg: "Can't find your favourite page or handle? Type their name or Instagram handle below. Suggest accounts you want tracked on Spialr!",
+    placeholder: 'Type page name or Instagram handle...',
+    emptyMsg: 'Be the first to suggest a page you want featured on Spialr!',
+    chips: ['📰 News Page', '📚 Educational', '🏢 Brand', '🏥 Health', '🎓 Educational Inst.', '🌐 Community'],
+    bannerColor: '#14b8a6',
+    bannerBg: 'rgba(20, 184, 166, 0.08)',
+    bannerBorder: '#ccfbf1',
+  },
+  // Default / All
+  All: {
+    slug: 'featured_celebrities',
+    icon: '✨',
+    bannerText: 'Enter your favourite celebrities to get featured',
+    subtitle: '• Suggest stars or creators you want tracked',
+    header: 'Celebrity Requests',
+    welcomeMsg: "Can't find your favourite celebrity? Type their name or Instagram handle below. Suggest stars you want tracked on Spialr!",
+    placeholder: 'Type message or celebrity name here...',
+    emptyMsg: 'Be the first to suggest a celebrity or creator you want featured on Spialr!',
+    chips: ['🎬 Actor / Actress', '🎤 Singer / Musician', '🏏 Sports / Athlete', '📱 Creator / Influencer', '🎙️ Standup / Host'],
+    bannerColor: '#0e71eb',
+    bannerBg: 'rgba(14, 113, 235, 0.08)',
+    bannerBorder: '#dbeafe',
+  },
+}
 
-// Signature Zoom Pill Dropdown
-// Sleek, broad bar after profiles
-export function CelebritySuggestionBanner({ onOpenChat, style = {} }) {
+// Returns config for a given category string (handles case-insensitivity & fallback)
+function getSectionConfig(category) {
+  if (!category || category === 'All') return SECTION_CONFIG['All']
+  // Exact match first
+  if (SECTION_CONFIG[category]) return SECTION_CONFIG[category]
+  // Case-insensitive match
+  const key = Object.keys(SECTION_CONFIG).find(
+    k => k.toLowerCase() === category.toLowerCase()
+  )
+  return key ? SECTION_CONFIG[key] : SECTION_CONFIG['All']
+}
+
+// ─── Banner Component ─────────────────────────────────────────────────────────
+export function CelebritySuggestionBanner({ onOpenChat, category = 'All', style = {} }) {
+  const cfg = getSectionConfig(category)
   return (
     <div
       onClick={() => onOpenChat()}
@@ -24,7 +175,7 @@ export function CelebritySuggestionBanner({ onOpenChat, style = {} }) {
         padding: '12px 18px',
         borderRadius: 12,
         background: 'var(--surface, #ffffff)',
-        border: '1px solid var(--border, #e2e8f0)',
+        border: `1px solid ${cfg.bannerBorder}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -36,12 +187,12 @@ export function CelebritySuggestionBanner({ onOpenChat, style = {} }) {
         ...style
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = '#93c5fd'
-        e.currentTarget.style.background = '#f8fafc'
-        e.currentTarget.style.boxShadow = '0 3px 12px rgba(14, 113, 235, 0.08)'
+        e.currentTarget.style.borderColor = cfg.bannerColor
+        e.currentTarget.style.background = cfg.bannerBg
+        e.currentTarget.style.boxShadow = `0 3px 12px ${cfg.bannerColor}22`
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'var(--border, #e2e8f0)'
+        e.currentTarget.style.borderColor = cfg.bannerBorder
         e.currentTarget.style.background = 'var(--surface, #ffffff)'
         e.currentTarget.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.03)'
       }}
@@ -51,14 +202,14 @@ export function CelebritySuggestionBanner({ onOpenChat, style = {} }) {
           width: 28,
           height: 28,
           borderRadius: 8,
-          background: 'rgba(14, 113, 235, 0.08)',
+          background: cfg.bannerBg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: 14,
           flexShrink: 0
         }}>
-          ✨
+          {cfg.icon}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
           <span style={{
@@ -67,14 +218,14 @@ export function CelebritySuggestionBanner({ onOpenChat, style = {} }) {
             color: 'var(--text, #0f172a)',
             letterSpacing: '-0.01em'
           }}>
-            Enter your favourite celebrities to get featured
+            {cfg.bannerText}
           </span>
           <span style={{
             fontSize: 12,
             color: 'var(--text-muted, #64748b)',
             fontWeight: 500
           }}>
-            • Suggest stars or creators you want tracked
+            {cfg.subtitle}
           </span>
         </div>
       </div>
@@ -88,7 +239,7 @@ export function CelebritySuggestionBanner({ onOpenChat, style = {} }) {
         style={{
           padding: '6px 14px',
           borderRadius: 8,
-          background: '#0e71eb',
+          background: cfg.bannerColor,
           color: '#ffffff',
           border: 'none',
           fontSize: 12,
@@ -100,26 +251,19 @@ export function CelebritySuggestionBanner({ onOpenChat, style = {} }) {
           flexShrink: 0,
           transition: 'all 0.15s ease',
           whiteSpace: 'nowrap',
-          boxShadow: '0 2px 6px rgba(14, 113, 235, 0.2)'
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.background = '#1d4ed8'
-          e.currentTarget.style.transform = 'translateY(-1px)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.background = '#0e71eb'
-          e.currentTarget.style.transform = 'translateY(0)'
+          boxShadow: `0 2px 6px ${cfg.bannerColor}44`
         }}
       >
         <MessageSquare size={13} strokeWidth={2.4} />
-        <span>Suggest Celebrity</span>
+        <span>Suggest {category === 'All' ? 'Celebrity' : (category === 'Meme Pages' ? 'Page' : category.replace(/s$/, ''))}</span>
       </button>
     </div>
   )
 }
 
-// Empty search suggestion card when users search and can't find a profile
-export function CelebrityEmptySearchCard({ searchQuery, onOpenChat, style = {} }) {
+// ─── Empty Search Card ────────────────────────────────────────────────────────
+export function CelebrityEmptySearchCard({ searchQuery, onOpenChat, category = 'All', style = {} }) {
+  const cfg = getSectionConfig(category)
   return (
     <div style={{
       textAlign: 'center',
@@ -136,7 +280,7 @@ export function CelebrityEmptySearchCard({ searchQuery, onOpenChat, style = {} }
         No profiles found for &ldquo;{searchQuery}&rdquo;
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginBottom: 12 }}>
-        Can&apos;t find this celebrity? Suggest them to get featured!
+        Can&apos;t find this {category === 'All' ? 'celebrity' : category.toLowerCase().replace(/s$/, '')}? Suggest them to get featured!
       </div>
       <button
         type="button"
@@ -144,7 +288,7 @@ export function CelebrityEmptySearchCard({ searchQuery, onOpenChat, style = {} }
         style={{
           padding: '6px 14px',
           borderRadius: 8,
-          background: '#0e71eb',
+          background: cfg.bannerColor,
           color: '#ffffff',
           border: 'none',
           fontSize: 12,
@@ -153,11 +297,11 @@ export function CelebrityEmptySearchCard({ searchQuery, onOpenChat, style = {} }
           alignItems: 'center',
           gap: 6,
           cursor: 'pointer',
-          boxShadow: '0 2px 6px rgba(14, 113, 235, 0.25)',
+          boxShadow: `0 2px 6px ${cfg.bannerColor}44`,
           transition: 'all 0.15s ease'
         }}
-        onMouseEnter={e => e.currentTarget.style.background = '#1d4ed8'}
-        onMouseLeave={e => e.currentTarget.style.background = '#0e71eb'}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
       >
         <MessageSquare size={12} strokeWidth={2.4} />
         <span>Enter &ldquo;{searchQuery}&rdquo; to get featured</span>
@@ -166,7 +310,10 @@ export function CelebrityEmptySearchCard({ searchQuery, onOpenChat, style = {} }
   )
 }
 
-export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefill = '' }) {
+// ─── Main Chat Drawer ─────────────────────────────────────────────────────────
+export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefill = '', category = 'All' }) {
+  const cfg = getSectionConfig(category)
+
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -199,11 +346,11 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
     }
   }, [])
 
-  // Fetch comments for 'suggestion' target
+  // Fetch comments for this section's target slug
   const fetchSuggestions = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/comments?target_type=suggestion&target_slug=featured_celebrities&sort=top')
+      const res = await fetch(`/api/comments?target_type=suggestion&target_slug=${cfg.slug}&sort=top`)
       if (res.ok) {
         const data = await res.json()
         setMessages(data.comments || [])
@@ -215,8 +362,10 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
     }
   }
 
+  // Re-fetch whenever chat opens or category changes
   useEffect(() => {
     if (isOpen) {
+      setMessages([])
       if (initialPrefill) {
         setContent(initialPrefill)
       }
@@ -225,7 +374,8 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
         if (inputRef.current) inputRef.current.focus()
       }, 250)
     }
-  }, [isOpen, initialPrefill])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialPrefill, cfg.slug])
 
   // Scroll to bottom on new message or open
   useEffect(() => {
@@ -256,11 +406,11 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
 
     const payload = {
       target_type: 'suggestion',
-      target_slug: 'featured_celebrities',
+      target_slug: cfg.slug,
       content: trimmed,
       author_name: authorName.trim() || 'Anonymous',
       avatar_emoji: avatarEmoji || '⭐',
-      avatar_color: 'linear-gradient(135deg, #0e71eb, #3b82f6)'
+      avatar_color: `linear-gradient(135deg, ${cfg.bannerColor}, ${cfg.bannerColor}bb)`
     }
 
     try {
@@ -330,7 +480,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
     setShowIdentityEditor(false)
   }
 
-  // Format timestamp (Zoom style: e.g. "10:45 PM" or "Yesterday 4:12 PM")
+  // Format timestamp
   const formatZoomTime = (dateStr) => {
     if (!dateStr) return 'Just now'
     try {
@@ -375,7 +525,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
         }}
         onClick={onClose}
       >
-        {/* ─── ZOOM IN-MEETING CHAT DRAWER WINDOW ─── */}
+        {/* ─── CHAT DRAWER WINDOW ─── */}
         <div
           onClick={e => e.stopPropagation()}
           style={{
@@ -391,7 +541,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
             animation: 'zoomSlideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
-          {/* ─── 1. ZOOM TOP HEADER BAR ─── */}
+          {/* ─── 1. HEADER BAR ─── */}
           <div style={{
             padding: '14px 18px',
             background: '#ffffff',
@@ -402,19 +552,19 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
             flexShrink: 0
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {/* Zoom Chat Icon */}
               <div style={{
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: '#0e71eb',
+                background: cfg.bannerColor,
                 color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 2px 8px rgba(14, 113, 235, 0.3)'
+                boxShadow: `0 2px 8px ${cfg.bannerColor}55`,
+                fontSize: 16
               }}>
-                <MessageSquare size={17} strokeWidth={2.4} />
+                {cfg.icon}
               </div>
 
               <div>
@@ -445,7 +595,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                   </span>
                 </div>
                 <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 500 }}>
-                  Celebrity Requests & Feedback
+                  {cfg.header} &amp; Feedback
                 </div>
               </div>
             </div>
@@ -482,23 +632,24 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
             </div>
           </div>
 
-          {/* ─── 2. PINNED WELCOME BANNER (Zoom Meeting Notice style) ─── */}
+          {/* ─── 2. PINNED WELCOME BANNER ─── */}
           <div style={{
             padding: '10px 16px',
-            background: '#f0f7ff',
-            borderBottom: '1px solid #dbeafe',
+            background: cfg.bannerBg,
+            borderBottom: `1px solid ${cfg.bannerBorder}`,
             display: 'flex',
             alignItems: 'flex-start',
             gap: 10,
             flexShrink: 0
           }}>
-            <Sparkles size={16} color="#0e71eb" style={{ marginTop: 2, flexShrink: 0 }} />
+            <Sparkles size={16} color={cfg.bannerColor} style={{ marginTop: 2, flexShrink: 0 }} />
             <div style={{ fontSize: 12, color: '#1e40af', lineHeight: 1.45 }}>
-              <strong>Can&apos;t find your favourite celebrity?</strong> Type their name or Instagram handle below. Suggest stars you want tracked on Spialr!
+              <strong>{cfg.welcomeMsg.split('?')[0]}?</strong>
+              {' '}{cfg.welcomeMsg.split('?')[1] || ''}
             </div>
           </div>
 
-          {/* ─── 3. SCROLLABLE ZOOM MESSAGE STREAM ─── */}
+          {/* ─── 3. SCROLLABLE MESSAGE STREAM ─── */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
@@ -549,7 +700,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                   No suggestions yet
                 </h4>
                 <p style={{ margin: 0, fontSize: 13, color: '#64748b', maxWidth: 280, lineHeight: 1.45 }}>
-                  Be the first to suggest a celebrity or creator you want featured on Spialr!
+                  {cfg.emptyMsg}
                 </p>
               </div>
             ) : (
@@ -571,7 +722,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                     onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
                     onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
                   >
-                    {/* Zoom Chat Sender Line: [Avatar] Name (to Everyone): Timestamp */}
+                    {/* Sender Line */}
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -581,7 +732,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 14 }}>{msg.avatar_emoji || '⭐'}</span>
-                        <span style={{ fontWeight: 800, color: '#0e71eb' }}>
+                        <span style={{ fontWeight: 800, color: cfg.bannerColor }}>
                           {msg.author_name || 'Anonymous'}
                         </span>
                       </div>
@@ -603,22 +754,22 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                       {msg.content}
                     </div>
 
-                    {/* Zoom Reaction / Upvote Button */}
+                    {/* Upvote Button */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 22, marginTop: 4 }}>
                       <button
                         type="button"
                         onClick={() => handleVote(msg.id)}
                         disabled={hasVoted}
-                        title={hasVoted ? 'You already upvoted this' : 'Upvote this celebrity suggestion'}
+                        title={hasVoted ? 'You already upvoted this' : 'Upvote this suggestion'}
                         style={{
                           padding: '2px 8px',
                           borderRadius: 100,
                           fontSize: 11.5,
                           fontWeight: 700,
                           border: '1px solid',
-                          borderColor: hasVoted ? '#0e71eb' : '#e2e8f0',
-                          background: hasVoted ? 'rgba(14, 113, 235, 0.08)' : '#ffffff',
-                          color: hasVoted ? '#0e71eb' : '#64748b',
+                          borderColor: hasVoted ? cfg.bannerColor : '#e2e8f0',
+                          background: hasVoted ? `${cfg.bannerColor}14` : '#ffffff',
+                          color: hasVoted ? cfg.bannerColor : '#64748b',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 4,
@@ -626,9 +777,9 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        <ThumbsUp size={11} strokeWidth={2.4} fill={hasVoted ? '#0e71eb' : 'none'} />
+                        <ThumbsUp size={11} strokeWidth={2.4} fill={hasVoted ? cfg.bannerColor : 'none'} />
                         <span>{msg.likes_count || 0}</span>
-                        {hasVoted && <span style={{ fontSize: 10.5, color: '#0e71eb' }}>• Upvoted</span>}
+                        {hasVoted && <span style={{ fontSize: 10.5, color: cfg.bannerColor }}>• Upvoted</span>}
                       </button>
                     </div>
                   </div>
@@ -638,7 +789,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
             <div ref={chatEndRef} />
           </div>
 
-          {/* ─── 4. QUICK SUGGESTIONS CHIPS ─── */}
+          {/* ─── 4. QUICK SUGGESTION CHIPS ─── */}
           <div style={{
             padding: '6px 14px',
             background: '#f8fafc',
@@ -649,12 +800,12 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
             whiteSpace: 'nowrap',
             flexShrink: 0
           }} className="no-scrollbar">
-            {QUICK_SUGGESTIONS.map((chip, idx) => (
+            {cfg.chips.map((chip, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => {
-                  setContent(prev => prev ? `${prev} (${chip})` : `Please feature: [Celebrity Name] (${chip})`)
+                  setContent(prev => prev ? `${prev} (${chip})` : `Please feature: [Name] (${chip})`)
                   if (inputRef.current) inputRef.current.focus()
                 }}
                 style={{
@@ -669,8 +820,8 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                   transition: 'all 0.15s ease'
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = '#0e71eb'
-                  e.currentTarget.style.color = '#0e71eb'
+                  e.currentTarget.style.borderColor = cfg.bannerColor
+                  e.currentTarget.style.color = cfg.bannerColor
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.borderColor = '#cbd5e1'
@@ -682,7 +833,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
             ))}
           </div>
 
-          {/* ─── 5. IDENTITY MODAL / POPOVER ─── */}
+          {/* ─── 5. IDENTITY MODAL ─── */}
           {showIdentityEditor && (
             <div style={{
               padding: '12px 16px',
@@ -724,7 +875,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                   style={{
                     padding: '6px 12px',
                     borderRadius: 8,
-                    background: '#0e71eb',
+                    background: cfg.bannerColor,
                     color: '#ffffff',
                     border: 'none',
                     fontSize: 12,
@@ -748,8 +899,8 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                       height: 28,
                       borderRadius: 6,
                       border: '1px solid',
-                      borderColor: avatarEmoji === em ? '#0e71eb' : '#e2e8f0',
-                      background: avatarEmoji === em ? 'rgba(14, 113, 235, 0.1)' : '#ffffff',
+                      borderColor: avatarEmoji === em ? cfg.bannerColor : '#e2e8f0',
+                      background: avatarEmoji === em ? `${cfg.bannerColor}18` : '#ffffff',
                       fontSize: 14,
                       cursor: 'pointer',
                       display: 'flex',
@@ -764,7 +915,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
             </div>
           )}
 
-          {/* ─── 6. ZOOM BOTTOM INPUT DOCK ─── */}
+          {/* ─── 6. BOTTOM INPUT DOCK ─── */}
           <div style={{
             padding: '12px 16px',
             background: '#ffffff',
@@ -802,11 +953,11 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                 <span>From:</span>
                 <span>{avatarEmoji}</span>
                 <strong style={{ color: '#0f172a' }}>{authorName}</strong>
-                <span style={{ color: '#0e71eb', textDecoration: 'underline' }}>Edit</span>
+                <span style={{ color: cfg.bannerColor, textDecoration: 'underline' }}>Edit</span>
               </button>
             </div>
 
-            {/* Textarea & Send Button Form */}
+            {/* Textarea & Send Button */}
             <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{
                 display: 'flex',
@@ -819,7 +970,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                 transition: 'border-color 0.15s ease',
                 boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
               }}
-              onFocusCapture={e => e.currentTarget.style.borderColor = '#0e71eb'}
+              onFocusCapture={e => e.currentTarget.style.borderColor = cfg.bannerColor}
               onBlurCapture={e => e.currentTarget.style.borderColor = '#cbd5e1'}
               >
                 <textarea
@@ -832,7 +983,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                       handleSend()
                     }
                   }}
-                  placeholder="Type message or celebrity name here..."
+                  placeholder={cfg.placeholder}
                   rows={2}
                   style={{
                     width: '100%',
@@ -848,7 +999,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                   }}
                 />
 
-                {/* Zoom Blue Send Button */}
+                {/* Send Button */}
                 <button
                   type="submit"
                   disabled={!content.trim() || submitting}
@@ -856,7 +1007,7 @@ export default function CelebritySuggestionChat({ isOpen, onClose, initialPrefil
                     width: 34,
                     height: 34,
                     borderRadius: 10,
-                    background: content.trim() && !submitting ? '#0e71eb' : '#cbd5e1',
+                    background: content.trim() && !submitting ? cfg.bannerColor : '#cbd5e1',
                     color: '#ffffff',
                     border: 'none',
                     display: 'flex',

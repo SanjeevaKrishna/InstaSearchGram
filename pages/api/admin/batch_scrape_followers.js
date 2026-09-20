@@ -242,20 +242,19 @@ export default async function handler(req, res) {
 
         let history = Array.isArray(profile.follower_history) ? [...profile.follower_history] : []
         const todayIdx = history.findIndex(h => h.date === todayStr)
+        const isFirstScrape = history.length === 0 || (history.length === 1 && history[0].is_initial);
         if (todayIdx !== -1) {
           history[todayIdx].count = count
+          history[todayIdx].scraped = true
+          if (isFirstScrape) history[todayIdx].is_first_scrape = true
           delete history[todayIdx].status
         } else {
-          history.push({ date: todayStr, count })
-        }
-
-        // If newly added profile with only 1 history date, automatically seed yesterday's baseline
-        if (history.length === 1) {
-          const delta = getRealisticDelta(count)
-          const targetDateObj = new Date(todayStr)
-          const priorDate = new Date(targetDateObj.getTime() - 24 * 60 * 60 * 1000)
-          const priorDateStr = priorDate.toISOString().split("T")[0]
-          history.unshift({ date: priorDateStr, count: Math.max(100, count - delta) })
+          history.push({
+            date: todayStr,
+            count,
+            scraped: true,
+            ...(isFirstScrape ? { is_first_scrape: true } : {})
+          })
         }
 
         // Interpolate any multi-day gaps between valid scrape dates with daily average values
