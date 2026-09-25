@@ -369,6 +369,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
   const [hoveredTab, setHoveredTab] = useState(null)
   const [selectedLanguage, setSelectedLanguage] = useState('All')
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
+  const langButtonRef = useRef(null)
   const [displayLimit, setDisplayLimit] = useState(100)
   const [isSuggestionChatOpen, setIsSuggestionChatOpen] = useState(false)
   const [suggestionPrefill, setSuggestionPrefill] = useState('')
@@ -528,11 +529,17 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
   useEffect(() => {
     if (!timelineMode) return
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setTimelineZoom(prev => prev === 1.0 ? 0.4 : prev)
+      setTimelineZoom(0.45)
+    } else {
+      setTimelineZoom(1.0)
     }
   }, [timelineMode])
 
-  // Pinch-to-zoom on the timeline canvas (mobile touch gesture)
+  // Pinch-to-zoom on the timeline canvas (mobile touch gesture) — RAF throttled to avoid lag
+  const currentZoomRef = useRef(1.0)
+  const rafPendingRef = useRef(false)
+  useEffect(() => { currentZoomRef.current = timelineZoom }, [timelineZoom])
+
   useEffect(() => {
     const el = arenaScrollRef.current
     if (!el) return
@@ -546,18 +553,23 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
     const onTouchStart = (e) => {
       if (e.touches.length === 2) {
         pinchStartDistRef.current = getDistance(e.touches)
-        pinchStartZoomRef.current = timelineZoom
+        pinchStartZoomRef.current = currentZoomRef.current
       }
     }
 
     const onTouchMove = (e) => {
-      if (e.touches.length === 2) {
-        e.preventDefault()
+      if (e.touches.length !== 2) return
+      e.preventDefault()
+      if (rafPendingRef.current) return
+      rafPendingRef.current = true
+      requestAnimationFrame(() => {
+        rafPendingRef.current = false
+        if (e.touches.length !== 2) return
         const dist = getDistance(e.touches)
         const ratio = dist / pinchStartDistRef.current
-        const newZoom = Math.min(3.5, Math.max(0.25, Number((pinchStartZoomRef.current * ratio).toFixed(2))))
+        const newZoom = Math.min(2.2, Math.max(0.3, Number((pinchStartZoomRef.current * ratio).toFixed(2))))
         setTimelineZoom(newZoom)
-      }
+      })
     }
 
     el.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -566,7 +578,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
     }
-  }, [arenaScrollRef.current, timelineZoom])
+  }, [arenaScrollRef.current])
 
   // Infinite Scroll Observer
   useEffect(() => {
@@ -1056,8 +1068,8 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
             zIndex: 10,
             gap: 8,
           }}>
-            {/* Left spacer — mirrors the language button width so tabs stay truly centered */}
-            <div style={{ flex: '0 0 80px', minWidth: 0 }} />
+            {/* Left spacer — hidden or auto-adjusted on mobile so tabs stay centered and elements stay within viewport */}
+            <div className="nav-left-spacer" style={{ flex: '0 0 60px', minWidth: 0, flexShrink: 1 }} />
 
             {/* Subtabs Selection — always centered */}
             <div className="fade-in subtabs-container" style={{
@@ -1138,31 +1150,34 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
             </div>
 
             {/* Language Filter — always anchored to right, fixed width so it never shifts tabs */}
-            <div style={{ flex: '0 0 80px', display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
+            <div className="nav-lang-container" style={{ flex: '0 0 60px', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
               {activeTab === 'most_followed' && !timelineMode && !loading && !error && liveData && liveData.most_followed && liveData.most_followed.length > 0 && (
                 <div style={{ position: 'relative' }}>
                   <button
+                    ref={langButtonRef}
                     onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
                     style={{
-                      padding: '8px 10px',
+                      padding: '8px 8px',
                       borderRadius: '100px',
                       border: '1px solid var(--border)',
                       background: 'var(--surface)',
                       color: 'var(--text)',
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 4,
+                      gap: 3,
                       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
                       transition: 'all 0.2s ease',
                       whiteSpace: 'nowrap',
-                      maxWidth: 80,
+                      maxWidth: 60,
+                      minWidth: 0,
+                      overflow: 'hidden',
                     }}
                   >
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 46 }}>{selectedLanguage}</span>
-                    <ChevronDown size={13} style={{
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 38 }}>{selectedLanguage}</span>
+                    <ChevronDown size={11} style={{
                       flexShrink: 0,
                       transform: isLangDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                       transition: 'transform 0.2s ease',
@@ -1185,16 +1200,16 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                         }}
                       />
                       <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        marginTop: 6,
+                        position: 'fixed',
+                        top: langButtonRef.current ? langButtonRef.current.getBoundingClientRect().bottom + 6 : 120,
+                        right: 16,
                         background: 'var(--surface)',
                         border: '1px solid var(--border)',
                         borderRadius: 12,
                         boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
                         zIndex: 100,
-                        minWidth: 160,
+                        minWidth: 140,
+                        maxWidth: 'calc(100vw - 32px)',
                         overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column',
@@ -1331,9 +1346,12 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                   display: 'flex',
                   gap: 8,
                   overflowX: 'auto',
-                  paddingBottom: 8,
+                  flexWrap: 'nowrap',
+                  paddingBottom: 4,
                   marginBottom: 12,
                   WebkitOverflowScrolling: 'touch',
+                  msOverflowStyle: 'none',
+                  scrollbarWidth: 'none',
                 }}>
                     {categories.map((cat) => {
                       const isActive = selectedCategory.toLowerCase() === cat.toLowerCase()
@@ -1503,7 +1521,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                 return (
                   <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {/* WHITE RACE CANVAS (Matching User Reference Image) */}
-                    <div style={{
+                    <div className="race-canvas-card" style={{
                       background: '#ffffff',
                       borderRadius: 24,
                       border: '1px solid #e2e8f0',
@@ -1582,7 +1600,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', padding: '6px 12px', borderRadius: 12, border: '1px solid #e2e8f0' }}>
                             <span style={{ fontSize: 12, fontWeight: 750, color: '#64748b' }}>Zoom Canvas:</span>
                             <button
-                              onClick={() => setTimelineZoom(prev => Math.max(0.5, Number((prev - 0.25).toFixed(2))))}
+                              onClick={() => setTimelineZoom(prev => Math.max(0.3, Number((prev - 0.15).toFixed(2))))}
                               style={{
                                 width: 28,
                                 height: 28,
@@ -1618,7 +1636,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               {Math.round(timelineZoom * 100)}%
                             </button>
                             <button
-                              onClick={() => setTimelineZoom(prev => Math.min(3.5, Number((prev + 0.25).toFixed(2))))}
+                              onClick={() => setTimelineZoom(prev => Math.min(2.5, Number((prev + 0.15).toFixed(2))))}
                               style={{
                                 width: 28,
                                 height: 28,
@@ -1640,11 +1658,6 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                           </div>
                         </div>
 
-                        {/* Pinch hint for mobile */}
-                        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, opacity: 0.7 }}>
-                          👌 Pinch to zoom · Scroll sideways to explore
-                        </div>
-
                       </div>
 
                       {/* Scrollable Horizontal Arena */}
@@ -1652,8 +1665,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                         <div style={{
                           minWidth: `${Math.round(2200 * timelineZoom)}px`,
                           width: `${Math.round(100 * timelineZoom)}%`,
-                          position: 'relative',
-                          transition: 'width 0.2s ease, min-width 0.2s ease'
+                          position: 'relative'
                         }}>
                           {/* Top Milestone Axis & Vertical Grid Lines */}
                           {(() => {
@@ -3439,6 +3451,16 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
           }
           .profile-name {
             font-size: 15px !important;
+          }
+          .nav-left-spacer {
+            display: none !important;
+          }
+          .nav-lang-container {
+            flex: 0 0 auto !important;
+          }
+          .race-canvas-card {
+            padding: 16px 12px 24px !important;
+            border-radius: 16px !important;
           }
         }
 
