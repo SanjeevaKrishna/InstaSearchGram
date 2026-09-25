@@ -608,3 +608,28 @@ input, textarea, select {
     right: 16px;
   }
 }
+
+/* ── Daily Growth Live Timer ── */
+@keyframes clockSpin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes timerFlip {
+  0%   { opacity: 0.4; transform: translateY(-3px) scale(0.95); }
+  100% { opacity: 1;   transform: translateY(0)    scale(1); }
+}
+
+.growth-clock-emoji {
+  display: inline-block;
+  font-size: 15px;
+  line-height: 1;
+  animation: clockSpin 6s linear infinite;
+  transform-origin: center center;
+}
+
+.growth-live-timer {
+  font-variant-numeric: tabular-nums;
+  animation: timerFlip 0.22s ease-out;
+}
+

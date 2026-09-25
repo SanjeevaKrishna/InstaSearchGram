@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import PostCard from '../../components/PostCard'
 import Logo from '../../components/Logo'
-import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck, Download } from 'lucide-react'
+import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck, Download, Loader2 } from 'lucide-react'
 import { downloadComparisonCard } from '../../lib/exportComparisonCard'
 import { supabase } from '../../lib/supabase'
 import CommentSection from '../../components/CommentSection'
@@ -163,7 +163,7 @@ function generateProfileNarrative(cel, liveRank, postsCount, posts = []) {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null, liveProfileSlug = null }) {
+export default function CelebrityPage({ initialCelebrity, initialPosts, initialCompareCelebrity, otherCelebrities = [], liveRank = null, compareLiveRank = null, liveProfileSlug = null, liveFollowersCount = null }) {
   const router = useRouter()
   const { slug, compare } = router.query
 
@@ -182,6 +182,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
   const [compareCelebrity, setCompareCelebrity] = useState(initialCompareCelebrity)
   const [loadingCompare, setLoadingCompare] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const targetLiveSlug = liveProfileSlug || (celebrity?.instagram_handle ? celebrity.instagram_handle.toLowerCase().trim().replace(/\./g, '-') : null)
 
   const handleExportComparison = async () => {
     if (isExporting || !celebrity || !compareCelebrity) return
@@ -392,161 +393,210 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
         </Head>
 
         
-        <main style={{ maxWidth: 850, margin: '0 auto', padding: '24px 20px 80px', width: '100%' }} className="fade-in">
-          {/* Back Button */}
-          <button 
-            onClick={() => router.push(`/celebrity/${slug}`)} 
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              fontSize: 13, 
-              color: 'var(--text-muted)', 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: 4, 
-              marginBottom: 24, 
-              cursor: 'pointer', 
-              padding: 0 
-            }}
-          >
-            ← Back to Profile
-          </button>
+        <main style={{ maxWidth: 850, margin: '0 auto', padding: '0 20px 80px', width: '100%' }}>
+          {/* Sticky Comparison Header: Pinned at top while comparative insights scroll */}
+          <div style={{
+            position: 'sticky',
+            top: 60,
+            zIndex: 40,
+            background: 'var(--surface)',
+            marginLeft: -20,
+            marginRight: -20,
+            paddingLeft: 20,
+            paddingRight: 20,
+            paddingTop: 10,
+            paddingBottom: 14,
+            marginBottom: 16,
+            borderBottom: '1px solid var(--border)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
+          }}>
+            {/* Top Row: Back Button on Left, Lucide Download Icon on Right */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <button 
+                onClick={() => router.push(`/celebrity/${slug}`)} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  fontSize: 12.5, 
+                  fontWeight: 600,
+                  color: 'var(--text-muted)', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: 4, 
+                  cursor: 'pointer', 
+                  padding: 0 
+                }}
+              >
+                ← Back to Profile
+              </button>
 
-          {/* Profile Split Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28, position: 'relative' }}>
-            
-            {/* VS Divider badge */}
-            <div style={{
-              position: 'absolute',
-              left: '50%',
-              top: '35px',
-              transform: 'translateX(-50%)',
-              background: 'var(--accent)',
-              color: '#fff',
-              fontSize: 11,
-              fontWeight: 800,
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 10px rgba(225, 48, 108, 0.3)',
-              zIndex: 10
-            }}>
-              VS
+              <button
+                type="button"
+                onClick={handleExportComparison}
+                disabled={isExporting}
+                title="Download Comparison Graphic"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  cursor: isExporting ? 'wait' : 'pointer',
+                  boxShadow: '0 3px 12px rgba(225, 48, 108, 0.35)',
+                  transition: 'all 0.2s ease',
+                  opacity: isExporting ? 0.75 : 1,
+                  padding: 0,
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => { if (!isExporting) e.currentTarget.style.transform = 'scale(1.08)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+              >
+                {isExporting ? (
+                  <Loader2 size={17} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <Download size={17} strokeWidth={2.5} />
+                )}
+              </button>
             </div>
 
-            {/* Left Celebrity Header */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
+            {/* Profile Split Header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, position: 'relative' }}>
+              
+              {/* VS Divider badge */}
               <div style={{
-                width: 70, height: 70, borderRadius: 14, background: 'var(--surface2)', border: '2px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800,
-                overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.12)', flexShrink: 0, marginBottom: 12
-              }}>
-                {celebrity.photo_url ? (
-                  <img src={celebrity.photo_url} alt={celebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
-                ) : celebrity.name?.charAt(0).toUpperCase()}
-              </div>
-
-              <h2 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 16,
+                position: 'absolute',
+                left: '50%',
+                top: '20px',
+                transform: 'translateX(-50%)',
+                background: 'var(--accent)',
+                color: '#fff',
+                fontSize: 10.5,
                 fontWeight: 800,
-                color: 'var(--text)',
-                marginBottom: 2,
-                textAlign: 'center',
-                width: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 10px rgba(225, 48, 108, 0.3)',
+                zIndex: 10
               }}>
-                {celebrity.name}
-              </h2>
-              {celebrity.instagram_handle && (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 8, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  @{celebrity.instagram_handle}
+                VS
+              </div>
+
+              {/* Left Celebrity Header */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
+                <div style={{
+                  width: 62, height: 62, borderRadius: 14, background: 'var(--surface2)', border: '2px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 800,
+                  overflow: 'hidden', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', flexShrink: 0, marginBottom: 8
+                }}>
+                  {celebrity.photo_url ? (
+                    <img src={celebrity.photo_url} alt={celebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                  ) : celebrity.name?.charAt(0).toUpperCase()}
                 </div>
-              )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
-                  {celebrity.followers_count ? formatCount(celebrity.followers_count) : '—'} followers
-                </span>
-                {celebrity.account_created_year && (
-                  <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
-                    Joined: {celebrity.account_created_year}
-                  </span>
+                <h2 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: 'var(--text)',
+                  marginBottom: 1,
+                  textAlign: 'center',
+                  width: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {celebrity.name}
+                </h2>
+                {celebrity.instagram_handle && (
+                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    @{celebrity.instagram_handle}
+                  </div>
                 )}
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
-                  {formatCount(celebrity.posts_count || postsCount)} posts
-                </span>
-                 {liveRank && compareLiveRank && (
-                  <span style={{ fontSize: 11.5, color: '#e1306c', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
-                    Ranked #{liveRank} Most Followed
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--accent)', fontWeight: 700, marginBottom: 1 }}>
+                    {celebrity.followers_count ? formatCount(celebrity.followers_count) : '—'} followers
                   </span>
-                )}
-              </div>
-            </div>
-
-            {/* Right Celebrity Header */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
-              <div style={{
-                width: 70, height: 70, borderRadius: 14, background: 'var(--surface2)', border: '2px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800,
-                overflow: 'hidden', boxShadow: '0 6px 16px rgba(0,0,0,0.12)', flexShrink: 0, marginBottom: 12
-              }}>
-                {compareCelebrity.photo_url ? (
-                  <img src={compareCelebrity.photo_url} alt={compareCelebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
-                ) : compareCelebrity.name?.charAt(0).toUpperCase()}
-              </div>
-
-              <h2 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 16,
-                fontWeight: 800,
-                color: 'var(--text)',
-                marginBottom: 2,
-                textAlign: 'center',
-                width: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {compareCelebrity.name}
-              </h2>
-              {compareCelebrity.instagram_handle && (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 8, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  @{compareCelebrity.instagram_handle}
+                  {celebrity.account_created_year && (
+                    <span style={{ fontSize: 10.5, color: 'var(--text-dim)', fontWeight: 600 }}>
+                      Joined: {celebrity.account_created_year}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 1 }}>
+                    {formatCount(celebrity.posts_count || postsCount)} posts
+                  </span>
+                  {liveRank && compareLiveRank && (
+                    <span style={{ fontSize: 11, color: '#e1306c', fontWeight: 700, textAlign: 'center', lineHeight: 1.25 }}>
+                      Ranked #{liveRank} Most Followed
+                    </span>
+                  )}
                 </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700, marginBottom: 2 }}>
-                  {compareCelebrity.followers_count ? formatCount(compareCelebrity.followers_count) : '—'} followers
-                </span>
-                {compareCelebrity.account_created_year && (
-                  <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
-                    Joined: {compareCelebrity.account_created_year}
-                  </span>
-                )}
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
-                  {formatCount(compareCelebrity.posts_count)} posts
-                </span>
-                {liveRank && compareLiveRank && (
-                  <span style={{ fontSize: 11.5, color: '#e1306c', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
-                    Ranked #{compareLiveRank} Most Followed
-                  </span>
-                )}
               </div>
-            </div>
 
+              {/* Right Celebrity Header */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
+                <div style={{
+                  width: 62, height: 62, borderRadius: 14, background: 'var(--surface2)', border: '2px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 800,
+                  overflow: 'hidden', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', flexShrink: 0, marginBottom: 8
+                }}>
+                  {compareCelebrity.photo_url ? (
+                    <img src={compareCelebrity.photo_url} alt={compareCelebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                  ) : compareCelebrity.name?.charAt(0).toUpperCase()}
+                </div>
+
+                <h2 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: 'var(--text)',
+                  marginBottom: 1,
+                  textAlign: 'center',
+                  width: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {compareCelebrity.name}
+                </h2>
+                {compareCelebrity.instagram_handle && (
+                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    @{compareCelebrity.instagram_handle}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--accent)', fontWeight: 700, marginBottom: 1 }}>
+                    {compareCelebrity.followers_count ? formatCount(compareCelebrity.followers_count) : '—'} followers
+                  </span>
+                  {compareCelebrity.account_created_year && (
+                    <span style={{ fontSize: 10.5, color: 'var(--text-dim)', fontWeight: 600 }}>
+                      Joined: {compareCelebrity.account_created_year}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 1 }}>
+                    {formatCount(compareCelebrity.posts_count)} posts
+                  </span>
+                  {liveRank && compareLiveRank && (
+                    <span style={{ fontSize: 11, color: '#e1306c', fontWeight: 700, textAlign: 'center', lineHeight: 1.25 }}>
+                      Ranked #{compareLiveRank} Most Followed
+                    </span>
+                  )}
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <div style={{ width: '100%', height: '1px', background: 'var(--border)', margin: '24px 0 20px' }} />
-
           {/* Account Insights Section */}
-          <h3 className="analytics-title" style={{ justifyContent: 'center', marginBottom: 20 }}>
+          <h3 className="analytics-title" style={{ justifyContent: 'center', marginTop: 18, marginBottom: 18 }}>
             <TrendingUp size={18} strokeWidth={2.5} /> Comparative Insights
           </h3>
 
@@ -578,35 +628,33 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             Your View, Your Like, Your Comment, Your Repost Counts
           </div>
 
-          {/* Download Action at bottom of page */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 28, marginBottom: 12 }}>
+          {/* Download Action at bottom right of page */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24, marginBottom: 12 }}>
             <button
               type="button"
               onClick={handleExportComparison}
               disabled={isExporting}
+              title="Download Comparison Graphic"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 8,
-                background: 'linear-gradient(135deg, #e1306c 0%, #8f00ff 100%)',
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
                 color: '#ffffff',
                 border: 'none',
-                padding: '11px 28px',
-                borderRadius: '30px',
-                fontSize: 14,
-                fontWeight: 700,
                 cursor: isExporting ? 'wait' : 'pointer',
                 boxShadow: '0 4px 18px rgba(225, 48, 108, 0.35)',
                 transition: 'all 0.2s ease',
                 opacity: isExporting ? 0.75 : 1,
-                userSelect: 'none'
+                padding: 0
               }}
-              onMouseEnter={(e) => { if (!isExporting) e.currentTarget.style.transform = 'translateY(-1px)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
+              onMouseEnter={(e) => { if (!isExporting) e.currentTarget.style.transform = 'scale(1.08)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
             >
-              <Download size={17} strokeWidth={2.5} />
-              <span>{isExporting ? 'Downloading...' : 'Download'}</span>
+              {isExporting ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={20} strokeWidth={2.5} />}
             </button>
           </div>
         </main>
@@ -626,12 +674,12 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
           name="keywords"
           content={`${celebrity.name}, ${celebrity.name} instagram followers, ${celebrity.name} instagram followers count, ${celebrity.name} followers on instagram, ${celebrity.name} insta followers, ${celebrity.instagram_handle || ''} followers, live instagram follower count, instagram stats, spialr`}
         />
-        <link rel="canonical" href={`https://spialr.com/celebrity/${celebrity.slug}`} />
+        <link rel="canonical" href={`https://spialr.com/celebrity/${celebrity.slug}`} key="canonical" />
         <meta property="og:type" content="profile" />
         <meta property="og:title" content={`${celebrity.name?.trim()} (@${celebrity.instagram_handle || ''}) Instagram Followers, Live Stats & Analytics | Spialr`} />
         <meta property="og:description" content={`Check ${celebrity.name}'s real-time Instagram follower count (${formatCount(celebrity.followers_count)}), engagement rate, average reel views, and growth rankings on Spialr.`} />
         <meta property="og:image" content={celebrity.photo_url || 'https://spialr.com/og-image.jpg'} />
-        <meta property="og:url" content={`https://spialr.com/celebrity/${celebrity.slug}`} />
+        <meta property="og:url" content={`https://spialr.com/celebrity/${celebrity.slug}`} key="og:url" />
         <meta property="og:site_name" content="Spialr" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${celebrity.name} Instagram Followers & Analytics | Spialr`} />
@@ -810,7 +858,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               {/* Followers · Posts · Joined — same info as All Profiles row */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 600 }}>
-                  <strong>{celebrity.followers_count ? formatCount(celebrity.followers_count) : '—'}</strong> followers
+                  <strong>{(liveFollowersCount || celebrity.followers_count) ? formatCount(liveFollowersCount || celebrity.followers_count) : '—'}</strong> followers
                 </span>
                 <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
                   <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts
@@ -925,23 +973,6 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   Total Repost
                 </div>
               </div>
-            </div>
-
-            <div style={{
-              marginTop: 20,
-              padding: '12px 16px',
-              background: 'var(--surface2)',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 13,
-              color: 'var(--text-dim)',
-              justifyContent: 'center'
-            }}>
-              <ShieldCheck size={16} style={{ color: '#10b981' }} />
-              <span suppressHydrationWarning>Manually verified as of {formatStaticDate(celebrity.updated_at)}, across <strong>{formatCount(celebrity.posts_count || postsCount)}</strong> posts.</span>
             </div>
           </div>
         ) : null}
@@ -1115,94 +1146,252 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
             )}
 
 
-            {/* About & Social Media Insights (AdSense / SEO Compliance) */}
-            <div style={{ marginBottom: 32, width: '100%' }}>
-              <div style={{
-                width: '100%',
-                height: '2px',
-                background: 'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)',
-                margin: '32px 0 24px',
-                opacity: 0.8
-              }} />
-              
-              {celebrity.description && (
-                <>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
-                    About {celebrity.name}
-                  </h3>
-                  <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 20, wordBreak: 'break-word' }}>
-                    {normalizeBioText(celebrity.description)}
-                  </p>
-                  
-                  {/* Pink-Red divider line */}
-                  <div style={{
-                    width: '100%',
-                    height: '1.5px',
-                    background: 'linear-gradient(90deg, var(--accent) 0%, transparent 100%)',
-                    margin: '24px 0 28px',
-                    opacity: 0.7
-                  }} />
-                </>
-              )}
+            {/* 3) Live Real-Time Follower Tracker — shown only for 100k+ accounts */}
+            {/* Instagram Red / Sunset gradient divider */}
+            <div style={{
+              width: '100%', height: '1.5px',
+              background: 'linear-gradient(90deg, #fd1d1d 0%, #e1306c 35%, #833ab4 70%, transparent 100%)',
+              margin: '28px 0 18px', opacity: 0.8
+            }} />
 
-              {/* Live Follower Tracker & 31-Day Growth Feature Card (Only shown if creator exists in live most_followed) */}
-              {liveProfileSlug && (
-                <div style={{
-                  marginTop: 12,
-                  marginBottom: 24,
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(217, 70, 239, 0.08) 100%)',
-                  border: '1px solid rgba(99, 102, 241, 0.35)',
-                  borderRadius: 20,
-                  padding: '20px 22px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 16,
-                  boxShadow: '0 8px 24px rgba(99, 102, 241, 0.08)'
-                }}>
-                  <div style={{ flex: 1, minWidth: 260 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
-                      <span style={{ fontSize: 11, fontWeight: 900, color: '#818cf8', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                        LIVE REAL-TIME FOLLOWER TRACKER
+            {targetLiveSlug && (liveFollowersCount || celebrity.followers_count) >= 100000 ? (() => {
+              const displayCount = liveFollowersCount || celebrity.followers_count
+              return (
+                <div
+                  onClick={() => router.push(`/profile/${targetLiveSlug}`)}
+                  style={{
+                    marginBottom: 24,
+                    background: 'var(--surface)',
+                    border: '1px solid rgba(225, 48, 108, 0.28)',
+                    borderRadius: 16,
+                    padding: '18px 22px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 20,
+                    cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                  className="live-realtime-card"
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = '#e1306c'
+                    e.currentTarget.style.background = 'var(--surface2)'
+                    e.currentTarget.style.boxShadow = '0 8px 30px rgba(225, 48, 108, 0.18)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'rgba(225, 48, 108, 0.28)'
+                    e.currentTarget.style.background = 'var(--surface)'
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.03)'
+                  }}
+                >
+                  {/* Subtle Instagram Gradient Aura in background */}
+                  <div style={{
+                    position: 'absolute',
+                    top: -40,
+                    right: -40,
+                    width: 220,
+                    height: 220,
+                    background: 'radial-gradient(circle, rgba(225,48,108,0.12) 0%, rgba(253,29,29,0.04) 50%, transparent 70%)',
+                    pointerEvents: 'none'
+                  }} />
+
+                  {/* Left Side: Square Metric Box + Title & Live Animation Elements */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
+                    {/* Dedicated Square Stat Box (Instagram Red Gradient) */}
+                    <div style={{
+                      width: 78,
+                      height: 78,
+                      borderRadius: 14,
+                      background: 'linear-gradient(135deg, rgba(225, 48, 108, 0.14) 0%, rgba(253, 29, 29, 0.05) 100%)',
+                      border: '1px solid rgba(225, 48, 108, 0.35)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 2,
+                      flexShrink: 0,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      {/* Top micro light reflection beam */}
+                      <div className="live-box-sheen" />
+
+                      <TrendingUp size={18} strokeWidth={2.4} style={{ color: '#fd1d1d', animation: 'liveFloatUp 2.4s ease-in-out infinite' }} />
+                      <span style={{
+                        fontSize: 18,
+                        fontWeight: 900,
+                        color: '#fd1d1d',
+                        letterSpacing: '-0.02em',
+                        lineHeight: 1.1
+                      }}>
+                        {formatCount(displayCount)}
+                      </span>
+                      <span style={{
+                        fontSize: 9,
+                        fontWeight: 800,
+                        color: '#e1306c',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3
+                      }}>
+                        <span className="live-beacon-dot" />
+                        LIVE
                       </span>
                     </div>
-                    <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>
-                      Track {celebrity.name}'s Real-Time Followers & 31-Day Growth
-                    </div>
-                    <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
-                      Explore live odometer counter, daily gain/loss breakdown, and milestone projections.
+
+                    {/* Title, Animated Equalizer & Progress Stream Bar */}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          fontSize: 10,
+                          fontWeight: 800,
+                          color: '#e1306c',
+                          background: 'rgba(225, 48, 108, 0.12)',
+                          padding: '2px 7px',
+                          borderRadius: 6,
+                          letterSpacing: '0.04em'
+                        }}>
+                          <span className="live-beacon-dot" />
+                          LIVE PULSE
+                        </span>
+
+                        {/* Animated Live Frequency / Activity Equalizer Bars */}
+                        <div style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2.5, height: 12 }} title="Live Stream Active">
+                          <span className="live-eq-bar eq-1" />
+                          <span className="live-eq-bar eq-2" />
+                          <span className="live-eq-bar eq-3" />
+                          <span className="live-eq-bar eq-4" />
+                        </div>
+
+                        <h4 style={{
+                          fontSize: 15.5,
+                          fontWeight: 800,
+                          color: 'var(--text)',
+                          letterSpacing: '-0.01em',
+                          margin: 0
+                        }}>
+                          Real-Time Follower Tracker
+                        </h4>
+                      </div>
+
+                      <div style={{
+                        fontSize: 12.5,
+                        color: 'var(--text-muted)',
+                        fontWeight: 500,
+                        lineHeight: 1.4
+                      }}>
+                        Live counter &amp; 30-day velocity tracking
+                      </div>
+
+                      {/* Animated Real-time Progress / Velocity Stream Bar */}
+                      <div style={{
+                        width: '100%',
+                        maxWidth: 280,
+                        height: 3.5,
+                        borderRadius: 3,
+                        background: 'rgba(225, 48, 108, 0.12)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        marginTop: 7
+                      }}>
+                        <div className="live-stream-bar" />
+                      </div>
                     </div>
                   </div>
 
+                  {/* Right Side: Instagram Sunset Gradient CTA Button */}
                   <button
-                    onClick={() => router.push(`/profile/${liveProfileSlug}`)}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      router.push(`/profile/${targetLiveSlug}`)
+                    }}
                     style={{
-                      padding: '10px 20px',
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #d946ef)',
+                      padding: '9px 18px',
+                      background: 'linear-gradient(135deg, #fd1d1d 0%, #e1306c 50%, #833ab4 100%)',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: 12,
-                      fontSize: 13,
-                      fontWeight: 800,
+                      borderRadius: 10,
+                      fontSize: 12.5,
+                      fontWeight: 700,
                       cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
-                      transition: 'all 0.2s ease',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      boxShadow: '0 4px 14px rgba(225, 48, 108, 0.35)',
+                      transition: 'all 0.2s ease'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-                    onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-1px)'
+                      e.currentTarget.style.boxShadow = '0 6px 18px rgba(225, 48, 108, 0.5)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(225, 48, 108, 0.35)'
+                    }}
                   >
-                    <span>Open Live Analytics →</span>
+                    <span>View Live</span>
+                    <span style={{ fontSize: 13 }}>→</span>
                   </button>
                 </div>
-              )}
+              )
+            })() : targetLiveSlug && (liveFollowersCount || celebrity.followers_count) < 100000 ? (
+              /* For sub-100k accounts: show a small "not enough data" note instead */
+              <div style={{
+                marginBottom: 16,
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                opacity: 0.7
+              }}>
+                <TrendingUp size={15} strokeWidth={2} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  Live real-time tracking available for accounts with <strong>100K+</strong> followers.
+                </span>
+              </div>
+            ) : null}
 
-            </div>
+            {/* 4) About Section */}
+            {celebrity.description && (
+              <div style={{ marginBottom: 32, width: '100%' }}>
+                <div style={{
+                  width: '100%',
+                  height: '2px',
+                  background: 'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)',
+                  margin: '24px 0 20px',
+                  opacity: 0.8
+                }} />
+                
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
+                  About {celebrity.name}
+                </h3>
+                <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 20, wordBreak: 'break-word' }}>
+                  {normalizeBioText(celebrity.description)}
+                </p>
+                
+                {/* Pink-Red divider line */}
+                <div style={{
+                  width: '100%',
+                  height: '1.5px',
+                  background: 'linear-gradient(90deg, var(--accent) 0%, transparent 100%)',
+                  margin: '20px 0 24px',
+                  opacity: 0.7
+                }} />
+              </div>
+            )}
           </div>
         )}
 
@@ -1365,7 +1554,74 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
         />
       </main>
 
+      <style jsx global>{`
+        @keyframes liveFloatUp {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
 
+        @keyframes liveBeaconPulse {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(225, 48, 108, 0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(225, 48, 108, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(225, 48, 108, 0); }
+        }
+
+        .live-beacon-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #fd1d1d;
+          display: inline-block;
+          animation: liveBeaconPulse 1.8s infinite;
+        }
+
+        .live-eq-bar {
+          width: 2.5px;
+          background: linear-gradient(180deg, #fd1d1d 0%, #e1306c 100%);
+          border-radius: 2px;
+          display: inline-block;
+        }
+
+        @keyframes eqBounce1 { 0%, 100% { height: 4px; } 50% { height: 12px; } }
+        @keyframes eqBounce2 { 0%, 100% { height: 11px; } 50% { height: 5px; } }
+        @keyframes eqBounce3 { 0%, 100% { height: 6px; } 50% { height: 13px; } }
+        @keyframes eqBounce4 { 0%, 100% { height: 10px; } 50% { height: 4px; } }
+
+        .live-eq-bar.eq-1 { animation: eqBounce1 0.9s ease-in-out infinite; }
+        .live-eq-bar.eq-2 { animation: eqBounce2 1.1s ease-in-out infinite 0.2s; }
+        .live-eq-bar.eq-3 { animation: eqBounce3 0.8s ease-in-out infinite 0.4s; }
+        .live-eq-bar.eq-4 { animation: eqBounce4 1.2s ease-in-out infinite 0.1s; }
+
+        @keyframes liveStreamAnim {
+          0% { transform: translateX(-100%); }
+          50% { transform: translateX(60%); }
+          100% { transform: translateX(240%); }
+        }
+
+        .live-stream-bar {
+          width: 60%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent 0%, #f09433 25%, #e1306c 50%, #fd1d1d 75%, transparent 100%);
+          border-radius: 3px;
+          animation: liveStreamAnim 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes liveBoxSheenAnim {
+          0% { transform: translateX(-120%) rotate(25deg); }
+          35%, 100% { transform: translateX(220%) rotate(25deg); }
+        }
+
+        .live-box-sheen {
+          position: absolute;
+          top: -20px;
+          left: -20px;
+          width: 30px;
+          height: 140px;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+          animation: liveBoxSheenAnim 3.8s ease-in-out infinite;
+          pointer-events: none;
+        }
+      `}</style>
     </>
   )
 }
@@ -1414,6 +1670,7 @@ export async function getServerSideProps(context) {
 
     let liveRank = null
     let liveProfileSlug = null
+    let liveFollowersCount = null
     if (leaderboardData) {
       const matchIndex = leaderboardData.findIndex(item => {
         // 1. Match by unique instagram_handle first
@@ -1431,6 +1688,8 @@ export async function getServerSideProps(context) {
         liveProfileSlug = matchedItem.instagram_handle
           ? matchedItem.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
           : matchedItem.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
+        // Use the live-scraped follower count from most_followed (more accurate / real-time)
+        liveFollowersCount = matchedItem.followers_count || null
       }
     }
 
@@ -1468,6 +1727,7 @@ export async function getServerSideProps(context) {
         liveRank,
         compareLiveRank,
         liveProfileSlug,
+        liveFollowersCount,
       }
     }
   } catch (err) {

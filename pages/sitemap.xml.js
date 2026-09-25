@@ -14,7 +14,39 @@ const getFileLastMod = (pagePath) => {
   }
 }
 
-function generateSiteMap(celebrities = [], profiles = []) {
+const generateReelSlug = (item) => {
+  if (!item) return ''
+  const creatorClean = (item.creator_name || '')
+    .replace('@', '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    
+  const titleClean = (item.title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .substring(0, 45)
+
+  const parts = [creatorClean, titleClean].filter(Boolean).join('-').replace(/-+/g, '-').replace(/(^-|-$)/g, '')
+  return `${parts || 'watch'}-${item.id}`
+}
+
+const generateCommentSlug = (item) => {
+  if (!item) return ''
+  const authorClean = (item.creator_name || '')
+    .replace('@', '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    
+  const textClean = (item.title || item.description || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .substring(0, 40)
+
+  const parts = [authorClean, textClean].filter(Boolean).join('-').replace(/-+/g, '-').replace(/(^-|-$)/g, '')
+  return `${parts || 'comment'}-${item.id}`
+}
+
+function generateSiteMap(celebrities = [], profiles = [], reels = [], comments = []) {
   const today = new Date().toISOString()
   return `<?xml version="1.0" encoding="UTF-8"?>
    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -40,8 +72,8 @@ function generateSiteMap(celebrities = [], profiles = []) {
      <url>
        <loc>${EXTERNAL_DATA_URL}/trending</loc>
        <lastmod>${getFileLastMod('trending.js')}</lastmod>
-       <changefreq>daily</changefreq>
-       <priority>0.85</priority>
+       <changefreq>hourly</changefreq>
+       <priority>0.9</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/converter</loc>
@@ -104,11 +136,10 @@ function generateSiteMap(celebrities = [], profiles = []) {
          const slug = p.instagram_handle
            ? p.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
            : p.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
-         const lastUpdated = p.created_at ? new Date(p.created_at).toISOString() : today
          return `
      <url>
        <loc>${EXTERNAL_DATA_URL}/profile/${encodeURIComponent(slug)}</loc>
-       <lastmod>${lastUpdated}</lastmod>
+       <lastmod>${today}</lastmod>
        <changefreq>daily</changefreq>
        <priority>0.9</priority>
      </url>`
@@ -117,8 +148,8 @@ function generateSiteMap(celebrities = [], profiles = []) {
      
      <!-- Celebrity Analytics URLs -->
      ${celebrities
-       .map(({ slug, updated_at, created_at }) => {
-         const lastUpdated = updated_at ? new Date(updated_at).toISOString() : created_at ? new Date(created_at).toISOString() : today
+       .map(({ slug, created_at }) => {
+         const lastUpdated = created_at ? new Date(created_at).toISOString() : today
          return `
      <url>
        <loc>${EXTERNAL_DATA_URL}/celebrity/${slug}</loc>
@@ -128,21 +159,85 @@ function generateSiteMap(celebrities = [], profiles = []) {
      </url>`
        })
        .join('')}
+
+     <!-- Trending & Most Viewed Reel URLs -->
+     ${reels
+       .map((r) => {
+         const slug = generateReelSlug(r)
+         const lastUpdated = r.created_at ? new Date(r.created_at).toISOString() : today
+         return `
+     <url>
+       <loc>${EXTERNAL_DATA_URL}/reel/${encodeURIComponent(slug)}</loc>
+       <lastmod>${lastUpdated}</lastmod>
+       <changefreq>daily</changefreq>
+       <priority>0.8</priority>
+     </url>`
+       })
+       .join('')}
+
+     <!-- Most Liked Comment URLs -->
+     ${comments
+       .map((c) => {
+         const slug = generateCommentSlug(c)
+         const lastUpdated = c.created_at ? new Date(c.created_at).toISOString() : today
+         return `
+     <url>
+       <loc>${EXTERNAL_DATA_URL}/comment/${encodeURIComponent(slug)}</loc>
+       <lastmod>${lastUpdated}</lastmod>
+       <changefreq>weekly</changefreq>
+       <priority>0.7</priority>
+     </url>`
+       })
+       .join('')}
    </urlset>
  `
 }
 
 export async function getServerSideProps({ res }) {
-  // Fetch both celebrity slugs and most_followed creator handles in parallel
+  async function fetchAllProfiles() {
+    let all = []
+    let page = 0
+    const pageSize = 1000
+    while (true) {
+      const { data, error } = await supabase
+        .from('most_followed')
+        .select('name, instagram_handle, created_at')
+        .range(page * pageSize, (page + 1) * pageSize - 1)
+      if (error || !data || data.length === 0) break
+      all = all.concat(data)
+      if (data.length < pageSize) break
+      page++
+    }
+    return all
+  }
+
+  // Fetch celebrity slugs, all profiles (paginated to bypass 1000 row limit), reels, and comments in parallel
   const [
     { data: celebrities },
-    { data: mostFollowedProfiles }
+    mostFollowedProfiles,
+    { data: mostViewedReels },
+    { data: viralReels },
+    { data: mostLikedReels },
+    { data: mostLikedComments }
   ] = await Promise.all([
-    supabase.from('celebrities').select('slug').range(0, 3000),
-    supabase.from('most_followed').select('name, instagram_handle, created_at').range(0, 3000)
+    supabase.from('celebrities').select('slug, created_at').neq('hide_search', true).range(0, 999),
+    fetchAllProfiles(),
+    supabase.from('most_viewed_reels').select('id, title, creator_name, created_at').range(0, 500),
+    supabase.from('viral_reels').select('id, title, creator_name, created_at').range(0, 500),
+    supabase.from('most_liked_reels').select('id, title, creator_name, created_at').range(0, 500),
+    supabase.from('most_liked_comments').select('id, title, description, creator_name, created_at').range(0, 500)
   ])
 
-  const sitemap = generateSiteMap(celebrities || [], mostFollowedProfiles || [])
+  // Deduplicate reels by ID across tables
+  const reelMap = new Map()
+  ;[...(mostViewedReels || []), ...(viralReels || []), ...(mostLikedReels || [])].forEach(r => {
+    if (r && r.id && !reelMap.has(r.id)) {
+      reelMap.set(r.id, r)
+    }
+  })
+  const allReels = Array.from(reelMap.values())
+
+  const sitemap = generateSiteMap(celebrities || [], mostFollowedProfiles || [], allReels, mostLikedComments || [])
 
   res.setHeader('Content-Type', 'text/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')

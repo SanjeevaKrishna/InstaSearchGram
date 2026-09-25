@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import Link from 'next/link'
 import BottomNav from '../components/BottomNav'
 import { TrendingUp, Play, Film, ChevronUp, ChevronDown, Minus, ExternalLink, Users, Eye, Heart } from 'lucide-react'
 import PostCard from '../components/PostCard'
@@ -69,6 +70,40 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
   const [timeAgo, setTimeAgo] = useState('')
 
   useEffect(() => {
+    if (isComment) {
+      if (!reel.created_at) {
+        setTimeAgo('')
+        return
+      }
+      try {
+        const created = new Date(reel.created_at)
+        const diffMs = Date.now() - created.getTime()
+        if (isNaN(diffMs) || diffMs < 0) {
+          setTimeAgo('')
+          return
+        }
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+        const diffDays = Math.floor(diffHours / 24)
+        const diffWeeks = Math.floor(diffDays / 7)
+        const diffYears = Math.floor(diffDays / 365)
+
+        if (diffYears >= 1) {
+          setTimeAgo(`${diffYears}y`)
+        } else if (diffWeeks >= 1) {
+          setTimeAgo(`${diffWeeks}w`)
+        } else if (diffDays >= 1) {
+          setTimeAgo(`${diffDays}d`)
+        } else if (diffHours >= 1) {
+          setTimeAgo(`${diffHours}h`)
+        } else {
+          setTimeAgo('just now')
+        }
+      } catch (err) {
+        setTimeAgo('')
+      }
+      return
+    }
+
     if (isMostViewed) {
       if (!reel.created_at) return
       try {
@@ -100,7 +135,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
     calculateTimeAgo()
     const interval = setInterval(calculateTimeAgo, 60000) // update every minute
     return () => clearInterval(interval)
-  }, [reel.created_at, isMostViewed])
+  }, [reel.created_at, isMostViewed, isComment])
 
   const formatFollowers = (n) => {
     if (!n) return null
@@ -124,11 +159,9 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
   if (isComment) {
     const commentSlug = generateCommentSlug(reel)
     return (
-      <div 
+      <Link 
+        href={`/comment/${commentSlug}`}
         className="leaderboard-row leaderboard-instagram-comment-row"
-        onClick={() => {
-          router.push(`/comment/${commentSlug}`)
-        }}
         style={{
           display: 'flex',
           alignItems: 'flex-start',
@@ -141,6 +174,8 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
           borderRadius: 14,
           border: '1px solid var(--border)',
           marginBottom: 8,
+          textDecoration: 'none',
+          color: 'inherit',
         }}
       >
         {/* Left Rank */}
@@ -179,7 +214,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, fontSize: 12, color: 'var(--text-muted)' }}>
-            <span>{timeAgo || '1d'}</span>
+            {timeAgo && <span>{timeAgo}</span>}
             <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Reply</span>
             {reel.instagram_link && (
               <span style={{ fontWeight: 600, color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -210,24 +245,24 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
             {reel.likes_text || '—'}
           </span>
         </div>
-      </div>
+      </Link>
     )
   }
 
   // 2. BIG FULL-BLEED FEATURED CARD FOR LAST 24H TRENDING REELS
   if (isTrending) {
     return (
-      <div 
+      <Link 
+        href={`/reel/${generateReelSlug(reel)}`}
         className="leaderboard-row leaderboard-featured-card"
-        onClick={() => {
-          router.push(`/reel/${generateReelSlug(reel)}`)
-        }}
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'stretch',
           gap: 14,
           padding: '20px 22px',
+          textDecoration: 'none',
+          color: 'inherit',
         }}
       >
         {/* Top Header: Rank with Trend Badge, Avatar, Creator Name & Watch Button */}
@@ -274,10 +309,10 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
             </div>
           </div>
 
-          <button className="btn row-watch-btn" style={{ alignSelf: 'center', margin: 0, flexShrink: 0 }}>
+          <span className="btn row-watch-btn" style={{ alignSelf: 'center', margin: 0, flexShrink: 0 }}>
             <span>Watch</span>
             <Play size={10} fill="currentColor" />
-          </button>
+          </span>
         </div>
 
         {/* Middle: Full-Bleed Edge-to-Edge Reel Thumbnail (0 Black Borders!) */}
@@ -367,16 +402,15 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
             )}
           </div>
         </div>
-      </div>
+      </Link>
     )
   }
 
   return (
-    <div 
+    <Link 
+      href={`/reel/${generateReelSlug(reel)}`}
       className="leaderboard-row"
-      onClick={() => {
-        router.push(`/reel/${generateReelSlug(reel)}`)
-      }}
+      style={{ textDecoration: 'none', color: 'inherit' }}
     >
       {/* Rank & Trend badge */}
       <div className="row-rank-container">
@@ -482,11 +516,11 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
       </div>
 
       {/* Action Watch Button */}
-      <button className="btn row-watch-btn">
+      <span className="btn row-watch-btn">
         <span>Watch</span>
         <Play size={10} fill="currentColor" />
-      </button>
-    </div>
+      </span>
+    </Link>
   )
 }
 
@@ -600,21 +634,54 @@ export default function TrendingPage({ initialData = null }) {
         <title>Daily Viral Instagram Reels & Trending Posts Leaderboard | Spialr</title>
         <meta name="description" content="Discover top daily viral Instagram reels, most liked posts, and viral comments. Track real-time engagement analytics and creator rankings on Spialr." />
         <meta name="keywords" content="viral instagram reels, trending reels india, most liked instagram posts, top instagram comments, viral reels leaderboard, spialr" />
-        <link rel="canonical" href="https://spialr.com/trending" />
+        <link rel="canonical" href="https://spialr.com/trending" key="canonical" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Daily Viral Instagram Reels & Trending Posts Leaderboard | Spialr" />
+        <meta property="og:description" content="Discover top daily viral Instagram reels, most liked posts, and viral comments. Track real-time engagement analytics and creator rankings on Spialr." />
+        <meta property="og:url" content="https://spialr.com/trending" key="og:url" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Daily Viral Instagram Reels & Trending Posts Leaderboard | Spialr" />
+        <meta name="twitter:description" content="Track daily viral Instagram reels, most liked posts, and viral creator leaderboards on Spialr." />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "ItemList",
-              "name": "Daily Viral Instagram Reels Leaderboard",
-              "description": "Top daily viral trending Instagram reels and posts.",
-              "itemListElement": activeReels.slice(0, 15).map((reel, idx) => ({
+              "name": "Daily Viral Instagram Reels & Most Viewed Leaderboard",
+              "description": "Top daily viral trending Instagram reels, most viewed videos, and popular creator posts.",
+              "itemListElement": (activeReels || []).slice(0, 20).map((reel, idx) => ({
                 "@type": "ListItem",
                 "position": idx + 1,
-                "name": reel.title || reel.caption || 'Instagram Post',
-                "url": `https://spialr.com/reel/${generateReelSlug(reel)}`
+                "name": reel.title || reel.caption || `${reel.creator_name || 'Creator'} Reel`,
+                "url": (activeTab === 'most_viewed' && activeSubTab === 'comments') 
+                  ? `https://spialr.com/comment/${generateCommentSlug(reel)}` 
+                  : `https://spialr.com/reel/${generateReelSlug(reel)}`,
+                "image": reel.photo_url || reel.creator_photo_url || undefined
               }))
+            })
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                {
+                  "@type": "ListItem",
+                  "position": 1,
+                  "name": "Home",
+                  "item": "https://spialr.com"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": "Trending & Most Viewed Reels",
+                  "item": "https://spialr.com/trending"
+                }
+              ]
             })
           }}
         />

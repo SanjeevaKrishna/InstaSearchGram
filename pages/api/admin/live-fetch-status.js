@@ -38,10 +38,22 @@ export default async function handler(req, res) {
       } catch {}
     }
 
+    const queue = Array.isArray(state.queue) ? state.queue : []
+    const pendingItems = queue.filter(q => q.status === 'pending')
+    const doneItems = queue.filter(q => q.status === 'done')
+    const failedItems = queue.filter(q => q.status === 'failed')
+
     return res.status(200).json({
       success: true,
       job: state.batch_job || { status: 'idle', progress: 0, total: 0 },
-      pendingQueueLength: (state.queue || []).filter(q => q.status === 'pending').length
+      queue: {
+        pending: pendingItems.length,
+        done: doneItems.length,
+        failed: failedItems.length,
+        total: queue.length,
+        currentHandle: pendingItems[0]?.handle || null
+      },
+      pendingQueueLength: pendingItems.length
     })
   } catch (err) {
     console.error('[live-fetch-status]', err.message)

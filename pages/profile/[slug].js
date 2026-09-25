@@ -158,7 +158,7 @@ const getFollowerStats = (history = [], currentCount = 0, createdAt = null) => {
   return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed, isSynchronizedOnly }
 }
 
-export default function ProfilePage({ profile, slug }) {
+export default function ProfilePage({ profile, slug, rank = null }) {
   const router = useRouter()
   const [tooltip, setTooltip] = useState(null)
   const [selectedPeriod, setSelectedPeriod] = useState('last30')
@@ -475,51 +475,87 @@ export default function ProfilePage({ profile, slug }) {
   return (
     <>
       <Head>
-        <title>{`${profile.name} (@${profile.instagram_handle || profile.name}) Instagram Followers Live - Real-Time Count & Stats | Spialr`}</title>
+        <title>{`${profile.name} (@${profile.instagram_handle || profile.name}) Instagram Followers, Live Stats & ${rank ? `Rank #${rank}` : 'Growth Tracker'} | Spialr`}</title>
         <meta
           name="description"
-          content={`Track ${profile.name} (@${profile.instagram_handle || ''}) live Instagram follower count (${formatNumber(profile.followers_count)}). View real-time daily follower gains, 31-day growth history, weekly breakdown, and live rankings on Spialr.`}
+          content={`Track ${profile.name} (@${profile.instagram_handle || ''}) live Instagram follower count (${formatNumber(profile.followers_count)})${rank ? ` - Ranked #${rank} Most Followed` : ''}. View real-time daily follower gains, 31-day progressive growth timeline, and analytics on Spialr.`}
         />
         <meta
           name="keywords"
-          content={`${profile.name}, ${profile.name} instagram followers, ${profile.name} instagram followers count, ${profile.name} followers on instagram, ${profile.name} insta followers, ${profile.instagram_handle || ''} followers, live instagram follower count, instagram follower tracker, growth stats, spialr`}
+          content={[
+            profile.name,
+            `${profile.name} instagram`,
+            `${profile.name} instagram followers`,
+            `${profile.name} instagram followers count`,
+            `${profile.name} live followers`,
+            `${profile.name} followers on instagram`,
+            `${profile.name} insta account`,
+            `${profile.name} follower counter`,
+            profile.instagram_handle ? `@${profile.instagram_handle}` : null,
+            profile.instagram_handle ? `@${profile.instagram_handle} instagram` : null,
+            profile.instagram_handle ? `${profile.instagram_handle} followers` : null,
+            `how many followers does ${profile.name} have`,
+            `${profile.name} live follower count`,
+            rank ? `${profile.name} instagram rank` : null,
+            rank ? `rank #${rank} instagram` : null,
+            profile.category ? `${profile.category} instagram creators` : null,
+            profile.language ? `${profile.language} instagram creators` : null,
+            'spialr'
+          ].filter(Boolean).join(', ')}
         />
-        <link rel="canonical" href={`https://spialr.com/profile/${slug || profile.instagram_handle || ''}`} />
+        <link rel="canonical" href={`https://spialr.com/profile/${slug || profile.instagram_handle || ''}`} key="canonical" />
         <meta property="og:type" content="profile" />
-        <meta property="og:title" content={`${profile.name} (@${profile.instagram_handle || ''}) Instagram Followers Live - Real-Time Count & Stats | Spialr`} />
-        <meta property="og:description" content={`Track ${profile.name} (@${profile.instagram_handle || ''}) real-time Instagram follower count (${formatNumber(profile.followers_count)}), live daily gains, and 31-day growth history on Spialr.`} />
+        <meta property="og:title" content={`${profile.name} (@${profile.instagram_handle || ''}) Instagram Followers Live & Stats | Spialr`} />
+        <meta property="og:description" content={`Real-time Instagram follower count (${formatNumber(profile.followers_count)})${rank ? ` - Ranked #${rank}` : ''}, live daily gains, and 31-day growth history for ${profile.name} on Spialr.`} />
         <meta property="og:image" content={profile.photo_url || 'https://spialr.com/og-image.jpg'} />
         <meta property="og:url" content={`https://spialr.com/profile/${slug || profile.instagram_handle || ''}`} />
         <meta property="og:site_name" content="Spialr" />
+        {profile.instagram_handle && <meta property="profile:username" content={profile.instagram_handle} />}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${profile.name} Instagram Followers Count Live | Spialr`} />
-        <meta name="twitter:description" content={`Live real-time follower count and 31-day growth stats for ${profile.name} (@${profile.instagram_handle || ''}).`} />
+        <meta name="twitter:title" content={`${profile.name} (@${profile.instagram_handle || ''}) Instagram Followers Live | Spialr`} />
+        <meta name="twitter:description" content={`Live real-time follower count and 31-day growth momentum for ${profile.name}${rank ? ` (Rank #${rank})` : ''} on Spialr.`} />
         <meta name="twitter:image" content={profile.photo_url || 'https://spialr.com/og-image.jpg'} />
 
-        {/* Structured Data: Person Schema */}
+        {/* Structured Data: ProfilePage & Person Schema (Google Social Knowledge Graph & Search Snippet) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "Person",
-              "name": profile.name,
-              "alternateName": profile.instagram_handle ? `@${profile.instagram_handle}` : profile.name,
+              "@type": "ProfilePage",
+              "dateCreated": profile.created_at || "2026-08-28T00:00:00Z",
               "url": `https://spialr.com/profile/${slug || profile.instagram_handle || ''}`,
-              "image": profile.photo_url || '',
-              "sameAs": profile.instagram_handle ? `https://www.instagram.com/${profile.instagram_handle}/` : undefined,
-              "interactionStatistic": [
-                {
-                  "@type": "InteractionCounter",
-                  "interactionType": "https://schema.org/FollowAction",
-                  "userInteractionCount": profile.followers_count || 0
-                }
-              ]
+              "name": `${profile.name} Instagram Follower Analytics`,
+              "mainEntity": {
+                "@type": "Person",
+                "name": profile.name,
+                "alternateName": [
+                  profile.instagram_handle ? `@${profile.instagram_handle}` : null,
+                  profile.instagram_handle,
+                  profile.name
+                ].filter(Boolean),
+                "identifier": profile.instagram_handle || slug,
+                "url": `https://spialr.com/profile/${slug || profile.instagram_handle || ''}`,
+                "image": profile.photo_url || '',
+                "sameAs": profile.instagram_handle ? [
+                  `https://www.instagram.com/${profile.instagram_handle}/`,
+                  `https://instagram.com/${profile.instagram_handle}`
+                ] : [],
+                "jobTitle": profile.category || "Instagram Content Creator",
+                "description": `${profile.name} (@${profile.instagram_handle || ''}) is an Instagram creator with ${formatNumber(profile.followers_count)} followers${rank ? `, ranked #${rank} on Spialr` : ''}.`,
+                "interactionStatistic": [
+                  {
+                    "@type": "InteractionCounter",
+                    "interactionType": "https://schema.org/FollowAction",
+                    "userInteractionCount": profile.followers_count || 0
+                  }
+                ]
+              }
             })
           }}
         />
 
-        {/* Structured Data: FAQPage Schema (Targets Google Q&A Rich Snippets) */}
+        {/* Structured Data: FAQPage Schema (Targets Google Search Rich Q&A Snippets) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -532,23 +568,31 @@ export default function ProfilePage({ profile, slug }) {
                   "name": `How many followers does ${profile.name} have on Instagram?`,
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": `As of today, ${profile.name} (@${profile.instagram_handle || ''}) has approximately ${formatNumber(profile.followers_count)} followers on Instagram, tracked in real-time with live updates on Spialr.`
+                    "text": `As of today, ${profile.name} (@${profile.instagram_handle || ''}) has approximately ${formatNumber(profile.followers_count)} (${(profile.followers_count || 0).toLocaleString()}) followers on Instagram, tracked with real-time live counter updates on Spialr.`
                   }
                 },
+                {
+                  "@type": "Question",
+                  "name": `What is ${profile.name}'s official Instagram account?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `The official Instagram handle for ${profile.name} is @${profile.instagram_handle || 'N/A'}. You can visit https://www.instagram.com/${profile.instagram_handle || ''}/ or track live follower growth velocity and rankings on Spialr.`
+                  }
+                },
+                ...(rank ? [{
+                  "@type": "Question",
+                  "name": `What is ${profile.name}'s rank among top Instagram accounts?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `${profile.name} is currently ranked #${rank} on the Spialr Live Leaderboard of most followed Instagram accounts.`
+                  }
+                }] : []),
                 {
                   "@type": "Question",
                   "name": `How fast is ${profile.name}'s Instagram account growing?`,
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": `${profile.name} gains approximately ${dailyGain >= 0 ? '+' + formatNumber(dailyGain) : formatNumber(dailyGain)} followers per day with an estimated 30-day growth of ${monthlyGain >= 0 ? '+' + formatNumber(monthlyGain) : formatNumber(monthlyGain)} followers.`
-                  }
-                },
-                {
-                  "@type": "Question",
-                  "name": `What is ${profile.name}'s official Instagram handle?`,
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": `The official Instagram handle for ${profile.name} is @${profile.instagram_handle || 'N/A'}. You can track live real-time follower counts, rankings, and historical momentum on Spialr.`
+                    "text": `${profile.name} is gaining approximately ${dailyGain >= 0 ? '+' + formatNumber(dailyGain) : formatNumber(dailyGain)} followers per day with an estimated 30-day net growth of ${monthlyGain >= 0 ? '+' + formatNumber(monthlyGain) : formatNumber(monthlyGain)} followers.`
                   }
                 }
               ]
@@ -937,9 +981,27 @@ export default function ProfilePage({ profile, slug }) {
               <h1 className="profile-title" style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, margin: '0 0 6px', lineHeight: 1.25 }}>{profile.name}</h1>
               {profile.instagram_handle && (
                 <a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 13, color: '#a855f7', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 14 }}>
+                  style={{ fontSize: 13, color: '#a855f7', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginBottom: rank ? 8 : 14 }}>
                   <InstagramIcon size={13} />@{profile.instagram_handle}
                 </a>
+              )}
+
+              {/* Dynamic Live Rank Badge */}
+              {rank && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  background: 'linear-gradient(90deg, rgba(240,148,51,0.12), rgba(220,39,67,0.12))',
+                  border: '1px solid rgba(220,39,67,0.25)',
+                  borderRadius: 100,
+                  padding: '4px 14px',
+                  marginBottom: 14,
+                  boxShadow: '0 2px 8px rgba(225,48,108,0.06)'
+                }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: '#dc2743', letterSpacing: '0.01em' }}>
+                    Rank #{rank} Most Followed Account
+                  </span>
+                </div>
               )}
               <div className="profile-tags-container" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
                 {profile.category && (() => {
@@ -1763,6 +1825,22 @@ export default function ProfilePage({ profile, slug }) {
             )
           })()}
 
+          {/* Crawlable SEO & Creator Overview Section for Google Search */}
+          <section className="card" style={{ padding: '22px 24px', marginTop: 24, marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={16} style={{ color: '#e1306c' }} />
+              About {profile.name}&apos;s Live Instagram Statistics & Growth
+            </h2>
+            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.65, margin: '0 0 10px' }}>
+              Welcome to the official real-time Instagram follower tracker for <strong>{profile.name}</strong> (<a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>@{profile.instagram_handle}</a>). 
+              {rank ? ` Ranked #${rank} among the most followed accounts on Spialr, ` : ' '}
+              <strong>{profile.name}</strong> currently has an audience of <strong>{formatNumber(profile.followers_count)}</strong> ({Number(profile.followers_count || 0).toLocaleString()}) followers on Instagram.
+            </p>
+            <p style={{ fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.65, margin: 0 }}>
+              Our automated intelligence system continuously monitors live follower counters, daily gain velocity, 31-day progressive growth trends, and weekly activity heatmap milestones. Check back daily to inspect real-time shifts in {profile.name}&apos;s Instagram following.
+            </p>
+          </section>
+
           {/* Community Comments Section */}
           <CommentSection
             targetType="profile"
@@ -1795,48 +1873,67 @@ export async function getServerSideProps(context) {
         : Promise.resolve({ data: null })
     ])
 
-    const byHandle = exactMatch || dotMatch
-    if (byHandle) {
-      return { props: { profile: byHandle, slug: decodedSlug } }
+    let finalProfile = exactMatch || dotMatch
+
+    if (!finalProfile) {
+      // Step 2: Fallback — lightweight fetch of id/name/handle only, then full fetch by id
+      const { data: nameList, error: nameErr } = await supabase
+        .from('most_followed')
+        .select('id, name, instagram_handle')
+
+      if (nameErr || !nameList) return { notFound: true }
+
+      const matched = nameList.find(p => {
+        const sanitizedHandle = p.instagram_handle
+          ? p.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
+          : null
+        const nameSlug = p.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
+        const namePlain = p.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
+
+        return (
+          decodedSlug === sanitizedHandle ||
+          decodedSlug === nameSlug ||
+          decodedSlug === namePlain
+        )
+      })
+
+      if (!matched) {
+        console.error(`[profile 404] No match for slug="${decodedSlug}". Tried handle exact, dots, name-slug, name-plain.`)
+        return { notFound: true }
+      }
+
+      // Step 3: Fetch full profile by id
+      const { data: fullProfile, error: fullErr } = await supabase
+        .from('most_followed')
+        .select('*')
+        .eq('id', matched.id)
+        .single()
+
+      if (fullErr || !fullProfile) return { notFound: true }
+      finalProfile = fullProfile
     }
 
-    // Step 2: Fallback — lightweight fetch of id/name/handle only, then full fetch by id
-    const { data: nameList, error: nameErr } = await supabase
-      .from('most_followed')
-      .select('id, name, instagram_handle')
+    if (!finalProfile) return { notFound: true }
 
-    if (nameErr || !nameList) return { notFound: true }
+    // Calculate dynamic live rank among accounts with 100k+ followers
+    let rank = null
+    try {
+      if (finalProfile.followers_count) {
+        const { count, error: countErr } = await supabase
+          .from('most_followed')
+          .select('id', { count: 'exact', head: true })
+          .gte('followers_count', 100000)
+          .gt('followers_count', finalProfile.followers_count)
 
-    const matched = nameList.find(p => {
-      // Build the URL-safe slug the same way live.js does (dots→hyphens in handles)
-      const sanitizedHandle = p.instagram_handle
-        ? p.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
-        : null
-      const nameSlug = p.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
-      const namePlain = p.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
-
-      return (
-        decodedSlug === sanitizedHandle ||
-        decodedSlug === nameSlug ||
-        decodedSlug === namePlain
-      )
-    })
-
-    if (!matched) {
-      console.error(`[profile 404] No match for slug="${decodedSlug}". Tried handle exact, dots, name-slug, name-plain.`)
-      return { notFound: true }
+        if (!countErr && typeof count === 'number') {
+          rank = count + 1
+        }
+      }
+    } catch (rankErr) {
+      console.warn('Rank calculation error in getServerSideProps:', rankErr)
     }
 
-    // Step 3: Fetch full profile by id
-    const { data: fullProfile, error: fullErr } = await supabase
-      .from('most_followed')
-      .select('*')
-      .eq('id', matched.id)
-      .single()
-
-    if (fullErr || !fullProfile) return { notFound: true }
-
-    return { props: { profile: fullProfile, slug: decodedSlug } }
+    return { props: { profile: finalProfile, slug: decodedSlug, rank } }
   } catch (err) {
     console.error('getServerSideProps error in profile page:', err)
     return { notFound: true }

@@ -232,7 +232,7 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
         <title>All Instagram Profiles & Celebrities Directory | Spialr</title>
         <meta name="description" content="Explore the complete directory of popular Instagram creators, celebrities, actors, and influencers. Benchmark stats, view followers, and compare profiles on Spialr." />
         <meta name="keywords" content="all instagram profiles, celebrity directory, compare instagram accounts, instagram creator list, spialr" />
-        <link rel="canonical" href="https://spialr.com/all" />
+        <link rel="canonical" href="https://spialr.com/all" key="canonical" />
       </Head>
 
       

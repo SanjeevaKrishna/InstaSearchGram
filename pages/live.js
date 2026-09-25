@@ -361,6 +361,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
   const [showSuccessAnim, setShowSuccessAnim] = useState(null)
   const [showStatsModal, setShowStatsModal] = useState(null)
   const [currentDate, setCurrentDate] = useState('')
+  const [growthLiveTime, setGrowthLiveTime] = useState('')
   const [loading, setLoading] = useState(initialLiveData ? false : true)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -520,6 +521,52 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
 
   const loaderRef = useRef(null)
   const arenaScrollRef = useRef(null)
+  const pinchStartZoomRef = useRef(1.0)
+  const pinchStartDistRef = useRef(0)
+
+  // Set a comfortable default zoom for mobile screens when timeline opens
+  useEffect(() => {
+    if (!timelineMode) return
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setTimelineZoom(prev => prev === 1.0 ? 0.4 : prev)
+    }
+  }, [timelineMode])
+
+  // Pinch-to-zoom on the timeline canvas (mobile touch gesture)
+  useEffect(() => {
+    const el = arenaScrollRef.current
+    if (!el) return
+
+    const getDistance = (touches) => {
+      const dx = touches[0].clientX - touches[1].clientX
+      const dy = touches[0].clientY - touches[1].clientY
+      return Math.sqrt(dx * dx + dy * dy)
+    }
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        pinchStartDistRef.current = getDistance(e.touches)
+        pinchStartZoomRef.current = timelineZoom
+      }
+    }
+
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        const dist = getDistance(e.touches)
+        const ratio = dist / pinchStartDistRef.current
+        const newZoom = Math.min(3.5, Math.max(0.25, Number((pinchStartZoomRef.current * ratio).toFixed(2))))
+        setTimelineZoom(newZoom)
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [arenaScrollRef.current, timelineZoom])
 
   // Infinite Scroll Observer
   useEffect(() => {
@@ -570,6 +617,24 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
       }
     }
   }, [loading, growthMode, activeTab])
+
+  // Real-time live clock for Daily Growth tab
+  useEffect(() => {
+    if (activeTab !== 'daily_growth') {
+      setGrowthLiveTime('')
+      return
+    }
+    const tick = () => {
+      const now = new Date()
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mm = String(now.getMinutes()).padStart(2, '0')
+      const ss = String(now.getSeconds()).padStart(2, '0')
+      setGrowthLiveTime(`${hh}:${mm}:${ss}`)
+    }
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [activeTab])
 
   // Reset display limit when filter state changes to optimize initial load & render speed
   useEffect(() => {
@@ -846,7 +911,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
           name="keywords"
           content="instagram followers, instagram followers count, live instagram follower count, instagram follower tracker, top 100 instagram accounts, most followed instagram accounts, creator growth timeline, instagram stats live, spialr"
         />
-        <link rel="canonical" href="https://spialr.com/live" />
+        <link rel="canonical" href="https://spialr.com/live" key="canonical" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         
         {/* Open Graph / Social Sharing SEO */}
@@ -985,164 +1050,178 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
           {/* Unified Navigation Row: Tabs (Left) & Language Dropdown (Right) */}
           <div style={{
             display: 'flex',
-            justifyContent: 'center',
             alignItems: 'center',
             marginBottom: 20,
-            flexWrap: 'wrap',
-            gap: 16,
             position: 'relative',
-            zIndex: 10
+            zIndex: 10,
+            gap: 8,
           }}>
-            {/* Subtabs Selection */}
-            <div className="fade-in subtabs-container" style={{
-              display: 'flex',
-              background: 'var(--surface2)',
-              borderRadius: '100px',
-              padding: 2.5,
-              gap: 3,
-              border: '1px solid var(--border)',
-              maxWidth: 270,
-              flex: '0 1 270px'
-            }}>
-              <button
-                onClick={() => handleTabChange('most_followed')}
-                onMouseEnter={() => setHoveredTab('most_followed')}
-                onMouseLeave={() => setHoveredTab(null)}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '5px 10px',
-                  borderRadius: '100px',
-                  border: 'none',
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
-                  color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
-                  boxShadow: activeTab === 'most_followed' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-                  transform: hoveredTab === 'most_followed' && activeTab !== 'most_followed' ? 'scale(1.02)' : 'scale(1)',
-                  transition: 'all 0.2s ease',
-                  letterSpacing: '-0.01em'
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 5, flexShrink: 0 }}>
-                  <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
-                  <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
-                  <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
-                  <line x1="2" y1="21" x2="22" y2="21" stroke="#e0e0e0" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                Most Followed
-              </button>
-              <button
-                onClick={() => handleTabChange('daily_growth')}
-                onMouseEnter={() => setHoveredTab('daily_growth')}
-                onMouseLeave={() => setHoveredTab(null)}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '5px 10px',
-                  borderRadius: '100px',
-                  border: 'none',
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  background: activeTab === 'daily_growth' ? 'var(--surface)' : 'transparent',
-                  color: activeTab === 'daily_growth' ? 'var(--text)' : 'var(--text-muted)',
-                  boxShadow: activeTab === 'daily_growth' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-                  transform: hoveredTab === 'daily_growth' && activeTab !== 'daily_growth' ? 'scale(1.02)' : 'scale(1)',
-                  transition: 'all 0.2s ease',
-                  letterSpacing: '-0.01em'
-                }}
-              >
-                <TrendingUp size={12.5} style={{ marginRight: 5, flexShrink: 0, color: activeTab === 'daily_growth' ? '#10b981' : 'var(--text-muted)' }} />
-                Daily Growth
-              </button>
-            </div>
+            {/* Left spacer — mirrors the language button width so tabs stay truly centered */}
+            <div style={{ flex: '0 0 80px', minWidth: 0 }} />
 
-            {/* Language Filter Dropdown (hidden in timelineMode) */}
-            {activeTab === 'most_followed' && !timelineMode && !loading && !error && liveData && liveData.most_followed && liveData.most_followed.length > 0 && (
-              <div style={{ position: 'relative' }}>
+            {/* Subtabs Selection — always centered */}
+            <div className="fade-in subtabs-container" style={{
+              flex: 1,
+              display: 'flex',
+              justifyContent: 'center',
+            }}>
+              <div style={{
+                display: 'flex',
+                background: 'var(--surface2)',
+                borderRadius: '100px',
+                padding: 2.5,
+                gap: 3,
+                border: '1px solid var(--border)',
+                width: '100%',
+                maxWidth: 270,
+              }}>
                 <button
-                  onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                  onClick={() => handleTabChange('most_followed')}
+                  onMouseEnter={() => setHoveredTab('most_followed')}
+                  onMouseLeave={() => setHoveredTab(null)}
                   style={{
-                    padding: '8px 18px',
-                    borderRadius: '100px',
-                    border: '1px solid var(--border)',
-                    background: 'var(--surface)',
-                    color: 'var(--text)',
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                    cursor: 'pointer',
+                    flex: 1,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 6,
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                    justifyContent: 'center',
+                    padding: '5px 10px',
+                    borderRadius: '100px',
+                    border: 'none',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: activeTab === 'most_followed' ? 'var(--surface)' : 'transparent',
+                    color: activeTab === 'most_followed' ? 'var(--text)' : 'var(--text-muted)',
+                    boxShadow: activeTab === 'most_followed' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                    transform: hoveredTab === 'most_followed' && activeTab !== 'most_followed' ? 'scale(1.02)' : 'scale(1)',
                     transition: 'all 0.2s ease',
+                    letterSpacing: '-0.01em',
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  <span>{selectedLanguage}</span>
-                  <ChevronDown size={14} style={{
-                    transform: isLangDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.2s ease',
-                    color: 'var(--text-muted)'
-                  }} />
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 5, flexShrink: 0 }}>
+                    <rect x="3" y="12" width="4" height="8" rx="1" fill="#4caf50" />
+                    <rect x="10" y="7" width="4" height="13" rx="1" fill="#f44336" />
+                    <rect x="17" y="3" width="4" height="17" rx="1" fill="#2196f3" />
+                    <line x1="2" y1="21" x2="22" y2="21" stroke="#e0e0e0" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Most Followed
                 </button>
-
-                {isLangDropdownOpen && (
-                  <>
-                    <div 
-                      onClick={() => setIsLangDropdownOpen(false)}
-                      style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 99,
-                        background: 'transparent'
-                      }}
-                    />
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: 6,
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 12,
-                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
-                      zIndex: 100,
-                      minWidth: 160,
-                      overflow: 'hidden',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      padding: '4px 0',
-                    }}>
-                      {['All', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam'].map((lang) => {
-                        const isSelected = selectedLanguage === lang;
-                        return (
-                          <button
-                            key={lang}
-                            onClick={() => {
-                              setSelectedLanguage(lang);
-                              setIsLangDropdownOpen(false);
-                              safeStorage.setItem('spialr_last_language', lang.toLowerCase());
-                            }}
-                            className={`lang-dropdown-item ${isSelected ? 'active' : ''}`}
-                          >
-                            {lang}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </>
-                )}
+                <button
+                  onClick={() => handleTabChange('daily_growth')}
+                  onMouseEnter={() => setHoveredTab('daily_growth')}
+                  onMouseLeave={() => setHoveredTab(null)}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '5px 10px',
+                    borderRadius: '100px',
+                    border: 'none',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: activeTab === 'daily_growth' ? 'var(--surface)' : 'transparent',
+                    color: activeTab === 'daily_growth' ? 'var(--text)' : 'var(--text-muted)',
+                    boxShadow: activeTab === 'daily_growth' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                    transform: hoveredTab === 'daily_growth' && activeTab !== 'daily_growth' ? 'scale(1.02)' : 'scale(1)',
+                    transition: 'all 0.2s ease',
+                    letterSpacing: '-0.01em',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <TrendingUp size={12.5} style={{ marginRight: 5, flexShrink: 0, color: activeTab === 'daily_growth' ? '#10b981' : 'var(--text-muted)' }} />
+                  Daily Growth
+                </button>
               </div>
-            )}
+            </div>
+
+            {/* Language Filter — always anchored to right, fixed width so it never shifts tabs */}
+            <div style={{ flex: '0 0 80px', display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
+              {activeTab === 'most_followed' && !timelineMode && !loading && !error && liveData && liveData.most_followed && liveData.most_followed.length > 0 && (
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '100px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap',
+                      maxWidth: 80,
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 46 }}>{selectedLanguage}</span>
+                    <ChevronDown size={13} style={{
+                      flexShrink: 0,
+                      transform: isLangDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      color: 'var(--text-muted)'
+                    }} />
+                  </button>
+
+                  {isLangDropdownOpen && (
+                    <>
+                      <div
+                        onClick={() => setIsLangDropdownOpen(false)}
+                        style={{
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 99,
+                          background: 'transparent'
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: 6,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 12,
+                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+                        zIndex: 100,
+                        minWidth: 160,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '4px 0',
+                      }}>
+                        {['All', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam'].map((lang) => {
+                          const isSelected = selectedLanguage === lang;
+                          return (
+                            <button
+                              key={lang}
+                              onClick={() => {
+                                setSelectedLanguage(lang);
+                                setIsLangDropdownOpen(false);
+                                safeStorage.setItem('spialr_last_language', lang.toLowerCase());
+                              }}
+                              className={`lang-dropdown-item ${isSelected ? 'active' : ''}`}
+                            >
+                              {lang}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
         {/* Main Content Area */}
@@ -1560,10 +1639,16 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                             </button>
                           </div>
                         </div>
+
+                        {/* Pinch hint for mobile */}
+                        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, opacity: 0.7 }}>
+                          👌 Pinch to zoom · Scroll sideways to explore
+                        </div>
+
                       </div>
 
                       {/* Scrollable Horizontal Arena */}
-                      <div ref={arenaScrollRef} style={{ overflowX: 'auto', paddingBottom: 24, WebkitOverflowScrolling: 'touch' }}>
+                      <div ref={arenaScrollRef} style={{ overflowX: 'auto', paddingBottom: 24, WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}>
                         <div style={{
                           minWidth: `${Math.round(2200 * timelineZoom)}px`,
                           width: `${Math.round(100 * timelineZoom)}%`,
@@ -1703,16 +1788,23 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                                         <span>FOCUS</span>
                                       </span>
                                     )}
-                                    <span style={{
-                                      fontSize: 12,
-                                      fontWeight: isFocused ? 950 : 900,
-                                      color: isFocused ? '#4f46e5' : '#1e293b',
-                                      letterSpacing: '0.02em',
-                                      textTransform: 'uppercase',
-                                      fontFamily: 'var(--font-display)'
-                                    }}>
-                                      {profile.name}
-                                    </span>
+                                    <Link
+                                      href={`/profile/${getProfileSlug(profile)}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      style={{ textDecoration: 'none', color: 'inherit' }}
+                                    >
+                                      <span style={{
+                                        fontSize: 12,
+                                        fontWeight: isFocused ? 950 : 900,
+                                        color: isFocused ? '#4f46e5' : '#1e293b',
+                                        letterSpacing: '0.02em',
+                                        textTransform: 'uppercase',
+                                        fontFamily: 'var(--font-display)',
+                                        cursor: 'pointer'
+                                      }}>
+                                        {profile.name}
+                                      </span>
+                                    </Link>
                                   </div>
 
                                   {/* Center: The Colored Bar Track */}
@@ -2285,10 +2377,9 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
 
                     return (
                       <Fragment key={profile.id}>
-                        <div
-                          key={profile.id}
+                        <Link
+                          href={`/profile/${getProfileSlug(profile)}`}
                           className="table-row table-row-hover"
-                          onClick={() => router.push(`/profile/${getProfileSlug(profile)}`)}
                           style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -2297,7 +2388,9 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                           backgroundColor: 'var(--surface)',
                           transition: 'background-color 0.2s ease',
                           position: 'relative',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          textDecoration: 'none',
+                          color: 'inherit'
                         }}
                       >
                         {/* Rank Position & Trend Badge */}
@@ -2468,7 +2561,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                         }}>
                           {profile.followers_text?.trim() ? profile.followers_text.trim().toUpperCase() : (profile.followers_count >= 1000000 ? `${(Math.floor(profile.followers_count / 100000) / 10).toString().replace(/\.0$/, '')}M` : (profile.followers_count >= 1000 ? `${(Math.floor(profile.followers_count / 100) / 10).toString().replace(/\.0$/, '')}K` : profile.followers_count || '—'))}
                         </div>
-                      </div>
+                      </Link>
                     </Fragment>
                   )
                 })}
@@ -2496,7 +2589,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
         ) : (
           /* ── DAILY FOLLOWER GROWTH TAB (GAINERS & LOSERS) ── */
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Header Row: Small Heading + Date in Middle, Dropdown on Right with Horizontal Line Below */}
+          {/* Header Row: Small Heading + Date in Middle, Dropdown on Right with Horizontal Line Below */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -2506,17 +2599,18 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               zIndex: 30,
               gap: 8
             }}>
-              {/* Left spacer to keep center truly centered */}
-              <div style={{ flex: 1 }} className="growth-header-spacer" />
+              {/* Left spacer — fixed width matching the right dropdown so center stays locked */}
+              <div style={{ flex: '0 0 80px' }} className="growth-header-spacer" />
 
-              {/* Middle: Small Heading + Date Directly Below */}
-              <div style={{ textAlign: 'center', flexShrink: 0, padding: '0 8px' }}>
+              {/* Middle: heading locked at fixed width so switching mode never shifts layout */}
+              <div style={{ textAlign: 'center', flexShrink: 0, padding: '0 8px', minWidth: 160 }}>
                 <h2 style={{
                   fontSize: 18,
                   fontWeight: 800,
                   margin: 0,
                   color: 'var(--text)',
                   letterSpacing: '-0.01em',
+                  whiteSpace: 'nowrap',
                 }}>
                   {growthMode === 'gainers' ? 'Most Followed' : 'Most Unfollowed'}
                 </h2>
@@ -2546,8 +2640,8 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                 )}
               </div>
 
-              {/* Right Side: Dropdown Menu */}
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
+              {/* Right Side: Dropdown Menu — fixed width matches left spacer to keep center locked */}
+              <div style={{ flex: '0 0 80px', display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <button
                     type="button"
@@ -2644,6 +2738,36 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               </div>
             </div>
 
+            {/* ── Left-aligned Instagram Gradient Live Timer ── */}
+            {growthLiveTime && (
+              <div suppressHydrationWarning style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                padding: '5px 14px 5px 10px',
+                background: 'linear-gradient(90deg, rgba(240,148,51,0.12) 0%, rgba(220,39,67,0.12) 50%, rgba(188,24,136,0.12) 100%)',
+                border: '1px solid rgba(220,39,67,0.18)',
+                borderRadius: 100,
+                width: 'fit-content',
+                marginBottom: 2,
+              }}>
+                <span className="growth-clock-emoji">🕐</span>
+                <span style={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: '#dc2743',
+                  letterSpacing: '0.03em',
+                }}>Live</span>
+                <span className="growth-live-timer" key={growthLiveTime} style={{
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: 'var(--text)',
+                  letterSpacing: '0.08em',
+                }}>{growthLiveTime}</span>
+              </div>
+            )}
+
             {/* Clean, Elegant Horizontal Divider Line */}
             <div style={{
               width: '100%',
@@ -2692,10 +2816,10 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                     const categoryStyle = getCategoryStyle(parsedCategory.tabCategory)
 
                     return (
-                      <div
+                      <Link
                         key={profile.id}
+                        href={`/profile/${getProfileSlug(profile)}`}
                         className="table-row table-row-hover"
-                        onClick={() => router.push(`/profile/${getProfileSlug(profile)}`)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -2704,7 +2828,9 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                           backgroundColor: 'var(--surface)',
                           transition: 'background-color 0.2s ease',
                           position: 'relative',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          textDecoration: 'none',
+                          color: 'inherit'
                         }}
                       >
                         {/* Normal Rank Position */}
@@ -2856,7 +2982,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                             {profile.followers_text || formatFollowersText(profile.followers_count)} ({profile.formatted_percent})
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     )
                   })}
 
@@ -3642,11 +3768,15 @@ export async function getServerSideProps(context) {
     const reelsData = reelsResult.data
 
     // Combine profiles page ranges
-    const profilesData = (profilesResult1.data || [])
+    const allProfilesData = (profilesResult1.data || [])
       .concat(profilesResult2.data || [])
       .concat(profilesResult3.data || [])
       .concat(profilesResult4.data || [])
       .concat(profilesResult5.data || [])
+
+    // Only show accounts with 100k+ followers in the public Live leaderboard
+    // Sub-100k profiles still have their own /profile/[slug] page accessible from All Celebrity section
+    const profilesData = allProfilesData.filter(p => (p.followers_count || 0) >= 100000)
 
     const sortedReels = (reelsData || []).sort((a, b) => {
       const rankA = a.order_index || 999999

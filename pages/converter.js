@@ -188,7 +188,7 @@ export default function Converter() {
         <title>Image to Dot Art Converter (Unicode Braille for Comments) | Spialr</title>
         <meta name="description" content="Free online Image to Dot Art Converter. Convert any image, portrait, or photo into copy-paste Unicode Braille dot art characters for Instagram, YouTube, and WhatsApp comments." />
         <meta name="keywords" content="image to dot art, dot art generator, braille art generator, copy paste dot art, instagram comment dot art, spialr" />
-        <link rel="canonical" href="https://spialr.com/converter" />
+        <link rel="canonical" href="https://spialr.com/converter" key="canonical" />
       </Head>
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 20px', minHeight: 'calc(100vh - 130px)' }}>
@@ -253,9 +253,25 @@ export default function Converter() {
           }}>
             Image to <span className="gradient-text">Dot Art</span>
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 15, maxWidth: 480, margin: '0 auto' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 15, maxWidth: 480, margin: '0 auto 8px' }}>
             Convert any image into a text-based Dithered dot representation optimized for comments and DMs.
           </p>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'rgba(220, 39, 67, 0.08)',
+            border: '1px solid rgba(220, 39, 67, 0.22)',
+            padding: '5px 14px',
+            borderRadius: 100,
+            fontSize: 12.5,
+            fontWeight: 650,
+            color: 'var(--accent)',
+            marginTop: 6
+          }}>
+            <span>✨</span>
+            <span>Use a detailed image for better quality dot art</span>
+          </div>
         </div>
 
         <div className="card" style={{ padding: 24, marginBottom: 30 }}>
@@ -338,7 +354,19 @@ export default function Converter() {
                 <div style={{ marginTop: 4 }}>
                   <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Upload image</div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Drag & drop here or click to browse</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', opacity: 0.7, marginTop: 8 }}>Supports JPG, PNG, WEBP</div>
+                  <div style={{
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: 'var(--accent)',
+                    background: 'rgba(220, 39, 67, 0.07)',
+                    padding: '3px 10px',
+                    borderRadius: 100,
+                    display: 'inline-block',
+                    marginTop: 8
+                  }}>
+                    💡 Use detailed images for better quality dot art
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', opacity: 0.7, marginTop: 6 }}>Supports JPG, PNG, WEBP</div>
                 </div>
               </>
             )}

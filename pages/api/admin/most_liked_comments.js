@@ -91,7 +91,7 @@ export default async function handler(req, res) {
         likes_text: likes_text || '',
         description: description || '',
         why_notable: why_notable || '',
-        ...(created_at ? { created_at } : {})
+        created_at: created_at ? created_at : null
       }
 
       const { data, error } = await supabase
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
         likes_text: likes_text || '',
         description: description || '',
         why_notable: why_notable || '',
-        ...(created_at ? { created_at } : {})
+        created_at: created_at ? created_at : null
       }
 
       const { data, error } = await supabase

@@ -4,6 +4,7 @@ import PostCard from '../../components/PostCard'
 import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
 import { calculateGrowthVelocity, formatSignedChange, formatSignedPercent } from '../../lib/growthVelocity'
 import AdminCommentManager from '../../components/AdminCommentManager'
+import { supabase } from '../../lib/supabase'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'is_admin_token'
@@ -301,6 +302,22 @@ function CelebrityForm({ initial, onSave, onCancel }) {
 
       const data = await res.json()
       if (data.error) throw new Error(data.error)
+
+      // If admin wants a Real-Time profile, upsert into most_followed table
+      if (form.create_realtime_profile && form.instagram_handle) {
+        const handle = form.instagram_handle.trim().toLowerCase()
+        const { error: rtError } = await supabase
+          .from('most_followed')
+          .upsert({
+            name: form.name.trim(),
+            instagram_handle: handle,
+            followers_count: form.followers_count ? Number(form.followers_count) : 0,
+          }, { onConflict: 'instagram_handle', ignoreDuplicates: false })
+        if (rtError) {
+          console.warn('Real-time profile create warning:', rtError.message)
+        }
+      }
+
       onSave(data.celebrity)
     } catch (e) {
       setError(e.message)
@@ -490,6 +507,21 @@ function CelebrityForm({ initial, onSave, onCancel }) {
           <label htmlFor="hide_search" style={{ fontSize: 14, color: '#f44336', fontWeight: 600, cursor: 'pointer' }}>
             🔴 Temporary Disable Profile (Hide from search & website)
           </label>
+        </div>
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)',
+          borderRadius: 10, padding: '10px 12px', marginTop: 4
+        }}>
+          <input type="checkbox" id="create_realtime" checked={form.create_realtime_profile || false} onChange={e => set('create_realtime_profile', e.target.checked)} style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0 }} />
+          <div>
+            <label htmlFor="create_realtime" style={{ fontSize: 14, color: '#10b981', fontWeight: 700, cursor: 'pointer', display: 'block' }}>
+              📈 Create Real-Time Follower Profile
+            </label>
+            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>
+              Adds this account to the live tracker system. Accounts with 100K+ followers will appear on the public Live page. Sub-100K accounts get a private <code style={{ fontSize: 11 }}>/profile/[handle]</code> page accessible from their celebrity section only.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1298,9 +1330,14 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
   }
 
   const [form, setForm] = useState(() => {
-    const initialDate = initial?.created_at 
+    const hasInitialDate = !!initial?.created_at
+    const initialDate = hasInitialDate 
       ? new Date(initial.created_at).toISOString().substring(0, 10) 
       : new Date().toISOString().substring(0, 10)
+
+    const initialWeeks = hasInitialDate
+      ? Math.max(1, Math.round((Date.now() - new Date(initial.created_at).getTime()) / (7 * 24 * 60 * 60 * 1000))).toString()
+      : '2'
 
     if (initial) {
       return {
@@ -1309,7 +1346,9 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         followers_text: initial.followers_text || '',
         views_text: initial.isCopy ? '' : (initial.views_text || initial.likes_text || ''),
         hours_ago: getInitialHoursAgo(initial.created_at),
-        uploaded_date: initialDate,
+        uploaded_date: hasInitialDate ? initialDate : '',
+        comment_date_mode: hasInitialDate ? 'weeks' : 'none',
+        comment_weeks: hasInitialDate ? initialWeeks : '',
         description: initial.description || '',
         why_notable: initial.why_notable || '',
         show_in_most_liked: initial.show_in_most_liked !== undefined ? !!initial.show_in_most_liked : false,
@@ -1329,6 +1368,8 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
       views_text: '',
       hours_ago: '0 hours ago',
       uploaded_date: initialDate,
+      comment_date_mode: 'weeks',
+      comment_weeks: '2',
       description: '',
       why_notable: '',
       show_in_most_liked: false,
@@ -1395,13 +1436,34 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
     setSaving(true)
     setError('')
     try {
-      const calculatedCreatedAt = (isMostViewed || isMostLiked || isComment)
-        ? (form.uploaded_date ? new Date(form.uploaded_date + 'T12:00:00').toISOString() : (form.created_at || new Date().toISOString()))
-        : (form.created_at ? form.created_at : (() => {
-            const match = (form.hours_ago || '').match(/\d+/)
-            const hours = match ? parseInt(match[0], 10) : 0
-            return new Date(Date.now() - (hours * 60 * 60 * 1000)).toISOString()
-          })())
+      let calculatedCreatedAt = null
+      if (isComment) {
+        if (form.comment_date_mode === 'weeks') {
+          const w = parseFloat(form.comment_weeks)
+          if (!isNaN(w) && w >= 0) {
+            calculatedCreatedAt = new Date(Date.now() - (w * 7 * 24 * 60 * 60 * 1000)).toISOString()
+          } else {
+            calculatedCreatedAt = null
+          }
+        } else if (form.comment_date_mode === 'exact') {
+          if (form.uploaded_date) {
+            calculatedCreatedAt = new Date(form.uploaded_date + 'T12:00:00Z').toISOString()
+          } else {
+            calculatedCreatedAt = null
+          }
+        } else {
+          // 'none' - no date entered
+          calculatedCreatedAt = null
+        }
+      } else if (isMostViewed || isMostLiked) {
+        calculatedCreatedAt = form.uploaded_date ? new Date(form.uploaded_date + 'T12:00:00').toISOString() : (form.created_at || new Date().toISOString())
+      } else {
+        calculatedCreatedAt = form.created_at ? form.created_at : (() => {
+          const match = (form.hours_ago || '').match(/\d+/)
+          const hours = match ? parseInt(match[0], 10) : 0
+          return new Date(Date.now() - (hours * 60 * 60 * 1000)).toISOString()
+        })()
+      }
 
       const res = await adminFetch(apiEndpoint, {
         method: (initial && !initial.isCopy) ? 'PUT' : 'POST',
@@ -1738,11 +1800,110 @@ function ViralReelsForm({ initial, onSave, onCancel, apiEndpoint = '/api/admin/v
         </div>
       )}
 
+      {isComment && (
+        <div style={{
+          background: 'var(--surface2)',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          padding: '14px 16px',
+          margin: '6px 0 10px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+            <label style={{ ...labelStyle, marginBottom: 0, color: 'var(--text)', fontWeight: 750, fontSize: 13 }}>
+              📅 Comment Post Date (Instagram Age)
+            </label>
+            <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>
+              ⚡ Automatically updates every week
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            {[
+              { id: 'weeks', label: '⏳ Weeks Ago (e.g. 2w, 24w)' },
+              { id: 'exact', label: '📆 Specific Date' },
+              { id: 'none', label: '🚫 No Date (Hide Date)' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => set('comment_date_mode', tab.id)}
+                style={{
+                  flex: 1,
+                  minWidth: 120,
+                  padding: '7px 10px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: form.comment_date_mode === tab.id ? 700 : 500,
+                  background: form.comment_date_mode === tab.id ? 'var(--accent)' : 'var(--surface)',
+                  color: form.comment_date_mode === tab.id ? '#ffffff' : 'var(--text-dim)',
+                  border: form.comment_date_mode === tab.id ? 'none' : '1px solid var(--border)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {form.comment_date_mode === 'weeks' && (
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                Enter number of weeks ago as shown on Instagram:
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                  className="input-field"
+                  type="number"
+                  min="0"
+                  max="520"
+                  step="1"
+                  value={form.comment_weeks !== undefined ? form.comment_weeks : ''}
+                  onChange={e => set('comment_weeks', e.target.value)}
+                  placeholder="e.g. 2 or 24"
+                  style={{ width: 130 }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
+                  {form.comment_weeks ? `${form.comment_weeks}w ago` : '—'}
+                </span>
+              </div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.4 }}>
+                💡 Saved as dynamic timestamp: will automatically progress every week (e.g. 24w ➔ 25w ➔ 26w) without manual editing.
+              </div>
+            </div>
+          )}
+
+          {form.comment_date_mode === 'exact' && (
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                Select approximate or exact date comment was posted:
+              </label>
+              <input
+                type="date"
+                className="input-field"
+                value={form.uploaded_date || ''}
+                onChange={e => set('uploaded_date', e.target.value)}
+                style={{ width: 'auto' }}
+              />
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 6 }}>
+                Instagram age (e.g. 3w, 12w) is automatically calculated from this date every week.
+              </div>
+            </div>
+          )}
+
+          {form.comment_date_mode === 'none' && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 0' }}>
+              ✓ No date will be displayed to users for this comment.
+            </div>
+          )}
+        </div>
+      )}
+
       {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
         <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : initial ? (isMostLiked ? 'Update Post' : 'Update Reel') : (isMostLiked ? 'Add Post' : 'Add Reel')}
+          {saving ? 'Saving...' : initial ? (isComment ? 'Update Comment' : isMostLiked ? 'Update Post' : 'Update Reel') : (isComment ? 'Add Comment' : isMostLiked ? 'Add Post' : 'Add Reel')}
         </button>
       </div>
     </div>
@@ -1796,6 +1957,7 @@ export default function AdminPanel() {
 
   // 🔴 Live Follower Fetch state (laptop-based)
   const [liveFetchJob, setLiveFetchJob] = useState({ status: 'idle', progress: 0, total: 0, updated: 0, failed: 0, last_completed_at: null })
+  const [liveFetchQueue, setLiveFetchQueue] = useState({ pending: 0, done: 0, failed: 0, total: 0, currentHandle: null })
   const [liveFetchTriggering, setLiveFetchTriggering] = useState(false)
   const liveFetchPollRef = useRef(null)
 
@@ -1843,12 +2005,21 @@ export default function AdminPanel() {
       if (res.ok) {
         const data = await res.json()
         if (data.success) {
-          setLiveFetchJob(data.job)
-          // Stop polling if done or idle
-          if (data.job.status === 'done' || data.job.status === 'idle') {
+          if (data.job) setLiveFetchJob(data.job)
+          if (data.queue) setLiveFetchQueue(data.queue)
+
+          const isJobActive = data.job?.status === 'running' || data.job?.status === 'queued'
+          const isQueueActive = (data.queue?.pending || 0) > 0
+
+          if (!isJobActive && !isQueueActive) {
             if (liveFetchPollRef.current) {
               clearInterval(liveFetchPollRef.current)
               liveFetchPollRef.current = null
+            }
+          } else {
+            // Keep polling while job or queue is active
+            if (!liveFetchPollRef.current) {
+              liveFetchPollRef.current = setInterval(pollLiveFetchStatus, 3000)
             }
           }
         }
@@ -1862,9 +2033,9 @@ export default function AdminPanel() {
       const res = await adminFetch('/api/admin/trigger-live-fetch', { method: 'POST' })
       if (res.ok) {
         setLiveFetchJob(prev => ({ ...prev, status: 'queued', progress: 0 }))
-        // Start polling status every 5s
         if (liveFetchPollRef.current) clearInterval(liveFetchPollRef.current)
-        liveFetchPollRef.current = setInterval(pollLiveFetchStatus, 5000)
+        liveFetchPollRef.current = setInterval(pollLiveFetchStatus, 3000)
+        setTimeout(pollLiveFetchStatus, 500)
       }
     } catch (e) {
       console.error('triggerLiveFetch error:', e)
@@ -2450,6 +2621,7 @@ export default function AdminPanel() {
     if (!authed) return
     loadData()
     fetchStorageUsage()
+    pollLiveFetchStatus()
   }, [authed, tab])
 
   const loadData = async () => {
@@ -4957,59 +5129,101 @@ export default function AdminPanel() {
                 <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444' }}>
                   🔴 Fetch Live Follower Counts
                 </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   {/* Status badge */}
                   <span style={{
-                    padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                    background: liveFetchJob.status === 'done' ? 'rgba(16,185,129,0.15)' : liveFetchJob.status === 'running' ? 'rgba(234,179,8,0.15)' : liveFetchJob.status === 'queued' ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.07)',
+                    padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    background: liveFetchJob.status === 'done' ? 'rgba(16,185,129,0.15)' : liveFetchJob.status === 'running' ? 'rgba(234,179,8,0.18)' : liveFetchJob.status === 'queued' ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.07)',
                     color: liveFetchJob.status === 'done' ? '#34d399' : liveFetchJob.status === 'running' ? '#fbbf24' : liveFetchJob.status === 'queued' ? '#818cf8' : 'var(--text-muted)',
-                    border: `1px solid ${liveFetchJob.status === 'done' ? 'rgba(16,185,129,0.3)' : liveFetchJob.status === 'running' ? 'rgba(234,179,8,0.3)' : liveFetchJob.status === 'queued' ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                    border: `1px solid ${liveFetchJob.status === 'done' ? 'rgba(16,185,129,0.3)' : liveFetchJob.status === 'running' ? 'rgba(234,179,8,0.35)' : liveFetchJob.status === 'queued' ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                    display: 'inline-flex', alignItems: 'center', gap: 6
                   }}>
-                    {liveFetchJob.status === 'idle' ? '⚪ Idle' : liveFetchJob.status === 'queued' ? '🟣 Queued — waiting for laptop...' : liveFetchJob.status === 'running' ? `🟡 Running (${liveFetchJob.progress}/${liveFetchJob.total})` : `✅ Done`}
+                    {liveFetchJob.status === 'running' && (
+                      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#fbbf24', animation: 'pulse 1.5s infinite' }} />
+                    )}
+                    {liveFetchJob.status === 'idle' ? '⚪ Idle' : liveFetchJob.status === 'queued' ? '🟣 Queued — Worker starting...' : liveFetchJob.status === 'running' ? `🟡 Scraping Live (${liveFetchJob.progress}/${liveFetchJob.total})` : `✅ Completed`}
                   </span>
                   <button
                     onClick={triggerLiveFetch}
-                    disabled={liveFetchTriggering || liveFetchJob.status === 'running' || liveFetchJob.status === 'queued'}
+                    disabled={liveFetchTriggering || liveFetchJob.status === 'running'}
                     style={{
-                      background: liveFetchTriggering || liveFetchJob.status === 'running' || liveFetchJob.status === 'queued' ? 'rgba(239,68,68,0.3)' : '#ef4444',
+                      background: liveFetchTriggering || liveFetchJob.status === 'running' ? 'rgba(239,68,68,0.35)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
                       color: '#fff',
                       border: 'none',
                       padding: '8px 18px',
                       borderRadius: 10,
                       fontSize: 13,
                       fontWeight: 800,
-                      cursor: liveFetchTriggering || liveFetchJob.status === 'running' || liveFetchJob.status === 'queued' ? 'not-allowed' : 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 6
+                      cursor: liveFetchTriggering || liveFetchJob.status === 'running' ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      boxShadow: liveFetchJob.status === 'running' ? 'none' : '0 4px 14px rgba(239,68,68,0.35)'
                     }}
                   >
-                    {liveFetchTriggering ? '⏳ Sending...' : liveFetchJob.status === 'running' ? '🔄 Running...' : liveFetchJob.status === 'queued' ? '⏳ Queued...' : '🔴 Fetch All Live Counts'}
+                    {liveFetchTriggering ? '⏳ Sending...' : liveFetchJob.status === 'running' ? '🔄 Live Fetch Running...' : '🔴 Fetch All Live Counts'}
                   </button>
                 </div>
               </div>
 
-              <div style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                Sends a request to your laptop script (<code>laptop-server/run.mjs</code>) via Supabase queue.
-                Your laptop fetches live Instagram follower counts and saves to database.
-                {liveFetchJob.status === 'running' && liveFetchJob.total > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, overflow: 'hidden', height: 8, marginBottom: 6 }}>
-                      <div style={{ width: `${Math.round((liveFetchJob.progress / liveFetchJob.total) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #ef4444, #f97316)', transition: 'width 0.5s ease' }} />
+              {/* Priority queue progress if items pending */}
+              {liveFetchQueue.total > 0 && liveFetchQueue.pending > 0 && (
+                <div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: '#818cf8', marginBottom: 6 }}>
+                    <span>⚡ Priority Profile Queue</span>
+                    <span>{liveFetchQueue.done}/{liveFetchQueue.total} profiles completed</span>
+                  </div>
+                  <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.round((liveFetchQueue.done / liveFetchQueue.total) * 100)}%`, height: '100%', background: '#6366f1', transition: 'width 0.3s ease' }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Real-time Batch Progress Bar */}
+              {liveFetchJob.status === 'running' && liveFetchJob.total > 0 && (
+                <div style={{ marginTop: 14, marginBottom: 14, background: 'var(--surface)', padding: '16px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.2)' }}>
+                  {/* Header with % */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>
+                      Scraping Instagram Followers: {liveFetchJob.progress} of {liveFetchJob.total} profiles
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 900, color: '#ef4444' }}>
+                      {Math.round((liveFetchJob.progress / liveFetchJob.total) * 100)}%
+                    </span>
+                  </div>
+
+                  {/* Progress bar line */}
+                  <div style={{ width: '100%', height: 10, background: 'var(--surface2)', borderRadius: 6, overflow: 'hidden', marginBottom: 10, border: '1px solid var(--border)' }}>
+                    <div style={{
+                      width: `${Math.round((liveFetchJob.progress / liveFetchJob.total) * 100)}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #ef4444, #f97316)',
+                      transition: 'width 0.4s ease'
+                    }} />
+                  </div>
+
+                  {/* Badges row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0284c7' }} />
+                      <span>Current: <strong style={{ color: '#0284c7' }}>@{liveFetchJob.last_handle || '...'}</strong></span>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {liveFetchJob.progress}/{liveFetchJob.total} profiles — ✅ {liveFetchJob.updated || 0} updated · ❌ {liveFetchJob.failed || 0} failed
-                      {liveFetchJob.last_handle && <> · Processing: <strong style={{ color: '#38bdf8' }}>@{liveFetchJob.last_handle}</strong></>}
+                    <div style={{ display: 'flex', gap: 12, fontWeight: 700 }}>
+                      <span style={{ color: '#10b981' }}>✅ {liveFetchJob.updated || 0} Updated</span>
+                      <span style={{ color: '#ef4444' }}>❌ {liveFetchJob.failed || 0} Failed</span>
                     </div>
                   </div>
-                )}
-                {liveFetchJob.status === 'done' && liveFetchJob.last_completed_at && (
-                  <div style={{ marginTop: 8, fontSize: 11, color: '#34d399' }}>
-                    ✅ Last completed: {new Date(liveFetchJob.last_completed_at).toLocaleString()} · {liveFetchJob.updated || 0} updated · {liveFetchJob.failed || 0} failed
-                  </div>
-                )}
-              </div>
-              <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, fontSize: 11.5, color: 'var(--text-muted)' }}>
-                ⚠️ Make sure your laptop is on and <strong>node laptop-server/run.mjs</strong> is running before clicking.
-                The laptop script picks up requests within ~30 seconds.
+                </div>
+              )}
+
+              {/* Completed notice */}
+              {liveFetchJob.status === 'done' && liveFetchJob.last_completed_at && (
+                <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, fontSize: 12, color: '#34d399', fontWeight: 600 }}>
+                  🎉 Last Live Fetch Completed: {new Date(liveFetchJob.last_completed_at).toLocaleString()} · ✅ {liveFetchJob.updated || 0} accounts updated · ❌ {liveFetchJob.failed || 0} failed
+                </div>
+              )}
+
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 8 }}>
+                💡 <strong>How it works:</strong> The background worker (<code>node laptop-server/run.mjs</code>) fetches Instagram using your residential IP and saves directly to database.
+                You can also use the <strong>Turbo Scrape</strong> section below anytime to scrape remaining unscraped accounts.
               </div>
             </div>
 

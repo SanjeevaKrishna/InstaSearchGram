@@ -195,11 +195,11 @@ export default function ContactPage() {
       <Head>
         <title>Contact Spialr | Support &amp; Business Inquiries</title>
         <meta name="description" content="Contact Spialr for support, profile suggestions, business inquiries, reporting incorrect information, copyright requests and technical assistance." />
-        <link rel="canonical" href="https://www.spialr.com/contact" />
+        <link rel="canonical" href="https://spialr.com/contact" key="canonical" />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.spialr.com/contact" />
+        <meta property="og:url" content="https://spialr.com/contact" key="og:url" />
         <meta property="og:title" content="Contact Spialr | Support & Business Inquiries" />
         <meta property="og:description" content="Contact Spialr for support, profile suggestions, business inquiries, reporting incorrect information, copyright requests and technical assistance." />
         <meta property="og:site_name" content="Spialr" />

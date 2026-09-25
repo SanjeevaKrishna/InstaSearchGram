@@ -95,7 +95,7 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
-        <link rel="canonical" href={canonicalUrl} />
+        <link rel="canonical" href={canonicalUrl} key="canonical" />
         {isThinContent && <meta name="robots" content="noindex, follow" />}
       </Head>
 

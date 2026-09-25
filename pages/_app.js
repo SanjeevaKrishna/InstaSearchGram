@@ -36,7 +36,7 @@ export default function App({ Component, pageProps }) {
         <link rel="apple-touch-icon" href="/favicon.png" />
         
         {/* Canonical Link */}
-        <link rel="canonical" href={canonicalUrl} />
+        <link rel="canonical" href={canonicalUrl} key="canonical" />
         
         {/* Primary Meta Tags */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -44,13 +44,13 @@ export default function App({ Component, pageProps }) {
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:url" content={canonicalUrl} key="og:url" />
         <meta property="og:site_name" content="Spialr" />
         <meta property="og:image" content="https://spialr.com/og-image.jpg" />
         
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content={canonicalUrl} />
+        <meta property="twitter:url" content={canonicalUrl} key="twitter:url" />
         <meta property="twitter:image" content="https://spialr.com/og-image.jpg" />
 
         {/* Schema.org WebSite JSON-LD */}
