@@ -1480,7 +1480,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                       boxShadow: '0 20px 60px rgba(0,0,0,0.06)',
                       padding: '32px 24px 44px',
                       position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'visible'
                     }}>
                       {/* Top Header of Race Canvas */}
                       <div style={{
@@ -1615,8 +1615,8 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                       {/* Scrollable Horizontal Arena */}
                       <div ref={arenaScrollRef} style={{ overflowX: 'auto', paddingBottom: 24, WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
                         <div style={{
-                          minWidth: `${Math.round(700 * timelineZoom)}px`,
-                          width: `${Math.round(100 * timelineZoom)}%`,
+                          width: '100%',
+                          minWidth: `${Math.max(300, Math.round(900 * timelineZoom))}px`,
                           position: 'relative'
                         }}>
                           {/* Top Milestone Axis & Vertical Grid Lines */}
@@ -1624,7 +1624,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                             const ticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map(r => Math.round(maxFollowersOnDate * r))
 
                             return (
-                              <div style={{ position: 'relative', marginLeft: 120, marginRight: 120, height: 26, marginBottom: 14 }}>
+                              <div className="timeline-axis-row" style={{ position: 'relative', marginLeft: 220, marginRight: 200, height: 26, marginBottom: 14 }}>
                                 {ticks.map((t, i) => {
                                   const leftPct = (t / maxFollowersOnDate) * 100
                                   return (
@@ -3420,10 +3420,14 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
           .timeline-bar-track {
             margin-right: 80px !important;
           }
+          .timeline-axis-row {
+            margin-left: 132px !important;
+            margin-right: 80px !important;
+          }
           .growth-header-spacer {
             display: none !important;
           }
-          .growth-header-btn span {
+          .growth-header-btn {
             display: none !important;
           }
         }
