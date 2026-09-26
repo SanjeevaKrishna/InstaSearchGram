@@ -18,10 +18,13 @@ import {
   ArrowLeftRight,
   Rocket,
   HeartCrack,
-  CheckCircle2
+  CheckCircle2,
+  Trophy,
+  X
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import CommentSection from '../../components/CommentSection'
+import { generateMilestones, formatMilestoneLabel, findMilestoneAchievedDate } from '../../lib/milestones'
 
 const InstagramIcon = ({ size = 24, style = {} }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
@@ -180,6 +183,10 @@ export default function ProfilePage({ profile, slug, rank = null }) {
   const peakFollowers = counts.length > 0 ? Math.max(...counts, currentCount) : currentCount
   const lostFollowers = peakFollowers - currentCount
   const isLosing = lostFollowers > 100
+
+  const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false)
+  const achievedMilestones = useMemo(() => generateMilestones(currentCount), [currentCount])
+  const reversedMilestones = useMemo(() => [...achievedMilestones].reverse(), [achievedMilestones])
 
   const [liveFollowers, setLiveFollowers] = useState(0)
   const [changeDir, setChangeDir] = useState(null)
@@ -1154,6 +1161,249 @@ export default function ProfilePage({ profile, slug, rank = null }) {
                 </div>
                 <div className="info-drama-stat-item">
                   <span style={{ color: 'var(--text-muted)' }}>Status:</span> <strong style={{ color: '#10b981', fontWeight: 800, marginLeft: 4 }}>Peak Achieved</strong>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 🏆 Milestones Block (Below Active Unfollow Trend / Peak Momentum) */}
+          {reversedMilestones.length > 0 && (
+            <div className="card info-drama-card" style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
+              padding: '14px 16px',
+              marginBottom: 20,
+              borderRadius: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap'
+            }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                fontWeight: 800,
+                fontSize: 14,
+                fontFamily: 'var(--font-display)',
+                color: 'var(--text)',
+                flexShrink: 0
+              }}>
+                <Trophy size={17} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                <span>Milestones:</span>
+              </div>
+
+              {/* Recent Achievements + [All] */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                paddingBottom: 2,
+                flex: 1,
+                justifyContent: 'flex-end',
+                maxWidth: '100%'
+              }}>
+                {reversedMilestones.slice(0, 4).map((m) => {
+                  const label = formatMilestoneLabel(m)
+                  const urlSlug = slug || profile.instagram_handle || profile.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                  return (
+                    <Link
+                      key={m}
+                      href={`/milestone/${urlSlug}/${label.replace('.', '-')}`}
+                      style={{
+                        padding: '6px 14px',
+                        background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08))',
+                        border: '1px solid rgba(99,102,241,0.25)',
+                        borderRadius: 8,
+                        fontSize: 12.5,
+                        fontWeight: 800,
+                        color: '#6366f1',
+                        textDecoration: 'none',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 6px rgba(99,102,241,0.06)'
+                      }}
+                    >
+                      <span>{label}</span>
+                    </Link>
+                  )
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => setIsMilestonesModalOpen(true)}
+                  style={{
+                    padding: '6px 14px',
+                    background: 'var(--surface2, #f1f5f9)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    color: 'var(--text)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>All</span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>({reversedMilestones.length})</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* All Milestones Modal */}
+          {isMilestonesModalOpen && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(6px)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16
+            }}>
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: 'var(--surface, #ffffff)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 24,
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  width: '100%',
+                  maxWidth: 520,
+                  maxHeight: '85vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Modal Header */}
+                <div style={{
+                  padding: '18px 20px',
+                  borderBottom: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Trophy size={20} color="#f59e0b" />
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>
+                        All Follower Milestones
+                      </h3>
+                      <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+                        {profile.name} · {reversedMilestones.length} achievements reached
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMilestonesModalOpen(false)}
+                    style={{
+                      background: 'var(--surface2, #f1f5f9)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: 32,
+                      height: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)'
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Modal Milestones List */}
+                <div style={{
+                  padding: '14px 20px',
+                  overflowY: 'auto',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10
+                }}>
+                  {reversedMilestones.map((m) => {
+                    const label = formatMilestoneLabel(m)
+                    const dateAchieved = findMilestoneAchievedDate(profile.follower_history || [], m)
+                    const urlSlug = slug || profile.instagram_handle || profile.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+
+                    return (
+                      <Link
+                        key={m}
+                        href={`/milestone/${urlSlug}/${label.replace('.', '-')}`}
+                        onClick={() => setIsMilestonesModalOpen(false)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px 16px',
+                          borderRadius: 14,
+                          background: 'var(--surface2, #f8fafc)',
+                          border: '1px solid var(--border)',
+                          textDecoration: 'none',
+                          color: 'inherit',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 10,
+                            background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(168,85,247,0.15))',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 18
+                          }}>
+                            🏆
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
+                              {label} Followers
+                            </div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                              {dateAchieved ? `Achieved on ${dateAchieved}` : 'Milestone Achieved'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          padding: '6px 14px',
+                          borderRadius: 100,
+                          background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+                          color: '#ffffff',
+                          fontSize: 11.5,
+                          fontWeight: 800,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}>
+                          <span>Celebrate</span>
+                          <span>→</span>
+                        </div>
+                      </Link>
+                    )
+                  })}
                 </div>
               </div>
             </div>
