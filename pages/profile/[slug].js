@@ -1172,63 +1172,58 @@ export default function ProfilePage({ profile, slug, rank = null }) {
               background: 'var(--surface)',
               border: '1px solid var(--border)',
               boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
-              padding: '14px 16px',
-              marginBottom: 20,
+              padding: '12px 14px',
+              marginBottom: 18,
               borderRadius: 16,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: 12,
-              flexWrap: 'wrap'
+              gap: 8,
+              overflow: 'hidden'
             }}>
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 7,
+                gap: 6,
                 fontWeight: 800,
-                fontSize: 14,
+                fontSize: 13.5,
                 fontFamily: 'var(--font-display)',
                 color: 'var(--text)',
                 flexShrink: 0
               }}>
-                <Trophy size={17} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                <Trophy size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
                 <span>Milestones:</span>
               </div>
 
-              {/* Recent Achievements + [All] */}
+              {/* Front Screen Chips: Top 3 recent (e.g. 150k, 100k, 75k) + [All] */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                overflowX: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                paddingBottom: 2,
-                flex: 1,
-                justifyContent: 'flex-end',
-                maxWidth: '100%'
+                gap: 6,
+                flexShrink: 0
               }}>
-                {reversedMilestones.slice(0, 4).map((m) => {
+                {reversedMilestones.slice(0, 3).map((m) => {
                   const label = formatMilestoneLabel(m)
-                  const urlSlug = slug || profile.instagram_handle || profile.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                  const targetSlug = slug || profile.instagram_handle || profile.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                  const encodedSlug = encodeURIComponent(targetSlug)
                   return (
                     <Link
                       key={m}
-                      href={`/milestone/${urlSlug}/${label.replace('.', '-')}`}
+                      href={`/milestone/${encodedSlug}/${label.replace('.', '-')}`}
                       style={{
-                        padding: '6px 14px',
+                        padding: '5px 11px',
                         background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08))',
                         border: '1px solid rgba(99,102,241,0.25)',
                         borderRadius: 8,
-                        fontSize: 12.5,
+                        fontSize: 12,
                         fontWeight: 800,
                         color: '#6366f1',
                         textDecoration: 'none',
                         whiteSpace: 'nowrap',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: 4,
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 6px rgba(99,102,241,0.06)'
+                        gap: 3,
+                        boxShadow: '0 2px 5px rgba(99,102,241,0.05)'
                       }}
                     >
                       <span>{label}</span>
@@ -1240,23 +1235,22 @@ export default function ProfilePage({ profile, slug, rank = null }) {
                   type="button"
                   onClick={() => setIsMilestonesModalOpen(true)}
                   style={{
-                    padding: '6px 14px',
+                    padding: '5px 11px',
                     background: 'var(--surface2, #f1f5f9)',
                     border: '1px solid var(--border)',
                     borderRadius: 8,
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: 800,
                     color: 'var(--text)',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 4,
-                    transition: 'all 0.2s ease'
+                    gap: 3
                   }}
                 >
                   <span>All</span>
-                  <span style={{ fontSize: 11, opacity: 0.7 }}>({reversedMilestones.length})</span>
+                  <span style={{ fontSize: 10.5, opacity: 0.7 }}>({reversedMilestones.length})</span>
                 </button>
               </div>
             </div>
@@ -1344,12 +1338,13 @@ export default function ProfilePage({ profile, slug, rank = null }) {
                   {reversedMilestones.map((m) => {
                     const label = formatMilestoneLabel(m)
                     const dateAchieved = findMilestoneAchievedDate(profile.follower_history || [], m)
-                    const urlSlug = slug || profile.instagram_handle || profile.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                    const targetSlug = slug || profile.instagram_handle || profile.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                    const encodedSlug = encodeURIComponent(targetSlug)
 
                     return (
                       <Link
                         key={m}
-                        href={`/milestone/${urlSlug}/${label.replace('.', '-')}`}
+                        href={`/milestone/${encodedSlug}/${label.replace('.', '-')}`}
                         onClick={() => setIsMilestonesModalOpen(false)}
                         style={{
                           display: 'flex',
@@ -1382,7 +1377,7 @@ export default function ProfilePage({ profile, slug, rank = null }) {
                               {label} Followers
                             </div>
                             <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
-                              {dateAchieved ? `Achieved on ${dateAchieved}` : 'Milestone Achieved'}
+                              {dateAchieved ? `Achieved on ${dateAchieved}` : 'Official Milestone'}
                             </div>
                           </div>
                         </div>

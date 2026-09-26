@@ -19,8 +19,6 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
   const router = useRouter()
   const [displayCount, setDisplayCount] = useState(0)
   const [isBlasted, setIsBlasted] = useState(false)
-  const [progress, setProgress] = useState(0) // 0 to 15 seconds
-  const [isPlaying, setIsPlaying] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
   const [copied, setCopied] = useState(false)
@@ -33,6 +31,12 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
   const totalDuration = 15000 // 15 seconds
   const partyBombTime = 10000 // 10 seconds party blast
   const startCount = Math.floor(milestoneValue * 0.992) // e.g. 992,000 for 1M
+
+  // Avatar URL with resilient proxy fallback
+  const rawPhoto = profile?.photo_url || profile?.profile_pic_url || ''
+  const avatarSrc = rawPhoto
+    ? (rawPhoto.startsWith('http') ? `/api/image-proxy?url=${encodeURIComponent(rawPhoto)}` : rawPhoto)
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || 'Creator')}&size=200&bold=true&background=6366f1&color=fff`
 
   // ── Confetti Particle Engine ──
   const triggerConfettiBlast = useCallback(() => {
@@ -118,8 +122,6 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
 
     const step = (now) => {
       const elapsed = now - startTimeRef.current
-      const currentSec = Math.min(elapsed, totalDuration)
-      setProgress(currentSec)
 
       if (elapsed < partyBombTime) {
         // Counting up smoothly from startCount to milestoneValue over 10 seconds
@@ -138,12 +140,9 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
 
       if (elapsed < totalDuration) {
         animationFrameRef.current = requestAnimationFrame(step)
-      } else {
-        setIsPlaying(false)
       }
     }
 
-    setIsPlaying(true)
     animationFrameRef.current = requestAnimationFrame(step)
   }, [milestoneValue, startCount, triggerConfettiBlast])
 
@@ -162,7 +161,10 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
 
     try {
       await exportMilestoneVideo({
-        profile,
+        profile: {
+          ...profile,
+          photo_url: rawPhoto
+        },
         milestoneValue,
         achievedDate,
         onProgress: (pct) => setExportProgress(pct),
@@ -295,7 +297,7 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
 
       {/* Main Container */}
       <div style={{
-        maxWidth: 620,
+        maxWidth: 580,
         margin: '24px auto 60px',
         padding: '0 16px',
         display: 'flex',
@@ -357,7 +359,7 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
             transition: 'all 0.5s ease'
           }}>
             <img
-              src={profile?.profile_pic_url || '/placeholder-avatar.png'}
+              src={avatarSrc}
               alt={profile?.name || 'Creator'}
               style={{
                 width: '100%',
@@ -392,7 +394,7 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
               fontSize: 14,
               fontWeight: 700,
               color: '#9333ea',
-              marginBottom: 24
+              marginBottom: 20
             }}>
               <InstagramIcon size={14} />
               <span>@{profile.instagram_handle}</span>
@@ -401,7 +403,7 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
 
           {/* 3. Follower Count: "- follower count -" (Image 3) */}
           <div style={{
-            margin: '12px 0 16px',
+            margin: '8px 0 12px',
             position: 'relative'
           }}>
             <div style={{
@@ -427,21 +429,28 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
             </div>
           </div>
 
-          {/* 4. Achieved Date (Image 3) */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: 100,
-            padding: '7px 18px',
-            marginTop: 10,
-            marginBottom: 22
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>
-              {achievedDate ? `Achieved Date: ${achievedDate}` : 'Milestone Record'}
-            </span>
-          </div>
+          {/* 4. Achieved Date (Clean text, NO oval border circle, matching user sketch) */}
+          {achievedDate ? (
+            <div style={{
+              fontSize: 14,
+              fontWeight: 650,
+              color: '#64748b',
+              marginTop: 6,
+              marginBottom: 16
+            }}>
+              Achieved Date: <strong style={{ color: '#0f172a' }}>{achievedDate}</strong>
+            </div>
+          ) : (
+            <div style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#94a3b8',
+              marginTop: 6,
+              marginBottom: 16
+            }}>
+              Official Milestone Reached
+            </div>
+          )}
 
           {/* Congratulations Pop-In Banner at 10s */}
           <div style={{
@@ -454,7 +463,7 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
             border: '1.5px solid #f59e0b',
             borderRadius: 18,
             padding: isBlasted ? '12px 20px' : '0 20px',
-            margin: isBlasted ? '8px 0 20px' : '0',
+            margin: isBlasted ? '8px 0 16px' : '0',
             boxShadow: '0 8px 24px rgba(245, 158, 11, 0.2)'
           }}>
             <div style={{ fontSize: 16, fontWeight: 900, color: '#b45309' }}>
@@ -504,50 +513,13 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
             </div>
           </div>
 
-          {/* 15-Second Timeline Progress Bar */}
-          <div style={{
-            width: '100%',
-            height: 6,
-            background: '#f1f5f9',
-            borderRadius: 10,
-            overflow: 'hidden',
-            marginTop: 16
-          }}>
-            <div style={{
-              width: `${(progress / totalDuration) * 100}%`,
-              height: '100%',
-              background: isBlasted
-                ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
-                : 'linear-gradient(90deg, #6366f1, #a855f7)',
-              borderRadius: 10,
-              transition: 'background 0.3s ease'
-            }} />
-          </div>
-
-          <div style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: 8,
-            fontSize: 11.5,
-            fontWeight: 700,
-            color: '#94a3b8'
-          }}>
-            <span>0:00 (Starts @ 99.2%)</span>
-            <span style={{ color: isBlasted ? '#ef4444' : '#64748b' }}>
-              {isBlasted ? '🎉 10s Blast!' : `${Math.floor(progress / 1000)}s / 15s`}
-            </span>
-            <span>0:15 (Finish)</span>
-          </div>
-
         </div>
 
         {/* Action Controls Below Card */}
         <div style={{
           display: 'flex',
           gap: 12,
-          marginTop: 18,
+          marginTop: 20,
           flexWrap: 'wrap',
           justifyContent: 'center'
         }}>
@@ -581,7 +553,7 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginTop: 30,
+          marginTop: 28,
           padding: '0 8px'
         }}>
           {prevMilestone ? (
@@ -640,49 +612,67 @@ export async function getServerSideProps({ params }) {
   const milestoneValue = parseMilestoneParam(milestone)
   if (!milestoneValue) return { notFound: true }
 
+  const decodedSlug = decodeURIComponent(slug || '').toLowerCase().trim()
+  const slugWithDots = decodedSlug.replace(/-/g, '.')
+
   try {
-    const { data: nameList, error: listErr } = await supabase
-      .from('most_followed')
-      .select('id, name, instagram_handle')
+    // Multi-tier query matching exact handle, dot handles, or name without 1,000-row limit truncation
+    // 1. Check most_followed by exact handle or with dots
+    const [{ data: exactMatch }, { data: dotMatch }] = await Promise.all([
+      supabase.from('most_followed').select('*').not('instagram_handle', 'is', null).ilike('instagram_handle', decodedSlug).limit(1).maybeSingle(),
+      slugWithDots !== decodedSlug
+        ? supabase.from('most_followed').select('*').not('instagram_handle', 'is', null).ilike('instagram_handle', slugWithDots).limit(1).maybeSingle()
+        : Promise.resolve({ data: null })
+    ])
 
-    if (listErr || !nameList) return { notFound: true }
+    let finalProfile = exactMatch || dotMatch
 
-    const decodedSlug = decodeURIComponent(slug)
-    const matched = nameList.find(p => {
-      const sanitizedHandle = p.instagram_handle
-        ? p.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
-        : null
-      const nameSlug = p.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
-      const namePlain = p.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
-      return (
-        decodedSlug === sanitizedHandle ||
-        decodedSlug === nameSlug ||
-        decodedSlug === namePlain
-      )
-    })
+    // 2. Check most_followed by name or numeric ID
+    if (!finalProfile) {
+      const nameAttempt = decodedSlug.replace(/-/g, ' ')
+      const { data: byName } = await supabase.from('most_followed').select('*').ilike('name', nameAttempt).limit(1).maybeSingle()
+      finalProfile = byName
+    }
 
-    if (!matched) return { notFound: true }
+    if (!finalProfile && !isNaN(decodedSlug) && decodedSlug.length > 0) {
+      const { data: byId } = await supabase.from('most_followed').select('*').eq('id', decodedSlug).limit(1).maybeSingle()
+      finalProfile = byId
+    }
 
-    const { data: fullProfile, error: profErr } = await supabase
-      .from('most_followed')
-      .select('*')
-      .eq('id', matched.id)
-      .single()
+    // 3. Fallback: Check celebrities table if profile is in celebrities table
+    if (!finalProfile) {
+      const [{ data: celExact }, { data: celDot }] = await Promise.all([
+        supabase.from('celebrities').select('*').not('instagram_handle', 'is', null).ilike('instagram_handle', decodedSlug).limit(1).maybeSingle(),
+        slugWithDots !== decodedSlug
+          ? supabase.from('celebrities').select('*').not('instagram_handle', 'is', null).ilike('instagram_handle', slugWithDots).limit(1).maybeSingle()
+          : Promise.resolve({ data: null })
+      ])
+      finalProfile = celExact || celDot
+    }
 
-    if (profErr || !fullProfile) return { notFound: true }
+    if (!finalProfile) {
+      const nameAttempt = decodedSlug.replace(/-/g, ' ')
+      const { data: celByName } = await supabase.from('celebrities').select('*').ilike('name', nameAttempt).limit(1).maybeSingle()
+      finalProfile = celByName
+    }
 
-    const currentCount = fullProfile.followers_count || 0
+    if (!finalProfile) {
+      console.warn(`[milestone 404] Profile not found for slug: ${decodedSlug}`)
+      return { notFound: true }
+    }
+
+    const currentCount = finalProfile.followers_count || 0
     const allMilestones = generateMilestones(currentCount)
 
-    const achievedDate = findMilestoneAchievedDate(fullProfile.follower_history || [], milestoneValue)
+    const achievedDate = findMilestoneAchievedDate(finalProfile.follower_history || [], milestoneValue)
 
     return {
       props: {
         profile: {
-          id: fullProfile.id,
-          name: fullProfile.name,
-          instagram_handle: fullProfile.instagram_handle || null,
-          profile_pic_url: fullProfile.profile_pic_url || null,
+          id: finalProfile.id,
+          name: finalProfile.name,
+          instagram_handle: finalProfile.instagram_handle || null,
+          photo_url: finalProfile.photo_url || finalProfile.profile_pic_url || finalProfile.avatar_url || null,
           followers_count: currentCount,
         },
         milestoneValue,
