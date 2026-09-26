@@ -1480,7 +1480,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                       boxShadow: '0 20px 60px rgba(0,0,0,0.06)',
                       padding: '32px 24px 44px',
                       position: 'relative',
-                      overflow: 'visible'
+                      overflow: 'hidden'
                     }}>
                       {/* Top Header of Race Canvas */}
                       <div style={{
@@ -1615,8 +1615,8 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                       {/* Scrollable Horizontal Arena */}
                       <div ref={arenaScrollRef} style={{ overflowX: 'auto', paddingBottom: 24, WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
                         <div style={{
-                          width: '100%',
-                          minWidth: `${Math.max(300, Math.round(900 * timelineZoom))}px`,
+                          minWidth: `${Math.round(2200 * timelineZoom)}px`,
+                          width: `${Math.round(100 * timelineZoom)}%`,
                           position: 'relative'
                         }}>
                           {/* Top Milestone Axis & Vertical Grid Lines */}
@@ -1624,7 +1624,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                             const ticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map(r => Math.round(maxFollowersOnDate * r))
 
                             return (
-                              <div className="timeline-axis-row" style={{ position: 'relative', marginLeft: 220, marginRight: 200, height: 26, marginBottom: 14 }}>
+                              <div style={{ position: 'relative', marginLeft: 220, marginRight: 220, height: 26, marginBottom: 14 }}>
                                 {ticks.map((t, i) => {
                                   const leftPct = (t / maxFollowersOnDate) * 100
                                   return (
@@ -1720,7 +1720,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                                   </div>
 
                                   {/* Creator Name & Focus Indicator */}
-                                  <div className="timeline-name-col" style={{
+                                  <div style={{
                                     width: 175,
                                     flexShrink: 0,
                                     textAlign: 'right',
@@ -1772,7 +1772,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                                   </div>
 
                                   {/* Center: The Colored Bar Track */}
-                                  <div className="timeline-bar-track" style={{ flex: 1, position: 'relative', height: '100%', display: 'flex', alignItems: 'center', marginRight: 200 }}>
+                                  <div style={{ flex: 1, position: 'relative', height: '100%', display: 'flex', alignItems: 'center', marginRight: 200 }}>
                                     <div
                                       style={{
                                         width: `${barPct}%`,
@@ -3412,17 +3412,6 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
           .race-canvas-card {
             padding: 16px 12px 24px !important;
             border-radius: 16px !important;
-          }
-          .timeline-name-col {
-            width: 90px !important;
-            padding-right: 8px !important;
-          }
-          .timeline-bar-track {
-            margin-right: 80px !important;
-          }
-          .timeline-axis-row {
-            margin-left: 132px !important;
-            margin-right: 80px !important;
           }
           .growth-header-spacer {
             display: none !important;
