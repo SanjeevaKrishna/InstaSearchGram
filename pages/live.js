@@ -522,9 +522,6 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
 
   const loaderRef = useRef(null)
   const arenaScrollRef = useRef(null)
-  const pinchStartZoomRef = useRef(1.0)
-  const pinchStartDistRef = useRef(0)
-
   // Set a comfortable default zoom for mobile screens when timeline opens
   useEffect(() => {
     if (!timelineMode) return
@@ -534,51 +531,6 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
       setTimelineZoom(1.0)
     }
   }, [timelineMode])
-
-  // Pinch-to-zoom on the timeline canvas (mobile touch gesture) — RAF throttled to avoid lag
-  const currentZoomRef = useRef(1.0)
-  const rafPendingRef = useRef(false)
-  useEffect(() => { currentZoomRef.current = timelineZoom }, [timelineZoom])
-
-  useEffect(() => {
-    const el = arenaScrollRef.current
-    if (!el) return
-
-    const getDistance = (touches) => {
-      const dx = touches[0].clientX - touches[1].clientX
-      const dy = touches[0].clientY - touches[1].clientY
-      return Math.sqrt(dx * dx + dy * dy)
-    }
-
-    const onTouchStart = (e) => {
-      if (e.touches.length === 2) {
-        pinchStartDistRef.current = getDistance(e.touches)
-        pinchStartZoomRef.current = currentZoomRef.current
-      }
-    }
-
-    const onTouchMove = (e) => {
-      if (e.touches.length !== 2) return
-      e.preventDefault()
-      if (rafPendingRef.current) return
-      rafPendingRef.current = true
-      requestAnimationFrame(() => {
-        rafPendingRef.current = false
-        if (e.touches.length !== 2) return
-        const dist = getDistance(e.touches)
-        const ratio = dist / pinchStartDistRef.current
-        const newZoom = Math.min(2.2, Math.max(0.3, Number((pinchStartZoomRef.current * ratio).toFixed(2))))
-        setTimelineZoom(newZoom)
-      })
-    }
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchmove', onTouchMove, { passive: false })
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchmove', onTouchMove)
-    }
-  }, [arenaScrollRef.current])
 
   // Infinite Scroll Observer
   useEffect(() => {
@@ -1661,9 +1613,9 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                       </div>
 
                       {/* Scrollable Horizontal Arena */}
-                      <div ref={arenaScrollRef} style={{ overflowX: 'auto', paddingBottom: 24, WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}>
+                      <div ref={arenaScrollRef} style={{ overflowX: 'auto', paddingBottom: 24, WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
                         <div style={{
-                          minWidth: `${Math.round(2200 * timelineZoom)}px`,
+                          minWidth: `${Math.round(700 * timelineZoom)}px`,
                           width: `${Math.round(100 * timelineZoom)}%`,
                           position: 'relative'
                         }}>
@@ -1672,7 +1624,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                             const ticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map(r => Math.round(maxFollowersOnDate * r))
 
                             return (
-                              <div style={{ position: 'relative', marginLeft: 220, marginRight: 220, height: 26, marginBottom: 14 }}>
+                              <div style={{ position: 'relative', marginLeft: 120, marginRight: 120, height: 26, marginBottom: 14 }}>
                                 {ticks.map((t, i) => {
                                   const leftPct = (t / maxFollowersOnDate) * 100
                                   return (
@@ -1768,7 +1720,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                                   </div>
 
                                   {/* Creator Name & Focus Indicator */}
-                                  <div style={{
+                                  <div className="timeline-name-col" style={{
                                     width: 175,
                                     flexShrink: 0,
                                     textAlign: 'right',
@@ -1820,7 +1772,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                                   </div>
 
                                   {/* Center: The Colored Bar Track */}
-                                  <div style={{ flex: 1, position: 'relative', height: '100%', display: 'flex', alignItems: 'center', marginRight: 200 }}>
+                                  <div className="timeline-bar-track" style={{ flex: 1, position: 'relative', height: '100%', display: 'flex', alignItems: 'center', marginRight: 200 }}>
                                     <div
                                       style={{
                                         width: `${barPct}%`,
@@ -2614,15 +2566,14 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               {/* Left spacer — fixed width matching the right dropdown so center stays locked */}
               <div style={{ flex: '0 0 80px' }} className="growth-header-spacer" />
 
-              {/* Middle: heading locked at fixed width so switching mode never shifts layout */}
-              <div style={{ textAlign: 'center', flexShrink: 0, padding: '0 8px', minWidth: 160 }}>
+              {/* Middle: heading — shrinks naturally on small screens */}
+              <div style={{ textAlign: 'center', flex: 1, padding: '0 8px', overflow: 'hidden' }}>
                 <h2 style={{
                   fontSize: 18,
                   fontWeight: 800,
                   margin: 0,
                   color: 'var(--text)',
                   letterSpacing: '-0.01em',
-                  whiteSpace: 'nowrap',
                 }}>
                   {growthMode === 'gainers' ? 'Most Followed' : 'Most Unfollowed'}
                 </h2>
@@ -2652,14 +2603,14 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                 )}
               </div>
 
-              {/* Right Side: Dropdown Menu — fixed width matches left spacer to keep center locked */}
-              <div style={{ flex: '0 0 80px', display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
+              {/* Right Side: Dropdown Menu — auto width so button text never overflows */}
+              <div style={{ flex: '0 0 auto', display: 'flex', justifyContent: 'flex-end', position: 'relative' }}>
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <button
                     type="button"
                     onClick={() => setIsGrowthDropdownOpen(!isGrowthDropdownOpen)}
                     style={{
-                      padding: '7px 14px',
+                      padding: '7px 12px',
                       borderRadius: '100px',
                       border: '1px solid var(--border)',
                       background: 'var(--surface)',
@@ -2680,7 +2631,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                     ) : (
                       <TrendingDown size={15} strokeWidth={2.5} style={{ color: '#ef4444' }} />
                     )}
-                    <span>{growthMode === 'gainers' ? 'Most Followed' : 'Most Unfollowed'}</span>
+                    <span className="growth-header-btn">{growthMode === 'gainers' ? 'Most Followed' : 'Most Unfollowed'}</span>
                     <ChevronDown size={13} style={{
                       transform: isGrowthDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                       transition: 'transform 0.2s ease',
@@ -3461,6 +3412,19 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
           .race-canvas-card {
             padding: 16px 12px 24px !important;
             border-radius: 16px !important;
+          }
+          .timeline-name-col {
+            width: 90px !important;
+            padding-right: 8px !important;
+          }
+          .timeline-bar-track {
+            margin-right: 80px !important;
+          }
+          .growth-header-spacer {
+            display: none !important;
+          }
+          .growth-header-btn span {
+            display: none !important;
           }
         }
 
