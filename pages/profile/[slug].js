@@ -2077,7 +2077,7 @@ export default function ProfilePage({ profile, slug, rank = null }) {
               About {profile.name}&apos;s Live Instagram Statistics & Growth
             </h2>
             <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.65, margin: '0 0 10px' }}>
-              Welcome to the official real-time Instagram follower tracker for <strong>{profile.name}</strong> (<a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>@{profile.instagram_handle}</a>). 
+              Welcome to the real-time Instagram follower tracker for <strong>{profile.name}</strong> (<a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>@{profile.instagram_handle}</a>). 
               {rank ? ` Ranked #${rank} among the most followed accounts on Spialr, ` : ' '}
               <strong>{profile.name}</strong> currently has an audience of <strong>{formatNumber(profile.followers_count)}</strong> ({Number(profile.followers_count || 0).toLocaleString()}) followers on Instagram.
             </p>
