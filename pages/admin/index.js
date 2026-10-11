@@ -1997,6 +1997,18 @@ export default function AdminPanel() {
   const [allScrapeProgress, setAllScrapeProgress] = useState({ current: 0, total: 0, percent: 0, currentName: '', currentHandle: '', status: '', updated: 0, failed: 0 })
   const [allScrapeLogs, setAllScrapeLogs] = useState([])
   const [allScrapeResult, setAllScrapeResult] = useState(null)
+  const [lastTurboFailures, setLastTurboFailures] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('spialr_last_turbo_failures')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed)) return parsed
+        }
+      } catch (e) {}
+    }
+    return []
+  })
   const [skipLoading, setSkipLoading] = useState(false)
   const allScrapeAbortRef = useRef(null)
 
@@ -3006,7 +3018,9 @@ export default function AdminPanel() {
     setBatchUpdating(false)
   }
 
-  const handleScrapeAllAccounts = async ({ onlyMissing = false } = {}) => {
+  const handleScrapeAllAccounts = async ({ onlyMissing = false, targetIds = null } = {}) => {
+    if (allScrapeRunning) return
+
     const withHandles = mostFollowed.filter(p => p.instagram_handle && p.instagram_handle.trim() !== '')
     let targetList = withHandles
 
@@ -3018,8 +3032,24 @@ export default function AdminPanel() {
       ? new Date(istDate.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       : istDate.toISOString().split('T')[0]
 
-    if (onlyMissing) {
-      targetList = withHandles.filter(p => !Array.isArray(p.follower_history) || !p.follower_history.some(h => h.date === effectiveDate && h.count))
+    if (targetIds && Array.isArray(targetIds) && targetIds.length > 0) {
+      targetList = withHandles.filter(p => targetIds.map(String).includes(String(p.id)))
+    } else if (onlyMissing) {
+      // Find accounts that need scraping:
+      // 1. Missing entry for effectiveDate or count is null/0
+      // 2. OR failed in today's scrape (Server Failed, last_error)
+      // 3. OR remembered in lastTurboFailures from the recent batch run
+      const failedIdSet = new Set((lastTurboFailures || []).map(f => String(f.id)).filter(Boolean))
+
+      targetList = withHandles.filter(p => {
+        if (failedIdSet.has(String(p.id))) return true
+        if (!Array.isArray(p.follower_history)) return true
+        const todayEntry = p.follower_history.find(h => h.date === effectiveDate)
+        if (!todayEntry) return true
+        if (!todayEntry.count) return true
+        if (todayEntry.status === 'Server Failed' || todayEntry.last_status === 'Server Failed' || todayEntry.last_error) return true
+        return false
+      })
     }
 
     const total = targetList.length
@@ -3029,8 +3059,10 @@ export default function AdminPanel() {
     }
 
     const estMinutes = Math.ceil((total * 3.5) / (2 * 60)) + 1
-    const promptMsg = onlyMissing
-      ? `⚡ Resume Scrape for ${total} REMAINING unscraped accounts?\n\nEstimated time: ~${estMinutes} minutes.`
+    const promptMsg = targetIds
+      ? `⚡ Retry scrape for ${total} FAILED accounts?\n\nEstimated time: ~${estMinutes} minutes.`
+      : onlyMissing
+      ? `⚡ Resume Scrape for ${total} REMAINING / failed accounts?\n\nEstimated time: ~${estMinutes} minutes.`
       : `⚡ Turbo Scrape ALL ${total} accounts with Instagram handles?\n\nEstimated time: ~${estMinutes} minutes.`
 
     if (!confirm(promptMsg)) return
@@ -3046,13 +3078,14 @@ export default function AdminPanel() {
 
     try {
       const token = getToken()
+      const sendTargetIds = (targetIds || onlyMissing) ? targetList.map(p => p.id) : null
       const res = await fetch('/api/admin/batch_scrape_followers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-admin-token': token || ''
         },
-        body: JSON.stringify({ onlyMissing }),
+        body: JSON.stringify({ onlyMissing, targetIds: sendTargetIds }),
         signal: allScrapeAbortRef.current.signal
       })
 
@@ -3139,6 +3172,17 @@ export default function AdminPanel() {
                 receivedComplete = true
                 setAllScrapeResult(data)
                 setAllScrapeRunning(false)
+                if (data.failures && data.failures.length > 0) {
+                  setLastTurboFailures(data.failures)
+                  try {
+                    localStorage.setItem('spialr_last_turbo_failures', JSON.stringify(data.failures))
+                  } catch (e) {}
+                } else {
+                  setLastTurboFailures([])
+                  try {
+                    localStorage.removeItem('spialr_last_turbo_failures')
+                  } catch (e) {}
+                }
                 showToast(`🎉 Batch scrape complete! ${data.updated} updated, ${data.failed} failed.`)
                 // Refresh table to show updated counts immediately
                 const loadRes = await adminFetch('/api/admin/most_followed')
@@ -5420,6 +5464,29 @@ export default function AdminPanel() {
                   >
                     ▶️ Scrape Only Remaining Unscraped for Today
                   </button>
+
+                  {lastTurboFailures?.length > 0 && (
+                    <button
+                      className="btn"
+                      onClick={() => handleScrapeAllAccounts({ targetIds: lastTurboFailures.map(f => f.id) })}
+                      style={{
+                        padding: '12px 20px',
+                        fontSize: 14,
+                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: 12,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(239,68,68,0.3)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <span>🔄 Retry {lastTurboFailures.length} Failed Accounts</span>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -5464,10 +5531,28 @@ export default function AdminPanel() {
                       
                       {allScrapeResult.failures?.length > 0 ? (
                         <div style={{ marginTop: 14, background: '#ffffff', border: '1px solid #fee2e2', borderRadius: 12, padding: '14px 16px' }}>
-                          <div style={{ color: '#dc2626', fontWeight: 800, fontSize: 13, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            ⚠️ Unscraped / Skipped Accounts ({allScrapeResult.failures.length}):
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                            <div style={{ color: '#dc2626', fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              ⚠️ Unscraped / Skipped Accounts ({allScrapeResult.failures.length}):
+                            </div>
+                            <button
+                              onClick={() => handleScrapeAllAccounts({ targetIds: allScrapeResult.failures.map(f => f.id) })}
+                              style={{
+                                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                color: '#ffffff',
+                                border: 'none',
+                                padding: '6px 14px',
+                                borderRadius: 8,
+                                fontSize: 12,
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(239,68,68,0.3)'
+                              }}
+                            >
+                              ⚡ Retry All {allScrapeResult.failures.length} Failed Accounts Now
+                            </button>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 240, overflowY: 'auto' }}>
                             {allScrapeResult.failures.map((f, i) => (
                               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fee2e2' }}>
                                 <div>
@@ -5475,21 +5560,38 @@ export default function AdminPanel() {
                                   <code style={{ color: '#dc2626', fontWeight: 700 }}>@{f.handle}</code>
                                   <div style={{ fontSize: 11, color: '#71717a', marginTop: 2 }}>{f.error}</div>
                                 </div>
-                                <button
-                                  onClick={() => handleEdit(mostFollowed.find(p => p.id === f.id) || f)}
-                                  style={{
-                                    background: '#ffffff',
-                                    border: '1px solid #fecaca',
-                                    color: '#dc2626',
-                                    padding: '4px 10px',
-                                    borderRadius: 6,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  Edit Handle
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <button
+                                    onClick={() => handleScrapeAllAccounts({ targetIds: [f.id] })}
+                                    style={{
+                                      background: '#0284c7',
+                                      border: 'none',
+                                      color: '#ffffff',
+                                      padding: '5px 12px',
+                                      borderRadius: 6,
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    🔄 Retry
+                                  </button>
+                                  <button
+                                    onClick={() => handleEdit(mostFollowed.find(p => p.id === f.id) || f)}
+                                    style={{
+                                      background: '#ffffff',
+                                      border: '1px solid #fecaca',
+                                      color: '#dc2626',
+                                      padding: '5px 10px',
+                                      borderRadius: 6,
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Edit Handle
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>

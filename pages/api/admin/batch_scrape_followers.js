@@ -194,10 +194,21 @@ export default async function handler(req, res) {
     }
   }
 
-  // Filter only missing profiles if requested or default when resuming
-  if (req.body?.onlyMissing || req.query?.onlyMissing) {
-    allProfiles = allProfiles.filter(p => !Array.isArray(p.follower_history) || !p.follower_history.some(h => h.date === todayStr && h.count))
-    console.log(`[BatchScrape] Filtered to ${allProfiles.length} missing profiles for ${todayStr}`)
+  // Filter target profiles: specific targetIds OR only missing/failed profiles
+  if (req.body?.targetIds && Array.isArray(req.body.targetIds) && req.body.targetIds.length > 0) {
+    const targetSet = new Set(req.body.targetIds.map(String))
+    allProfiles = allProfiles.filter(p => targetSet.has(String(p.id)))
+    console.log(`[BatchScrape] Filtered to ${allProfiles.length} specific target profiles for retry`)
+  } else if (req.body?.onlyMissing || req.query?.onlyMissing) {
+    allProfiles = allProfiles.filter(p => {
+      if (!Array.isArray(p.follower_history)) return true
+      const todayEntry = p.follower_history.find(h => h.date === todayStr)
+      if (!todayEntry) return true
+      if (!todayEntry.count) return true
+      if (todayEntry.status === 'Server Failed' || todayEntry.last_status === 'Server Failed' || todayEntry.last_error) return true
+      return false
+    })
+    console.log(`[BatchScrape] Filtered to ${allProfiles.length} missing/failed profiles for ${todayStr}`)
   }
 
   let updated = 0
@@ -243,16 +254,22 @@ export default async function handler(req, res) {
         let history = Array.isArray(profile.follower_history) ? [...profile.follower_history] : []
         const todayIdx = history.findIndex(h => h.date === todayStr)
         const isFirstScrape = history.length === 0 || (history.length === 1 && history[0].is_initial);
+        const nowIso = new Date().toISOString()
         if (todayIdx !== -1) {
           history[todayIdx].count = count
           history[todayIdx].scraped = true
+          history[todayIdx].scraped_at = nowIso
           if (isFirstScrape) history[todayIdx].is_first_scrape = true
           delete history[todayIdx].status
+          delete history[todayIdx].last_status
+          delete history[todayIdx].last_error
+          delete history[todayIdx].failed_at
         } else {
           history.push({
             date: todayStr,
             count,
             scraped: true,
+            scraped_at: nowIso,
             ...(isFirstScrape ? { is_first_scrape: true } : {})
           })
         }
@@ -362,12 +379,18 @@ export default async function handler(req, res) {
           let history = Array.isArray(profile.follower_history) ? [...profile.follower_history] : []
           const todayIdx = history.findIndex(h => h.date === todayStr)
           const statusText = isSkipped ? 'Skipped by Admin' : 'Server Failed'
+          const nowIso = new Date().toISOString()
           if (todayIdx !== -1) {
             if (!history[todayIdx].count) {
-              history[todayIdx] = { date: todayStr, count: null, status: statusText }
+              history[todayIdx] = { date: todayStr, count: null, status: statusText, last_error: errorMsg, failed_at: nowIso }
+            } else {
+              // Keeps existing count for public view, but records latest scrape failure for retry
+              history[todayIdx].last_status = statusText
+              history[todayIdx].last_error = errorMsg
+              history[todayIdx].failed_at = nowIso
             }
           } else {
-            history.push({ date: todayStr, count: null, status: statusText })
+            history.push({ date: todayStr, count: null, status: statusText, last_error: errorMsg, failed_at: nowIso })
           }
           history.sort((a, b) => new Date(a.date) - new Date(b.date))
           await supabase
