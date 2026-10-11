@@ -2872,25 +2872,22 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               </div>
             </div>
 
-            {/* ── Left-aligned Instagram Gradient Live Timer ── */}
+            {/* ── Left-aligned Live Timer ── */}
             {growthLiveTime && (
               <div suppressHydrationWarning style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 7,
-                padding: '5px 14px 5px 10px',
-                background: 'linear-gradient(90deg, rgba(240,148,51,0.12) 0%, rgba(220,39,67,0.12) 50%, rgba(188,24,136,0.12) 100%)',
-                border: '1px solid rgba(220,39,67,0.18)',
-                borderRadius: 100,
+                gap: 6,
+                padding: '2px 0',
                 width: 'fit-content',
                 marginBottom: 2,
               }}>
-                <span className="growth-clock-emoji">🕐</span>
+                <span className="growth-clock-emoji" style={{ fontSize: 13 }}>🕐</span>
                 <span style={{
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  color: '#dc2743',
-                  letterSpacing: '0.03em',
+                  fontSize: 12,
+                  fontWeight: 650,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.02em',
                 }}>Live</span>
                 <span className="growth-live-timer" key={growthLiveTime} style={{
                   fontFamily: 'monospace',
