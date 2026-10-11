@@ -89,6 +89,9 @@ const parseCategoryAndTag = (rawCategory) => {
     tabCategory = 'Sports';
   } else if (cat.includes('politician')) {
     tabCategory = 'Politicians';
+  } else if (cat.includes('bigg boss') || cat.includes('biggboss')) {
+    tabCategory = 'Bigg Boss';
+    describingTag = 'Bigg Boss';
   }
 
   return { tabCategory, describingTag };
@@ -214,6 +217,10 @@ const getCategoryStyle = (tabCategory) => {
     baseColor = '#14b8a6' // Teal
     bgColor = 'rgba(20, 184, 166, 0.08)'
     borderColor = 'rgba(20, 184, 166, 0.25)'
+  } else if (cat.includes('bigg boss') || cat.includes('biggboss')) {
+    baseColor = '#e11d48' // Vibrant Rose Red
+    bgColor = 'rgba(225, 29, 72, 0.09)'
+    borderColor = 'rgba(225, 29, 72, 0.3)'
   }
 
   return {
@@ -1295,7 +1302,9 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
 
             {/* Category Filter (hidden in timelineMode) */}
             {!timelineMode && liveData.most_followed.length > 0 && (() => {
-              const categories = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers']
+              const baseCategories = ['All', 'Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers']
+              const isHindi = selectedLanguage.toLowerCase() === 'hindi'
+              const categories = isHindi ? [...baseCategories, 'Bigg Boss'] : baseCategories
 
               return (
                 <div className="no-scrollbar category-filter-container" style={{
@@ -1431,6 +1440,15 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               const filteredByLangCat = timelineMode 
                 ? (liveData.most_followed || [])
                 : (liveData.most_followed || []).filter(p => {
+                    const count = p.followers_count || 0
+                    const isBiggBossCategory = selectedCategory.toLowerCase() === 'bigg boss'
+
+                    // Rule: profiles under 100k are ONLY visible in the 'Bigg Boss' section.
+                    // In 'All' and regular profession categories (Singers, Actors, etc.), they remain hidden until 100k+.
+                    if (count < 100000 && !isBiggBossCategory) {
+                      return false
+                    }
+
                     let matchesCategory = false
                     if (selectedCategory.toLowerCase() === 'all') {
                       matchesCategory = true
@@ -3895,9 +3913,14 @@ export async function getServerSideProps(context) {
       .concat(profilesResult4.data || [])
       .concat(profilesResult5.data || [])
 
-    // Only show accounts with 100k+ followers in the public Live leaderboard
-    // Sub-100k profiles still have their own /profile/[slug] page accessible from All Celebrity section
-    const profilesData = allProfilesData.filter(p => (p.followers_count || 0) >= 100000)
+    // Only show accounts with 100k+ followers in the public Live leaderboard,
+    // EXCEPT Bigg Boss contestants who are allowed under 100k to appear in the Bigg Boss section.
+    const profilesData = allProfilesData.filter(p => {
+      const count = p.followers_count || 0
+      if (count >= 100000) return true
+      const cat = (p.category || '').toLowerCase()
+      return cat.includes('bigg boss') || cat.includes('biggboss')
+    })
 
     const sortedReels = (reelsData || []).sort((a, b) => {
       const rankA = a.order_index || 999999

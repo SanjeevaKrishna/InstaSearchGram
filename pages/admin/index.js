@@ -895,7 +895,7 @@ function NewsForm({ initial, onSave, onCancel }) {
 }
 
 function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
-  const predefinedTabCategories = ['Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers']
+  const predefinedTabCategories = ['Creators', 'Influencers', 'Actors', 'Meme Pages', 'Personalities', 'Sports', 'Politicians', 'Handles', 'Singers', 'Bigg Boss']
   
   const parseCategoryAndTag = (rawCategory) => {
     const raw = (rawCategory || '').trim();
@@ -928,6 +928,9 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
       tabCategory = 'Sports';
     } else if (cat.includes('politician')) {
       tabCategory = 'Politicians';
+    } else if (cat.includes('bigg boss') || cat.includes('biggboss')) {
+      tabCategory = 'Bigg Boss';
+      describingTag = 'Bigg Boss';
     }
 
     return { tabCategory, describingTag };
@@ -1138,6 +1141,48 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
             placeholder="e.g. 270M" 
           />
         </div>
+      </div>
+
+      {/* 👁️ Bigg Boss Contestant Checkbox */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 16px',
+        borderRadius: 12,
+        background: selectedCategories.some(c => c.tabCategory === 'Bigg Boss') 
+          ? 'rgba(225, 29, 72, 0.08)' 
+          : 'var(--surface2)',
+        border: selectedCategories.some(c => c.tabCategory === 'Bigg Boss')
+          ? '1.5px solid rgba(225, 29, 72, 0.4)'
+          : '1px solid var(--border)',
+        transition: 'all 0.2s ease',
+      }}>
+        <div>
+          <label style={{ ...labelStyle, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <span style={{ fontSize: 16 }}>👁️</span>
+            <span style={{ fontWeight: 750, color: 'var(--text)' }}>Bigg Boss Contestant</span>
+          </label>
+          <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: 0 }}>
+            Allows this profile to appear in the <strong>Hindi Bigg Boss</strong> section even if under 100K followers.
+          </p>
+        </div>
+        <input 
+          type="checkbox"
+          checked={selectedCategories.some(c => c.tabCategory === 'Bigg Boss')}
+          onChange={e => {
+            const isChecked = e.target.checked
+            if (isChecked) {
+              if (!selectedCategories.some(c => c.tabCategory === 'Bigg Boss')) {
+                setSelectedCategories([...selectedCategories, { tabCategory: 'Bigg Boss', describingTag: 'Bigg Boss' }])
+              }
+            } else {
+              const filtered = selectedCategories.filter(c => c.tabCategory !== 'Bigg Boss')
+              setSelectedCategories(filtered.length > 0 ? filtered : [{ tabCategory: 'Creators', describingTag: '' }])
+            }
+          }}
+          style={{ width: 20, height: 20, cursor: 'pointer', accentColor: '#e11d48' }}
+        />
       </div>
 
       <div style={{ display: 'grid', gap: 12, border: '1px solid var(--border)', borderRadius: 12, padding: 14, background: 'var(--surface2)' }}>
