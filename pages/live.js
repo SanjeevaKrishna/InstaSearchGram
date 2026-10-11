@@ -1168,32 +1168,123 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                         right: 16,
                         background: 'var(--surface)',
                         border: '1px solid var(--border)',
-                        borderRadius: 12,
-                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+                        borderRadius: 16,
+                        boxShadow: '0 12px 36px rgba(0, 0, 0, 0.18)',
                         zIndex: 100,
-                        minWidth: 140,
+                        width: 220,
                         maxWidth: 'calc(100vw - 32px)',
                         overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column',
-                        padding: '4px 0',
+                        padding: 0,
                       }}>
-                        {['All', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam'].map((lang) => {
-                          const isSelected = selectedLanguage === lang;
-                          return (
-                            <button
-                              key={lang}
-                              onClick={() => {
-                                setSelectedLanguage(lang);
-                                setIsLangDropdownOpen(false);
-                                safeStorage.setItem('spialr_last_language', lang.toLowerCase());
-                              }}
-                              className={`lang-dropdown-item ${isSelected ? 'active' : ''}`}
-                            >
-                              {lang}
-                            </button>
-                          )
-                        })}
+                        {/* Section 1: Languages */}
+                        <div style={{ padding: '10px 14px 4px' }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 750, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Language
+                          </span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: '0 10px 10px' }}>
+                          {['All', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam'].map((lang) => {
+                            const isSelected = selectedLanguage === lang;
+                            return (
+                              <button
+                                key={lang}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedLanguage(lang);
+                                  setIsLangDropdownOpen(false);
+                                  safeStorage.setItem('spialr_last_language', lang.toLowerCase());
+                                }}
+                                style={{
+                                  padding: '7px 10px',
+                                  borderRadius: 8,
+                                  border: '1px solid',
+                                  borderColor: isSelected ? 'var(--accent)' : 'transparent',
+                                  background: isSelected ? 'var(--gradient-subtle)' : 'var(--surface2)',
+                                  color: isSelected ? 'var(--accent)' : 'var(--text)',
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? 700 : 550,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <span>{lang}</span>
+                                {isSelected && <Check size={12} strokeWidth={3} />}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {/* Divider */}
+                        <div style={{ height: 1, background: 'var(--border)', margin: '0 10px' }} />
+
+                        {/* Section 2: Sort Mode (Most Followed / Daily Growth) */}
+                        <div style={{ padding: '10px 14px 4px' }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 750, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Order
+                          </span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, padding: '0 10px 12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSectionSortMode('most_followed');
+                              setIsLangDropdownOpen(false);
+                            }}
+                            style={{
+                              padding: '8px 8px',
+                              borderRadius: 10,
+                              border: '1px solid',
+                              borderColor: sectionSortMode === 'most_followed' ? 'rgba(168, 85, 247, 0.4)' : 'transparent',
+                              background: sectionSortMode === 'most_followed' ? 'rgba(168, 85, 247, 0.09)' : 'var(--surface2)',
+                              color: sectionSortMode === 'most_followed' ? '#a855f7' : 'var(--text-dim)',
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 4,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <BarChart3 size={15} strokeWidth={2.5} />
+                            <span>Most Followed</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSectionSortMode('daily_growth');
+                              setIsLangDropdownOpen(false);
+                            }}
+                            style={{
+                              padding: '8px 8px',
+                              borderRadius: 10,
+                              border: '1px solid',
+                              borderColor: sectionSortMode === 'daily_growth' ? 'rgba(16, 185, 129, 0.4)' : 'transparent',
+                              background: sectionSortMode === 'daily_growth' ? 'rgba(16, 185, 129, 0.09)' : 'var(--surface2)',
+                              color: sectionSortMode === 'daily_growth' ? '#10b981' : 'var(--text-dim)',
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 4,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <TrendingUp size={15} strokeWidth={2.5} />
+                            <span>Daily Growth</span>
+                          </button>
+                        </div>
                       </div>
                     </>
                   )}
@@ -1347,87 +1438,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               )
             })()}
 
-            {/* Section Sort Dropdown — shown only when a specific language or category is selected (not All+All) */}
-            {!timelineMode && liveData.most_followed.length > 0 && !(selectedLanguage === 'All' && selectedCategory === 'All') && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 10, position: 'relative', zIndex: 40 }}>
-                <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsSectionSortDropdownOpen(!isSectionSortDropdownOpen)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '100px',
-                      border: '1px solid',
-                      borderColor: sectionSortMode === 'daily_growth' ? 'rgba(16,185,129,0.5)' : 'var(--border)',
-                      background: sectionSortMode === 'daily_growth' ? 'rgba(16,185,129,0.08)' : 'var(--surface)',
-                      color: sectionSortMode === 'daily_growth' ? '#10b981' : 'var(--text-dim)',
-                      fontSize: 12,
-                      fontWeight: 650,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                      transition: 'all 0.2s ease',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {sectionSortMode === 'daily_growth'
-                      ? <TrendingUp size={13} strokeWidth={2.5} />
-                      : <BarChart3 size={13} strokeWidth={2.5} />}
-                    <span>{sectionSortMode === 'daily_growth' ? 'Daily Growth' : 'Most Followed'}</span>
-                    <ChevronDown size={11} style={{
-                      transform: isSectionSortDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s ease',
-                      color: 'var(--text-muted)'
-                    }} />
-                  </button>
 
-                  {isSectionSortDropdownOpen && (
-                    <>
-                      <div
-                        onClick={() => setIsSectionSortDropdownOpen(false)}
-                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'transparent' }}
-                      />
-                      <div style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 6px)',
-                        right: 0,
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 12,
-                        boxShadow: '0 10px 32px rgba(0,0,0,0.13)',
-                        zIndex: 100,
-                        minWidth: 170,
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        padding: '4px 0',
-                      }}>
-                        <button
-                          type="button"
-                          onClick={() => { setSectionSortMode('most_followed'); setIsSectionSortDropdownOpen(false); }}
-                          className={`lang-dropdown-item ${sectionSortMode === 'most_followed' ? 'active' : ''}`}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}
-                        >
-                          <BarChart3 size={14} strokeWidth={2.5} style={{ color: '#a855f7' }} />
-                          <span>Most Followed</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setSectionSortMode('daily_growth'); setIsSectionSortDropdownOpen(false); }}
-                          className={`lang-dropdown-item ${sectionSortMode === 'daily_growth' ? 'active' : ''}`}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}
-                        >
-                          <TrendingUp size={14} strokeWidth={2.5} style={{ color: '#10b981' }} />
-                          <span>Daily Growth</span>
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
 
             {liveData.most_followed.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '80px 0', background: 'var(--surface2)', borderRadius: 20, border: '1px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
