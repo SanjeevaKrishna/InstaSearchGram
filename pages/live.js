@@ -317,6 +317,8 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
   const [growthMode, setGrowthMode] = useState('gainers') // 'gainers' or 'losers'
   const [growthLimit, setGrowthLimit] = useState(50)
   const [isGrowthDropdownOpen, setIsGrowthDropdownOpen] = useState(false)
+  const [sectionSortMode, setSectionSortMode] = useState('most_followed') // 'most_followed' | 'daily_growth'
+  const [isSectionSortDropdownOpen, setIsSectionSortDropdownOpen] = useState(false)
 
   // Synchronize activeTab state with the tab query parameter
   useEffect(() => {
@@ -339,6 +341,8 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
     setIsLangDropdownOpen(false)
     setIsGrowthDropdownOpen(false)
     setGrowthLimit(50)
+    setSectionSortMode('most_followed')
+    setIsSectionSortDropdownOpen(false)
     router.push({
       pathname: '/live',
       query: { tab: targetTab }
@@ -1334,6 +1338,88 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               )
             })()}
 
+            {/* Section Sort Dropdown — shown only when a specific language or category is selected (not All+All) */}
+            {!timelineMode && liveData.most_followed.length > 0 && !(selectedLanguage === 'All' && selectedCategory === 'All') && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 10, position: 'relative', zIndex: 40 }}>
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsSectionSortDropdownOpen(!isSectionSortDropdownOpen)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '100px',
+                      border: '1px solid',
+                      borderColor: sectionSortMode === 'daily_growth' ? 'rgba(16,185,129,0.5)' : 'var(--border)',
+                      background: sectionSortMode === 'daily_growth' ? 'rgba(16,185,129,0.08)' : 'var(--surface)',
+                      color: sectionSortMode === 'daily_growth' ? '#10b981' : 'var(--text-dim)',
+                      fontSize: 12,
+                      fontWeight: 650,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {sectionSortMode === 'daily_growth'
+                      ? <TrendingUp size={13} strokeWidth={2.5} />
+                      : <BarChart3 size={13} strokeWidth={2.5} />}
+                    <span>{sectionSortMode === 'daily_growth' ? 'Daily Growth' : 'Most Followed'}</span>
+                    <ChevronDown size={11} style={{
+                      transform: isSectionSortDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      color: 'var(--text-muted)'
+                    }} />
+                  </button>
+
+                  {isSectionSortDropdownOpen && (
+                    <>
+                      <div
+                        onClick={() => setIsSectionSortDropdownOpen(false)}
+                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'transparent' }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        right: 0,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 12,
+                        boxShadow: '0 10px 32px rgba(0,0,0,0.13)',
+                        zIndex: 100,
+                        minWidth: 170,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '4px 0',
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => { setSectionSortMode('most_followed'); setIsSectionSortDropdownOpen(false); }}
+                          className={`lang-dropdown-item ${sectionSortMode === 'most_followed' ? 'active' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}
+                        >
+                          <BarChart3 size={14} strokeWidth={2.5} style={{ color: '#a855f7' }} />
+                          <span>Most Followed</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setSectionSortMode('daily_growth'); setIsSectionSortDropdownOpen(false); }}
+                          className={`lang-dropdown-item ${sectionSortMode === 'daily_growth' ? 'active' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', fontSize: 13, cursor: 'pointer' }}
+                        >
+                          <TrendingUp size={14} strokeWidth={2.5} style={{ color: '#10b981' }} />
+                          <span>Daily Growth</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {liveData.most_followed.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '80px 0', background: 'var(--surface2)', borderRadius: 20, border: '1px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 <BarChart3 size={36} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
@@ -1342,7 +1428,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
               </div>
             ) : (() => {
               // In Timeline Mode, show all profiles without category/language filters
-              const baseList = timelineMode 
+              const filteredByLangCat = timelineMode 
                 ? (liveData.most_followed || [])
                 : (liveData.most_followed || []).filter(p => {
                     let matchesCategory = false
@@ -1360,11 +1446,44 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                     return matchesCategory && matchesLanguage
                   })
 
+              // Daily Growth sort mode: sort filtered list by today's gain/loss using growthData
+              let baseList = filteredByLangCat
+              if (!timelineMode && sectionSortMode === 'daily_growth' && growthData && growthData.gainers && growthData.gainers.length > 0) {
+                // Build a map of instagram_handle -> growth item for quick lookup
+                const growthMap = {}
+                for (const g of growthData.gainers) {
+                  const h = (g.instagram_handle || '').toLowerCase().trim()
+                  if (h) growthMap[h] = g
+                }
+                // Sort by daily change descending (gainers first, then losers)
+                baseList = [...filteredByLangCat].sort((a, b) => {
+                  const ha = (a.instagram_handle || '').toLowerCase().trim()
+                  const hb = (b.instagram_handle || '').toLowerCase().trim()
+                  const ga = growthMap[ha]
+                  const gb = growthMap[hb]
+                  const ca = ga ? ga.change : null
+                  const cb = gb ? gb.change : null
+                  if (ca === null && cb === null) return 0
+                  if (ca === null) return 1
+                  if (cb === null) return -1
+                  return cb - ca
+                })
+              }
+
               // Assign rankings
-              const rankedList = baseList.map((p, idx) => ({
-                ...p,
-                categoryRank: idx + 1
-              }))
+              const rankedList = baseList.map((p, idx) => {
+                const handle = (p.instagram_handle || '').toLowerCase().trim()
+                let dailyChange = null
+                if (sectionSortMode === 'daily_growth' && growthData && growthData.gainers) {
+                  const gEntry = growthData.gainers.find(g => (g.instagram_handle || '').toLowerCase().trim() === handle)
+                  if (gEntry) dailyChange = gEntry.change
+                }
+                return {
+                  ...p,
+                  categoryRank: idx + 1,
+                  dailyChange,
+                }
+              })
 
               // Filter by search query for display
               const filtered = rankedList.filter(p => {
@@ -2513,7 +2632,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                           </div>
                         </div>
 
-                        {/* Followers Count */}
+                        {/* Followers Count / Daily Change */}
                         <div className="col-followers" style={{
                           width: 140,
                           textAlign: 'right',
@@ -2522,8 +2641,31 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                           color: 'var(--text)',
                           fontFamily: 'var(--font-body)',
                           flexShrink: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-end',
+                          gap: 2,
                         }}>
-                          {profile.followers_text?.trim() ? profile.followers_text.trim().toUpperCase() : (profile.followers_count >= 1000000 ? `${(Math.floor(profile.followers_count / 100000) / 10).toString().replace(/\.0$/, '')}M` : (profile.followers_count >= 1000 ? `${(Math.floor(profile.followers_count / 100) / 10).toString().replace(/\.0$/, '')}K` : profile.followers_count || '—'))}
+                          {sectionSortMode === 'daily_growth' && profile.dailyChange !== null && profile.dailyChange !== undefined ? (
+                            <>
+                              <span style={{
+                                fontWeight: 800,
+                                fontSize: 14,
+                                color: profile.dailyChange > 0 ? '#10b981' : profile.dailyChange < 0 ? '#ef4444' : 'var(--text-muted)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 2,
+                              }}>
+                                {profile.dailyChange > 0 ? <TrendingUp size={13} strokeWidth={2.5} /> : profile.dailyChange < 0 ? <TrendingDown size={13} strokeWidth={2.5} /> : null}
+                                {profile.dailyChange > 0 ? '+' : ''}{profile.dailyChange.toLocaleString()}
+                              </span>
+                              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+                                {profile.followers_text?.trim() ? profile.followers_text.trim().toUpperCase() : formatNumber(profile.followers_count)}
+                              </span>
+                            </>
+                          ) : (
+                            <span>{profile.followers_text?.trim() ? profile.followers_text.trim().toUpperCase() : (profile.followers_count >= 1000000 ? `${(Math.floor(profile.followers_count / 100000) / 10).toString().replace(/\.0$/, '')}M` : (profile.followers_count >= 1000 ? `${(Math.floor(profile.followers_count / 100) / 10).toString().replace(/\.0$/, '')}K` : profile.followers_count || '—'))}</span>
+                          )}
                         </div>
                       </Link>
                     </Fragment>
