@@ -167,7 +167,7 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
             color: '#757575',
           }}>
             {cel.photo_url ? (
-              <img src={cel.photo_url} alt={cel.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+              <img src={cel.photo_url} alt={cel.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
             ) : (
               cel.name?.charAt(0).toUpperCase()
             )}
@@ -462,6 +462,9 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
 }
 
 export async function getServerSideProps(context) {
+  if (context.res) {
+    context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+  }
   const { compare } = context.query
 
   try {

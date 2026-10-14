@@ -189,7 +189,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
         <div className="row-avatar-container" style={{ width: 44, height: 44, flexShrink: 0 }}>
           <div className="row-avatar-inner">
             {reel.creator_photo_url ? (
-              <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+              <img src={reel.creator_photo_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
             ) : initials}
           </div>
         </div>
@@ -299,7 +299,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
             <div className="row-avatar-container" style={{ width: 42, height: 42, flexShrink: 0 }}>
               <div className="row-avatar-inner">
                 {reel.creator_photo_url ? (
-                  <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+                  <img src={reel.creator_photo_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
                 ) : initials}
               </div>
             </div>
@@ -334,6 +334,8 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
             <img 
               src={reel.photo_url} 
               alt={reel.title || 'Trending Reel'} 
+              loading="lazy"
+              decoding="async"
               style={{ 
                 width: '100%', 
                 height: '100%', 
@@ -446,7 +448,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
       <div className="row-avatar-container">
         <div className="row-avatar-inner">
           {reel.creator_photo_url ? (
-            <img src={reel.creator_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+            <img src={reel.creator_photo_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
           ) : initials}
         </div>
       </div>
@@ -454,7 +456,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
       {/* Video Cover Thumbnail (Portrait Aspect Ratio) */}
       <div className="row-thumbnail">
         {reel.photo_url ? (
-          <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+          <img src={reel.photo_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             <Film size={18} />
@@ -1530,7 +1532,10 @@ export default function TrendingPage({ initialData = null }) {
   )
 }
 
-export async function getServerSideProps() {
+export async function getServerSideProps({ res }) {
+  if (res) {
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+  }
   const parseCountText = (text) => {
     if (!text) return 0;
     const cleaned = text.toString().trim().toLowerCase();

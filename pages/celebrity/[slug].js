@@ -496,7 +496,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   overflow: 'hidden', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', flexShrink: 0, marginBottom: 8
                 }}>
                   {celebrity.photo_url ? (
-                    <img src={celebrity.photo_url} alt={celebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                    <img src={celebrity.photo_url} alt={celebrity.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
                   ) : celebrity.name?.charAt(0).toUpperCase()}
                 </div>
 
@@ -548,7 +548,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   overflow: 'hidden', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', flexShrink: 0, marginBottom: 8
                 }}>
                   {compareCelebrity.photo_url ? (
-                    <img src={compareCelebrity.photo_url} alt={compareCelebrity.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                    <img src={compareCelebrity.photo_url} alt={compareCelebrity.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
                   ) : compareCelebrity.name?.charAt(0).toUpperCase()}
                 </div>
 
@@ -823,6 +823,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   <img
                     src={celebrity.photo_url}
                     alt={celebrity.name}
+                    loading="lazy"
+                    decoding="async"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={e => { e.target.style.display = 'none' }}
                   />
@@ -1440,6 +1442,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                           className="playlist-img"
                           src={pList.find(p => p.playlist_cover_url).playlist_cover_url} 
                           alt={title} 
+                          loading="lazy"
+                          decoding="async"
                           style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s var(--spring)' }} 
                         />
                       ) : (
@@ -1527,6 +1531,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                           <img 
                             src={cel.photo_url} 
                             alt={cel.name} 
+                            loading="lazy"
+                            decoding="async"
                             style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', marginBottom: 12, border: '2px solid var(--border)', display: 'block', margin: '0 auto 12px auto' }} 
                           />
                         ) : (
@@ -1626,7 +1632,14 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
   )
 }
 
+// In-memory cache for leaderboard data to avoid downloading all most_followed rows on every celebrity profile view
+let cachedLeaderboard = { data: null, timestamp: 0 };
+const LEADERBOARD_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
 export async function getServerSideProps(context) {
+  if (context.res) {
+    context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  }
   const { slug, compare } = context.query
 
   try {
@@ -1662,11 +1675,21 @@ export async function getServerSideProps(context) {
       }
     }
 
-    // Fetch leaderboard data for rank calculations (highly robust, ignores case, spaces, and punctuation)
-    const { data: leaderboardData } = await supabase
-      .from('most_followed')
-      .select('name, followers_count, instagram_handle')
-      .order('followers_count', { ascending: false })
+    // Fetch leaderboard data for rank calculations (cached in serverless memory for 10 min)
+    let leaderboardData = null;
+    const now = Date.now();
+    if (cachedLeaderboard.data && (now - cachedLeaderboard.timestamp < LEADERBOARD_CACHE_TTL)) {
+      leaderboardData = cachedLeaderboard.data;
+    } else {
+      const { data } = await supabase
+        .from('most_followed')
+        .select('name, followers_count, instagram_handle')
+        .order('followers_count', { ascending: false });
+      if (data) {
+        cachedLeaderboard = { data, timestamp: now };
+        leaderboardData = data;
+      }
+    }
 
     let liveRank = null
     let liveProfileSlug = null

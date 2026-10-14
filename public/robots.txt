@@ -3,5 +3,6 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Crawl-delay: 5
 
 Sitemap: https://spialr.com/sitemap.xml

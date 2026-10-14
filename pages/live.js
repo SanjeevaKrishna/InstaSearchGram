@@ -1953,7 +1953,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                                         transition: 'all 0.2s ease'
                                       }}>
                                         {profile.photo_url ? (
-                                          <img src={profile.photo_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                                          <img src={profile.photo_url} alt={profile.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
                                         ) : (
                                           <span style={{ fontSize: 11, fontWeight: 800, color: '#334155' }}>{profile.name?.charAt(0)}</span>
                                         )}
@@ -2602,7 +2602,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               overflow: 'hidden'
                             }}>
                               {profile.photo_url ? (
-                                <img src={profile.photo_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={profile.photo_url} alt={profile.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
                               ) : (
                                 profile.name?.charAt(0)
                               )}
@@ -3021,7 +3021,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               overflow: 'hidden'
                             }}>
                               {profile.photo_url ? (
-                                <img src={profile.photo_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={profile.photo_url} alt={profile.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
                               ) : (
                                 profile.name?.charAt(0)
                               )}
@@ -3881,6 +3881,9 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
 }
 
 export async function getServerSideProps(context) {
+  if (context?.res) {
+    context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  }
   try {
     const queryTab = context?.query?.tab
     const initialTab = (queryTab === 'voting' || queryTab === 'daily_growth') ? 'daily_growth' : 'most_followed'
@@ -3889,37 +3892,28 @@ export async function getServerSideProps(context) {
       settingsResult, 
       profilesResult1, 
       profilesResult2, 
-      profilesResult3, 
-      profilesResult4,
-      profilesResult5,
       reelsResult
     ] = await Promise.all([
       supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
       supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
-      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999),
-      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(3000, 3999),
-      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(4000, 4999),
       supabase.from('viral_reels').select('*')
     ])
 
     if (settingsResult.error) throw settingsResult.error
     if (profilesResult1.error) throw profilesResult1.error
     if (profilesResult2.error) throw profilesResult2.error
-    if (profilesResult3.error) throw profilesResult3.error
-    if (profilesResult4.error) throw profilesResult4.error
-    if (profilesResult5.error) throw profilesResult5.error
     if (reelsResult.error) throw reelsResult.error
 
     const settingsData = settingsResult.data
     const reelsData = reelsResult.data
 
-    // Combine profiles page ranges
-    const allProfilesData = (profilesResult1.data || [])
-      .concat(profilesResult2.data || [])
-      .concat(profilesResult3.data || [])
-      .concat(profilesResult4.data || [])
-      .concat(profilesResult5.data || [])
+    // Combine profiles page ranges (fetching further pages dynamically only if database grows past 2000)
+    let allProfilesData = (profilesResult1.data || []).concat(profilesResult2.data || [])
+    if ((profilesResult2.data || []).length === 1000) {
+      const { data: profilesResult3 } = await supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999)
+      if (profilesResult3) allProfilesData = allProfilesData.concat(profilesResult3)
+    }
 
     // Only show accounts with 100k+ followers in the public Live leaderboard,
     // EXCEPT Bigg Boss contestants who are allowed under 100k to appear in the Bigg Boss section.

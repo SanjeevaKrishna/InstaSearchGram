@@ -187,7 +187,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
                         overflow: 'hidden',
                       }}>
                         {cel.photo_url ? (
-                          <img src={cel.photo_url} alt={cel.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                          <img src={cel.photo_url} alt={cel.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
                         ) : (
                           cel.name?.charAt(0).toUpperCase()
                         )}
@@ -257,7 +257,10 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
 // Server-side: fetch real featured creators from Supabase so the HTML source
 // already contains all profile cards and real photo_url values.
 // No loading state, no useEffect, no client-side fetch for this list.
-export async function getServerSideProps() {
+export async function getServerSideProps({ res }) {
+  if (res) {
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+  }
   try {
     if (!supabase) {
       return { props: { featured: [] } }

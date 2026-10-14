@@ -39,6 +39,7 @@ export default async function handler(req, res) {
     const isFresh = liveAt > 0 && (now - liveAt) < FIVE_MINUTES_MS
 
     if (isFresh) {
+      res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=30')
       return res.status(200).json({
         fresh: true,
         count: todayEntry.count || profile.followers_count,

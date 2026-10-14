@@ -361,6 +361,8 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
             <img
               src={avatarSrc}
               alt={profile?.name || 'Creator'}
+              loading="lazy"
+              decoding="async"
               style={{
                 width: '100%',
                 height: '100%',
@@ -605,7 +607,10 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
   )
 }
 
-export async function getServerSideProps({ params }) {
+export async function getServerSideProps({ params, res }) {
+  if (res) {
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
+  }
   const { slug, milestone } = params
   if (!slug || !milestone) return { notFound: true }
 

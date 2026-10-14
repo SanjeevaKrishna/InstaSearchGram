@@ -90,9 +90,11 @@ export default async function handler(req, res) {
 
     if (error) throw error
 
-    // Set Cache-Control headers on featured homepage query
-    if (featured === 'true' && (!q || !q.trim())) {
-      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
+    // Set Cache-Control headers to allow Edge CDN caching
+    if (!q || !q.trim()) {
+      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+    } else {
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
     }
 
     res.status(200).json({ celebrities: data || [] })
