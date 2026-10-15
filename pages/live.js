@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { TrendingUp, TrendingDown, Flame, Calendar, Clock, AlertTriangle, Search, BarChart3, Film, Play, Pause, RotateCcw, FastForward, Activity, ChevronUp, ChevronDown, Pin, ThumbsUp, ThumbsDown, User, ChevronRight, X, Sparkles, Minus, CornerUpLeft, Target, Download, Video, Loader2, ArrowUpRight, ArrowDownRight, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { proxyProfileImages } from '../lib/imageProxy'
 import { safeStorage } from '../lib/storage'
 import { exportTimelineVideo } from '../lib/timelineVideoExporter'
 import { calculateGrowthVelocity, formatFollowersText, formatSignedChange, formatSignedPercent } from '../lib/growthVelocity'
@@ -3943,8 +3944,8 @@ export async function getServerSideProps(context) {
         initialTab,
         initialLiveData: {
           live_date: settingsData?.live_date || currentDate,
-          most_followed: profilesData || [],
-          viral_reels: sortedReels || []
+          most_followed: proxyProfileImages(profilesData || []),
+          viral_reels: proxyProfileImages(sortedReels || [])
         }
       }
     }

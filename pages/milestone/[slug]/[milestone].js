@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { ArrowLeft, Download, RotateCcw, Share2, Sparkles, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
+import { proxyImageUrl } from '../../../lib/imageProxy'
 import { generateMilestones, formatMilestoneLabel, parseMilestoneParam, findMilestoneAchievedDate } from '../../../lib/milestones'
 import { exportMilestoneVideo } from '../../../lib/milestoneVideoExporter'
 
@@ -677,7 +678,7 @@ export async function getServerSideProps({ params, res }) {
           id: finalProfile.id,
           name: finalProfile.name,
           instagram_handle: finalProfile.instagram_handle || null,
-          photo_url: finalProfile.photo_url || finalProfile.profile_pic_url || finalProfile.avatar_url || null,
+          photo_url: proxyImageUrl(finalProfile.photo_url || finalProfile.profile_pic_url || finalProfile.avatar_url || null),
           followers_count: currentCount,
         },
         milestoneValue,

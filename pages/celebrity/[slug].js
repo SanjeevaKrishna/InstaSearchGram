@@ -6,6 +6,7 @@ import Logo from '../../components/Logo'
 import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck, Download, Loader2 } from 'lucide-react'
 import { downloadComparisonCard } from '../../lib/exportComparisonCard'
 import { supabase } from '../../lib/supabase'
+import { proxyImageUrl, proxyProfileImages } from '../../lib/imageProxy'
 import CommentSection from '../../components/CommentSection'
 
 const getOrdinal = (n) => {
@@ -1741,12 +1742,17 @@ export async function getServerSideProps(context) {
       .neq('id', celebrity.id)
       .limit(4)
 
+    // Proxy Supabase Storage images through Vercel CDN
+    const proxiedCelebrity = celebrity ? { ...celebrity, photo_url: proxyImageUrl(celebrity.photo_url) } : null
+    const proxiedCompareCelebrity = compareCelebrity ? { ...compareCelebrity, photo_url: proxyImageUrl(compareCelebrity.photo_url) } : null
+    const proxiedOtherCelebrities = proxyProfileImages(otherCelebrities || [])
+
     return {
       props: {
-        initialCelebrity: celebrity,
+        initialCelebrity: proxiedCelebrity,
         initialPosts: posts || [],
-        initialCompareCelebrity: compareCelebrity,
-        otherCelebrities: otherCelebrities || [],
+        initialCompareCelebrity: proxiedCompareCelebrity,
+        otherCelebrities: proxiedOtherCelebrities || [],
         liveRank,
         compareLiveRank,
         liveProfileSlug,

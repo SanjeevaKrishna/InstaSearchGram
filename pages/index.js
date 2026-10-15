@@ -4,6 +4,7 @@ import Link from 'next/link'
 import CelebrityCard from '../components/CelebrityCard'
 import { Sparkles, Search, Flame } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { proxyProfileImages } from '../lib/imageProxy'
 
 export default function Home({ featured = [], profileCount = 'thousands of' }) {
   const [query, setQuery] = useState('')
@@ -285,7 +286,7 @@ export async function getServerSideProps({ res }) {
       return { props: { featured: [] } }
     }
 
-    return { props: { featured: data || [], profileCount: count || 'thousands of' } }
+    return { props: { featured: proxyProfileImages(data || []), profileCount: count || 'thousands of' } }
   } catch (err) {
     console.error('Homepage getServerSideProps exception:', err)
     return { props: { featured: [] } }

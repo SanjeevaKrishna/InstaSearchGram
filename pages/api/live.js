@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { proxyProfileImages } from '../../lib/imageProxy'
 
 // 2-minute memory cache to prevent heavy database loads and network latency on concurrent queries
 let liveCache = {
@@ -216,12 +217,12 @@ export default async function handler(req, res) {
     const responseData = {
       live_date: settingsData?.live_date || currentDate,
       trending_enabled: settingsData?.trending_enabled !== undefined ? settingsData.trending_enabled : true,
-      most_followed: profilesData || [],
-      viral_reels: mappedReels,
-      most_viewed_reels: mappedMostViewed,
-      india_most_liked_posts: mappedMostLiked,
-      most_liked_reels: mappedMostLikedReels,
-      most_liked_comments: mappedMostLikedComments
+      most_followed: proxyProfileImages(profilesData || []),
+      viral_reels: proxyProfileImages(mappedReels || []),
+      most_viewed_reels: proxyProfileImages(mappedMostViewed || []),
+      india_most_liked_posts: proxyProfileImages(mappedMostLiked || []),
+      most_liked_reels: proxyProfileImages(mappedMostLikedReels || []),
+      most_liked_comments: proxyProfileImages(mappedMostLikedComments || [])
     }
 
     // Save to server-side memory cache

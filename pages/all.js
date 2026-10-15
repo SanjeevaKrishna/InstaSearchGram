@@ -4,6 +4,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { proxyProfileImages, proxyImageUrl } from '../lib/imageProxy'
 import CelebritySuggestionChat, { CelebritySuggestionBanner, CelebrityEmptySearchCard } from '../components/CelebritySuggestionChat'
 
 const formatCount = (num) => {
@@ -501,9 +502,15 @@ export async function getServerSideProps(context) {
       }
     }
 
+    // Proxy all Supabase Storage image URLs through Vercel CDN
+    const proxiedCelebrities = proxyProfileImages(celebrities)
+    if (originalCelebrity) {
+      originalCelebrity = { ...originalCelebrity, photo_url: proxyImageUrl(originalCelebrity.photo_url) }
+    }
+
     return {
       props: {
-        initialCelebrities: celebrities || [],
+        initialCelebrities: proxiedCelebrities || [],
         initialOriginalCelebrity: originalCelebrity
       }
     }
