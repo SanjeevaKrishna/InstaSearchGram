@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Logo from './Logo'
-import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, MessageSquare, Flame, Sparkles } from 'lucide-react'
+import { Home, Info, Mail, ShieldCheck, FileText, AlertTriangle, Scale, PlusCircle, Newspaper, TrendingUp, MessageSquare, Flame, Sparkles, BookOpen } from 'lucide-react'
 
 export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -66,6 +66,9 @@ export default function Navbar() {
               <Link href="/live">
                 <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Live</button>
               </Link>
+              <Link href="/blog">
+                <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13, borderRadius: '100px' }}>Blog</button>
+              </Link>
             </div>
 
             {/* Menu Dropdown */}
@@ -112,6 +115,9 @@ export default function Navbar() {
 
                   <Link href="/" className="dropdown-item" onClick={closeDropdown}>
                     <Home size={14} style={{ marginRight: 8 }} /> Home
+                  </Link>
+                  <Link href="/blog" className="dropdown-item" onClick={closeDropdown}>
+                    <BookOpen size={14} style={{ marginRight: 8, color: 'var(--accent)' }} /> Blog &amp; Insights
                   </Link>
                   <Link href="/about" className="dropdown-item" onClick={closeDropdown}>
                     <Info size={14} style={{ marginRight: 8 }} /> About Us

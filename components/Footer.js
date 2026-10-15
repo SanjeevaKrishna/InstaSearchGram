@@ -37,6 +37,7 @@ export default function Footer() {
             <Link href="/trending" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Trending Reels</Link>
             <Link href="/live" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Live Standings</Link>
             <Link href="/converter" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Converter</Link>
+            <Link href="/blog" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Blog</Link>
             <Link href="/about" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>About Us</Link>
             <Link href="/methodology" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Methodology</Link>
             <Link href="/contact" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Contact</Link>
@@ -121,6 +122,7 @@ export default function Footer() {
               <Link href="/trending" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Trending Reels</Link>
               <Link href="/live" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Live Standings</Link>
               <Link href="/converter" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Dot Art Converter</Link>
+              <Link href="/blog" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Blog &amp; Insights</Link>
             </div>
           </div>
 

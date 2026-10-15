@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
 import fs from 'fs'
 import path from 'path'
+import { getAllPosts } from '../data/blogs'
 
 const EXTERNAL_DATA_URL = 'https://spialr.com'
 
@@ -46,7 +47,7 @@ const generateCommentSlug = (item) => {
   return `${parts || 'comment'}-${item.id}`
 }
 
-function generateSiteMap(celebrities = [], profiles = [], reels = [], comments = []) {
+function generateSiteMap(celebrities = [], profiles = [], reels = [], comments = [], blogPosts = []) {
   const today = new Date().toISOString()
   return `<?xml version="1.0" encoding="UTF-8"?>
    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -80,6 +81,12 @@ function generateSiteMap(celebrities = [], profiles = [], reels = [], comments =
        <lastmod>${getFileLastMod('converter.js')}</lastmod>
        <changefreq>daily</changefreq>
        <priority>0.8</priority>
+     </url>
+     <url>
+       <loc>${EXTERNAL_DATA_URL}/blog</loc>
+       <lastmod>${today}</lastmod>
+       <changefreq>daily</changefreq>
+       <priority>0.85</priority>
      </url>
      <url>
        <loc>${EXTERNAL_DATA_URL}/methodology</loc>
@@ -237,7 +244,7 @@ export async function getServerSideProps({ res }) {
   })
   const allReels = Array.from(reelMap.values())
 
-  const sitemap = generateSiteMap(celebrities || [], mostFollowedProfiles || [], allReels, mostLikedComments || [])
+  const sitemap = generateSiteMap(celebrities || [], mostFollowedProfiles || [], allReels, mostLikedComments || [], getAllPosts())
 
   res.setHeader('Content-Type', 'text/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
