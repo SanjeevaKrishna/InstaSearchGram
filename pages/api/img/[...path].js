@@ -10,6 +10,7 @@
  */
 
 const SUPABASE_STORAGE_BASE = 'https://kmamqlbtiqmfsngovniw.supabase.co/storage/v1/object/public/'
+const IMAGEKIT_URL_ENDPOINT = process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/e7duyta3i'
 
 export default async function handler(req, res) {
   const { path } = req.query
@@ -18,6 +19,15 @@ export default async function handler(req, res) {
   }
 
   const imagePath = path.join('/')
+
+  // Redirect to ImageKit CDN directly to eliminate Supabase egress completely
+  if (IMAGEKIT_URL_ENDPOINT) {
+    const cleanPath = imagePath.replace(/^profile-images\//, '')
+    const base = IMAGEKIT_URL_ENDPOINT.replace(/\/$/, '')
+    res.setHeader('Cache-Control', 'public, s-maxage=2592000, max-age=604800')
+    return res.redirect(302, `${base}/${cleanPath}`)
+  }
+
   const supabaseUrl = SUPABASE_STORAGE_BASE + imagePath
 
   try {

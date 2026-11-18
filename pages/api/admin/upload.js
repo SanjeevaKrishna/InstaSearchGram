@@ -58,6 +58,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Unsupported image format' });
     }
 
+    if (process.env.IMAGEKIT_PRIVATE_KEY && process.env.IMAGEKIT_PUBLIC_KEY && process.env.IMAGEKIT_URL_ENDPOINT) {
+      const ImageKit = (await import('imagekit')).default || require('imagekit');
+      const imagekit = new ImageKit({
+        publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+        privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+        urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
+      });
+
+      const ikFileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
+      const result = await imagekit.upload({
+        file: buffer,
+        fileName: ikFileName,
+        folder: '/insta_search_celebrities',
+        useUniqueFileName: false
+      });
+
+      return res.status(200).json({ url: result.url });
+    }
+
     const fileName = `insta_search_celebrities/${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
     const supabase = getAdminClient();
 

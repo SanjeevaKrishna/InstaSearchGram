@@ -6,7 +6,8 @@ const nextConfig = {
       'instagram.com',
       'cdninstagram.com',
       'www.instagram.com',
-      'kmamqlbtiqmfsngovniw.supabase.co'
+      'kmamqlbtiqmfsngovniw.supabase.co',
+      'ik.imagekit.io'
     ],
   },
   experimental: {
