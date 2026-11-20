@@ -3404,16 +3404,74 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
           </div>
         )}
 
-        {/* Zoom-Style Community Celebrity Suggestions Chat Drawer */}
-        <CelebritySuggestionChat
-          isOpen={isSuggestionChatOpen}
-          onClose={() => {
-            setIsSuggestionChatOpen(false)
-            setSuggestionPrefill('')
-          }}
-          initialPrefill={suggestionPrefill}
-          category={selectedCategory}
-        />
+        {/* Live Standings Guide & FAQ Section (High Value AdSense Content) */}
+        <section style={{ marginTop: 60, borderTop: '1px solid var(--border)', paddingTop: 40, width: '100%', maxWidth: 860, margin: '60px auto 0' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 16 }}>
+            About Live Instagram Follower Tracking &amp; Rankings
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: 20 }}>
+            Spialr provides real-time follower counting and rank progression tracking for the most followed accounts on Instagram. Whether tracking top actors, digital creators, musicians, or viral influencers, our leaderboard monitors daily gains, ranking shifts, and historical momentum across rolling 31-day windows.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginBottom: 32 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+                ⚡ Real-Time Standings
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                Live leaderboards reflect current public follower numbers, ordered strictly from highest to lowest with up-to-the-minute position tracking.
+              </p>
+            </div>
+
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+                📈 31-Day Growth Timeline
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                Interactive growth curves let you replay historic ranking races day-by-day to visualize viral surges and milestone breakthroughs.
+              </p>
+            </div>
+
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+                🔥 Daily Gainers &amp; Velocity
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                Inspect 24-hour net follower increases to identify which creators are trending today and gaining momentum fastest.
+              </p>
+            </div>
+          </div>
+
+          <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 14 }}>
+            Frequently Asked Questions
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                How often does the live follower count update?
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Public counts are polled through rolling automated synchronization cycles. You can also trigger an instant on-demand refresh by tapping the live badge at the top of the leaderboard.
+              </div>
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                Why do numbers differ slightly from the Instagram app?
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Instagram often abbreviates numbers in the mobile interface (e.g. 50.2M) and applies server-side caching. Spialr captures precise follower values directly from public data endpoints.
+              </div>
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                How is daily growth velocity calculated?
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Velocity is calculated as the net difference between consecutive verified 24-hour snapshots, filtering out server errors or initial sync spikes to ensure genuine trend analysis.
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <style jsx global>{`

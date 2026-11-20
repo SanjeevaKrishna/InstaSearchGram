@@ -1213,6 +1213,58 @@ export default function TrendingPage({ initialData = null }) {
             </div>
           </>
         )}
+
+        {/* Trending Analytics Guide & FAQ Section (High Value AdSense Content) */}
+        <section style={{ marginTop: 60, borderTop: '1px solid var(--border)', paddingTop: 40, width: '100%', maxWidth: 760, margin: '60px auto 0' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 16 }}>
+            About Instagram Viral Reels &amp; Trending Analytics
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: 20 }}>
+            The Spialr Trending Hub curates the most viral short-form video content on Instagram. By measuring view velocities, like-to-view ratios, and community repost frequency, our leaderboard surfaces content that is experiencing active viral spread across digital media.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 32 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+              <h3 style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+                🔥 Viral Momentum Tracking
+              </h3>
+              <p style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                Identifies videos gaining rapid traction across social feeds, ranked by accelerated engagement velocity.
+              </p>
+            </div>
+
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+              <h3 style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+                👁️ All-Time Most Viewed
+              </h3>
+              <p style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                Archives record-breaking reels with multi-million view counts from top creators, actors, and public accounts.
+              </p>
+            </div>
+          </div>
+
+          <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 14 }}>
+            Frequently Asked Questions
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                How are trending reels selected?
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Reels are cataloged from public Instagram creator posts and evaluated based on total views, like interactions, and recent momentum metrics.
+              </div>
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                Does Spialr host or re-upload reel video files?
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                No. Spialr only indexes metadata, thumbnails, and public engagement numbers. Videos remain hosted directly by Instagram and their respective creators.
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <BottomNav />

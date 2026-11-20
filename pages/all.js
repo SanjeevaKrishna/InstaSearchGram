@@ -243,10 +243,16 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
           fontFamily: 'var(--font-display)',
           fontSize: 28,
           fontWeight: 800,
-          marginBottom: compare ? 12 : 24,
+          marginBottom: compare ? 12 : 12,
         }}>
-          {compare ? 'Select Profile to Compare:' : 'All Available Profiles:'}
+          {compare ? 'Select Profile to Compare:' : 'All Available Profiles & Creators:'}
         </h1>
+
+        {!compare && (
+          <p style={{ fontSize: 14.5, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 24, maxWidth: 700 }}>
+            Browse through the verified directory of Instagram creators, influencers, actors, athletes, and public figures. Select any profile to inspect real-time followers, engagement ratios, average reel views, or use the compare feature to benchmark any two creators side-by-side.
+          </p>
+        )}
 
         {originalCelebrity && (
           <div style={{ fontSize: 15, color: 'var(--text-muted)', marginBottom: 24 }}>
@@ -457,6 +463,60 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
           }}
           initialPrefill={suggestionPrefill}
         />
+
+        {/* Directory Guide & FAQ Section (High Value AdSense Content) */}
+        {!compare && (
+          <div style={{ marginTop: 60, borderTop: '1px solid var(--border)', paddingTop: 40 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 16 }}>
+              About the Spialr Creator Directory
+            </h2>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: 20 }}>
+              The Spialr Directory indexes hundreds of popular Instagram creators, celebrities, influencers, and media personalities from across the globe. Each profile page is updated with verified follower numbers, average reel viewership benchmarks, historical account age, and audience interaction metrics.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 32 }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+                  🔍 Real-Time Metric Tracking
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                  We track public follower numbers and compute 31-day progressive growth trends so you can see who is gaining momentum and whose audience is shifting.
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+                  ⚖️ Side-by-Side Comparison
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                  Select any profile and click &ldquo;Compare&rdquo; to benchmark reel views, like ratios, comments, and engagement against any other creator on the platform.
+                </p>
+              </div>
+            </div>
+
+            <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 14 }}>
+              Frequently Asked Questions
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                  How often are profile statistics refreshed?
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                  Leaderboard rankings and live follower counts are synchronized on a rolling schedule. Post interactions and engagement rates are computed based on publicly indexed posts.
+                </div>
+              </div>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                  Can I suggest a creator or celebrity to be added?
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                  Yes! Use the community suggestion banner or search popup at any time to propose new Instagram accounts for inclusion in the Spialr directory.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </>
   )

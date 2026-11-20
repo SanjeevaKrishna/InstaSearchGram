@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import PostCard from '../../components/PostCard'
 import Logo from '../../components/Logo'
-import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck, Download, Loader2 } from 'lucide-react'
+import { TrendingUp, Eye, Heart, ThumbsUp, Search, MessageSquare, Star, Tv, Sparkles, Share2, Repeat2, GitCompare, X, Percent, ShieldCheck, Download, Loader2, HelpCircle, BarChart3 } from 'lucide-react'
 import { downloadComparisonCard } from '../../lib/exportComparisonCard'
 import { supabase } from '../../lib/supabase'
 import { proxyImageUrl, proxyProfileImages } from '../../lib/imageProxy'
@@ -63,7 +63,27 @@ function generateProfileNarrative(cel, liveRank, postsCount, posts = []) {
 
   const parts = []
 
-
+  // ── Paragraph 1: Audience scale & standing ─────────────────────────────────
+  if (followers > 0) {
+    let rankText = liveRank ? ` currently ranking #${liveRank} on the Spialr leaderboard` : ''
+    if (followers >= 100_000_000) {
+      parts.push(
+        `${name}${handle ? ` (${handle})` : ''} commands an elite global audience of over ${fmt(followers)} followers on Instagram${rankText}. At this nine-figure scale, each post and reel reaches a worldwide demographic, making the profile one of the most prominent media platforms in digital culture.`
+      )
+    } else if (followers >= 10_000_000) {
+      parts.push(
+        `${name}${handle ? ` (${handle})` : ''} has established a massive community of ${fmt(followers)} followers on Instagram${rankText}. This multi-million reach gives the profile significant digital influence and consistent viral momentum across both reels and static posts.`
+      )
+    } else if (followers >= 1_000_000) {
+      parts.push(
+        `With an active following of ${fmt(followers)} on Instagram${rankText}, ${name}${handle ? ` (${handle})` : ''} holds a verified foothold in the creator space, consistently commanding high impression volumes and strong social reach.`
+      )
+    } else {
+      parts.push(
+        `${name}${handle ? ` (${handle})` : ''} reaches a targeted following of ${fmt(followers)} on Instagram${rankText}, cultivating a dedicated audience through curated reels, photo highlights, and regular community engagement.`
+      )
+    }
+  }
 
   // ── Paragraph 2: account age & posting context — varies by age ─────────────
   if (age && postsNum) {
@@ -259,6 +279,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
     }
   })
   const hasPlaylists = Object.keys(playlists).length > 0
+  const narrativeParts = celebrity ? generateProfileNarrative(celebrity, liveRank, postsCount, posts) : []
 
   if (loading) return (
     <>
@@ -723,7 +744,7 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   "name": `How many followers does ${celebrity.name} have on Instagram?`,
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": `As of today, ${celebrity.name} (@${celebrity.instagram_handle || ''}) has ${formatCount(celebrity.followers_count)} followers on Instagram. You can track real-time follower numbers, daily changes, and 31-day growth analytics on Spialr.`
+                    "text": `As of today, ${celebrity.name}${celebrity.instagram_handle ? ` (@${celebrity.instagram_handle})` : ''} has approximately ${formatCount(celebrity.followers_count)} followers on Instagram${liveRank ? ` and ranks #${liveRank} on the leaderboard` : ''}. You can track real-time follower numbers and analytics on Spialr.`
                   }
                 },
                 {
@@ -732,6 +753,22 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   "acceptedAnswer": {
                     "@type": "Answer",
                     "text": `${celebrity.name} averages approximately ${formatCount(celebrity.average_views || 0)} views per reel with a follower interaction rate of ${Number(celebrity.followers_interaction || 0).toFixed(2)}%, analyzed on Spialr.`
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": `When did ${celebrity.name} join Instagram?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": celebrity.account_created_year ? `${celebrity.name}'s account was created in ${celebrity.account_created_year} and currently features ${formatCount(celebrity.posts_count || postsCount)} indexed posts.` : `${celebrity.name}'s account details and post history are indexed and tracked on Spialr.`
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": `How does Spialr calculate Instagram engagement and metrics?`,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": `Spialr calculates followers-interaction rates by evaluating public post interactions against verified follower totals, updated on a rolling basis without accessing private accounts.`
                   }
                 }
               ]
@@ -1367,8 +1404,8 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
               </div>
             ) : null}
 
-            {/* 4) About Section */}
-            {celebrity.description && (
+            {/* 4) About & Growth Overview Section */}
+            {(celebrity.description || (narrativeParts && narrativeParts.length > 0)) && (
               <div style={{ marginBottom: 32, width: '100%' }}>
                 <div style={{
                   width: '100%',
@@ -1378,19 +1415,76 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
                   opacity: 0.8
                 }} />
                 
-                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)' }}>
-                  About {celebrity.name}
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <BarChart3 size={20} style={{ color: 'var(--accent)' }} /> About &amp; Platform Analysis
                 </h3>
-                <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 20, wordBreak: 'break-word' }}>
-                  {normalizeBioText(celebrity.description)}
-                </p>
+
+                {celebrity.description && (
+                  <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: 16, wordBreak: 'break-word' }}>
+                    {normalizeBioText(celebrity.description)}
+                  </p>
+                )}
+
+                {/* Data-Driven Profile Narratives (AdSense deep content) */}
+                {narrativeParts && narrativeParts.map((para, pIdx) => (
+                  <p key={pIdx} style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: 14, background: 'var(--surface)', padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border)' }}>
+                    {para}
+                  </p>
+                ))}
+
+                {/* Frequently Asked Questions */}
+                <div style={{ marginTop: 28 }}>
+                  <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text)' }}>
+                    <HelpCircle size={17} style={{ color: 'var(--accent)' }} /> Frequently Asked Questions
+                  </h4>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                        How many followers does {celebrity.name} have on Instagram?
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                        As of today, {celebrity.name}{celebrity.instagram_handle ? ` (@${celebrity.instagram_handle})` : ''} has approximately <strong>{formatCount(celebrity.followers_count)}</strong> followers{liveRank ? ` and ranks #${liveRank} on the most followed leaderboard` : ''}.
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                        What are {celebrity.name}&apos;s average views and engagement metrics?
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                        On Spialr, {celebrity.name} records an estimated average of <strong>{formatCount(celebrity.average_views || 0)}</strong> views per reel and a follower interaction rate of <strong>{Number(celebrity.followers_interaction || 0).toFixed(2)}%</strong> across cataloged posts.
+                      </div>
+                    </div>
+
+                    {celebrity.account_created_year && (
+                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                          When did {celebrity.name} join Instagram?
+                        </div>
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                          The account was established in <strong>{celebrity.account_created_year}</strong> and currently has {formatCount(celebrity.posts_count || postsCount)} posts cataloged on the platform.
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                        How does Spialr collect and verify this data?
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                        Metrics are compiled from publicly accessible Instagram profile data. Follower counts and post performance are benchmarked on a rolling schedule to provide reliable comparative insights without scraping private account info.
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 
                 {/* Pink-Red divider line */}
                 <div style={{
                   width: '100%',
                   height: '1.5px',
                   background: 'linear-gradient(90deg, var(--accent) 0%, transparent 100%)',
-                  margin: '20px 0 24px',
+                  margin: '24px 0 24px',
                   opacity: 0.7
                 }} />
               </div>
