@@ -218,16 +218,34 @@ export async function getServerSideProps({ res }) {
     return all
   }
 
+  async function fetchAllCelebrities() {
+    let all = []
+    let page = 0
+    const pageSize = 1000
+    while (true) {
+      const { data, error } = await supabase
+        .from('celebrities')
+        .select('slug, created_at')
+        .neq('hide_search', true)
+        .range(page * pageSize, (page + 1) * pageSize - 1)
+      if (error || !data || data.length === 0) break
+      all = all.concat(data)
+      if (data.length < pageSize) break
+      page++
+    }
+    return all
+  }
+
   // Fetch celebrity slugs, all profiles (paginated to bypass 1000 row limit), reels, and comments in parallel
   const [
-    { data: celebrities },
+    celebrities,
     mostFollowedProfiles,
     { data: mostViewedReels },
     { data: viralReels },
     { data: mostLikedReels },
     { data: mostLikedComments }
   ] = await Promise.all([
-    supabase.from('celebrities').select('slug, created_at').neq('hide_search', true).range(0, 999),
+    fetchAllCelebrities(),
     fetchAllProfiles(),
     supabase.from('most_viewed_reels').select('id, title, creator_name, created_at').range(0, 500),
     supabase.from('viral_reels').select('id, title, creator_name, created_at').range(0, 500),

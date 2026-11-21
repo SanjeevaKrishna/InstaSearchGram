@@ -482,19 +482,20 @@ export default function ProfilePage({ profile, slug, rank = null }) {
   return (
     <>
       <Head>
-        <title>{`${profile.name} (@${profile.instagram_handle || profile.name}) Instagram Followers, Live Stats & ${rank ? `Rank #${rank}` : 'Growth Tracker'} | Spialr`}</title>
+        <title>{`${profile.name} Instagram — Followers, Handle (@${profile.instagram_handle || profile.name}), Live Count & Growth | Spialr`}</title>
         <meta
           name="description"
-          content={`Track ${profile.name} (@${profile.instagram_handle || ''}) live Instagram follower count (${formatNumber(profile.followers_count)})${rank ? ` - Ranked #${rank} Most Followed` : ''}. View real-time daily follower gains, 31-day progressive growth timeline, and analytics on Spialr.`}
+          content={`Check ${profile.name}'s Instagram account (@${profile.instagram_handle || ''}): real-time follower count (${formatNumber(profile.followers_count)})${rank ? ` - Ranked #${rank} Most Followed` : ''}, daily follower gains, and 31-day progressive growth on Spialr.`}
         />
         <meta
           name="keywords"
           content={[
             profile.name,
             `${profile.name} instagram`,
+            `${profile.name} insta`,
+            `${profile.name} instagram account`,
+            `${profile.name} instagram id`,
             `${profile.name} instagram followers`,
-            `${profile.name} instagram followers count`,
-            `${profile.name} live followers`,
             `${profile.name} followers on instagram`,
             `${profile.name} insta account`,
             `${profile.name} follower counter`,

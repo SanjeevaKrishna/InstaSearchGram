@@ -687,14 +687,29 @@ export default function CelebrityPage({ initialCelebrity, initialPosts, initialC
   return (
     <>
       <Head>
-        <title>{`${celebrity.name?.trim()} (@${celebrity.instagram_handle || ''}) Instagram Followers, Live Stats & Analytics | Spialr`}</title>
+        <title>{`${celebrity.name?.trim()} Instagram — Followers, Handle (@${celebrity.instagram_handle || ''}), Live Stats & Posts | Spialr`}</title>
         <meta
           name="description"
-          content={`Check ${celebrity.name}'s real-time Instagram follower count (${formatCount(celebrity.followers_count)}), engagement rate, average reel views, post performance, and live growth rankings on Spialr.`}
+          content={`Explore ${celebrity.name}'s official Instagram account (@${celebrity.instagram_handle || ''}): real-time follower count (${formatCount(celebrity.followers_count)}), engagement stats, top reels, and performance analytics on Spialr.`}
         />
         <meta
           name="keywords"
-          content={`${celebrity.name}, ${celebrity.name} instagram followers, ${celebrity.name} instagram followers count, ${celebrity.name} followers on instagram, ${celebrity.name} insta followers, ${celebrity.instagram_handle || ''} followers, live instagram follower count, instagram stats, spialr`}
+          content={[
+            `${celebrity.name} instagram`,
+            `${celebrity.name} insta`,
+            `${celebrity.name} instagram account`,
+            `${celebrity.name} instagram handle`,
+            `${celebrity.name} instagram id`,
+            `${celebrity.name} instagram followers`,
+            `${celebrity.name} followers on instagram`,
+            `${celebrity.name} insta profile`,
+            `${celebrity.name} instagram stats`,
+            `${celebrity.name} real instagram`,
+            celebrity.instagram_handle ? `@${celebrity.instagram_handle}` : null,
+            celebrity.instagram_handle ? `${celebrity.instagram_handle} instagram` : null,
+            celebrity.instagram_handle ? `instagram.com/${celebrity.instagram_handle}` : null,
+            'spialr'
+          ].filter(Boolean).join(', ')}
         />
         <link rel="canonical" href={`https://spialr.com/celebrity/${celebrity.slug}`} key="canonical" />
         <meta property="og:type" content="profile" />
