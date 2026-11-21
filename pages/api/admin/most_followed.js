@@ -1,6 +1,7 @@
 import { getAdminClient } from '../../../lib/supabase'
 import { recalculateVotingRanks } from '../../../lib/voting'
 import { InstagramFollowersScraper } from '../../../lib/followersScraper'
+import { getFeaturedLiveIds, setFeaturedLiveId } from '../../../lib/liveFeatured'
 
 function verifyAdmin(req) {
   const auth = req.headers['x-admin-token']
@@ -92,7 +93,14 @@ export default async function handler(req, res) {
         from += 1000
         to += 1000
       }
-      return res.status(200).json({ profiles: profilesData })
+
+      const featuredIds = await getFeaturedLiveIds(supabase)
+      const profilesWithFeatured = profilesData.map(p => ({
+        ...p,
+        is_featured: featuredIds.includes(String(p.id))
+      }))
+
+      return res.status(200).json({ profiles: profilesWithFeatured })
     }
 
     // POST - add a new profile
@@ -141,7 +149,14 @@ export default async function handler(req, res) {
 
     // PUT - update a profile or trigger auto-reordering
     if (req.method === 'PUT') {
-      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, instagram_handle, action, votes, follower_history } = req.body
+      const { id, name, photo_url, followers_count, followers_text, order_index, category, language, instagram_handle, action, votes, follower_history, is_featured } = req.body
+
+      // Sub-action: Toggle featured status
+      if (action === 'toggle_featured' || (is_featured !== undefined && !action && !name && !followers_text && !photo_url)) {
+        if (!id) return res.status(400).json({ error: 'ID is required' })
+        const updatedIds = await setFeaturedLiveId(supabase, id, !!is_featured)
+        return res.status(200).json({ success: true, id, is_featured: !!is_featured, featured_ids: updatedIds })
+      }
 
       // Sub-action: Reorder profiles by followers count descending
       if (action === 'reorder') {
@@ -360,7 +375,12 @@ export default async function handler(req, res) {
         .single()
 
       if (error) return res.status(500).json({ error: error.message })
-      return res.status(200).json({ profile: data })
+
+      if (is_featured !== undefined) {
+        await setFeaturedLiveId(supabase, id, !!is_featured)
+      }
+
+      return res.status(200).json({ profile: { ...data, is_featured: is_featured !== undefined ? !!is_featured : undefined } })
     }
 
     // DELETE - remove a profile

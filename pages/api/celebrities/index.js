@@ -1,28 +1,14 @@
 import { supabase } from '../../../lib/supabase'
-
-// 2-minute memory cache for featured homepage query to eliminate database network delay for visitors
-let featuredCache = {
-  data: null,
-  timestamp: 0
-}
-const CACHE_DURATION = 2 * 60 * 1000 // 2 minutes
+import { getFeaturedLiveIds } from '../../../lib/liveFeatured'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
   const { q, featured } = req.query
 
-  // Check cache for homepage featured query
-  if (featured === 'true' && (!q || !q.trim())) {
-    const now = Date.now()
-    if (featuredCache.data && (now - featuredCache.timestamp < CACHE_DURATION)) {
-      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
-      return res.status(200).json({ celebrities: featuredCache.data })
-    }
-  }
-
   try {
     let data = []
+    let liveData = []
     let error = null
 
     if (featured === 'true') {
@@ -37,16 +23,35 @@ export default async function handler(req, res) {
       if (q && q.trim()) {
         query = query.ilike('name', `%${q.trim()}%`)
       }
-      const res = await query
-      data = res.data
-      error = res.error
+      const resData = await query
+      data = resData.data
+      error = resData.error
 
-      // Save to memory cache if query succeeds and no search filter is active
-      if (!error && (!q || !q.trim())) {
-        featuredCache = {
-          data: data || [],
-          timestamp: Date.now()
+      // Also get featured live profiles
+      try {
+        const featuredLiveIds = await getFeaturedLiveIds(supabase)
+        if (featuredLiveIds && featuredLiveIds.length > 0) {
+          let liveQuery = supabase
+            .from('most_followed')
+            .select('id, name, instagram_handle, followers_count, photo_url')
+            .in('id', featuredLiveIds)
+            .limit(10)
+          if (q && q.trim()) {
+            liveQuery = liveQuery.ilike('name', `%${q.trim()}%`)
+          }
+          const { data: matchedFeaturedLive } = await liveQuery
+          if (matchedFeaturedLive) {
+            liveData = matchedFeaturedLive.map(item => ({
+              ...item,
+              slug: item.instagram_handle
+                ? item.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
+                : (item.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'),
+              is_live: true
+            }))
+          }
         }
+      } catch (err) {
+        console.warn('Failed to load featured live profiles:', err.message)
       }
     } else if (req.query.limit === 'all') {
       let from = 0
@@ -81,26 +86,51 @@ export default async function handler(req, res) {
         .neq('hide_search', true)
         .limit(20)
       if (q && q.trim()) {
-        query = query.ilike('name', `%${q.trim()}%`)
+        const cleanQ = q.trim()
+        query = query.or(`name.ilike.%${cleanQ}%,instagram_handle.ilike.%${cleanQ}%`)
       }
-      const res = await query
-      data = res.data
-      error = res.error
+      const resData = await query
+      data = resData.data
+      error = resData.error
+
+      // Search matching Live Profiles from most_followed table
+      if (q && q.trim()) {
+        try {
+          const cleanQ = q.trim().toLowerCase().replace(/^@/, '')
+          const { data: matchedLive } = await supabase
+            .from('most_followed')
+            .select('id, name, instagram_handle, followers_count, photo_url')
+            .or(`name.ilike.%${cleanQ}%,instagram_handle.ilike.%${cleanQ}%`)
+            .limit(10)
+
+          if (matchedLive && matchedLive.length > 0) {
+            liveData = matchedLive.map(item => ({
+              ...item,
+              slug: item.instagram_handle
+                ? item.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
+                : (item.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'),
+              is_live: true
+            }))
+          }
+        } catch (liveErr) {
+          console.warn('Failed to search live profiles:', liveErr.message)
+        }
+      }
     }
 
     if (error) throw error
 
     // Set Cache-Control headers to allow Edge CDN caching
     if (!q || !q.trim()) {
-      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+      res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300')
     } else {
-      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
+      res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
     }
 
-    res.status(200).json({ celebrities: data || [] })
+    res.status(200).json({ celebrities: data || [], liveProfiles: liveData })
   } catch (err) {
     console.error(err)
-    res.status(500).json({ error: 'Failed to fetch celebrities', celebrities: [] })
+    res.status(500).json({ error: 'Failed to fetch celebrities', celebrities: [], liveProfiles: [] })
   }
 }
 

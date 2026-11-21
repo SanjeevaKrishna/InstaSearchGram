@@ -5,10 +5,12 @@ import CelebrityCard from '../components/CelebrityCard'
 import { Sparkles, Search, Flame } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { proxyProfileImages } from '../lib/imageProxy'
+import { getFeaturedLiveIds } from '../lib/liveFeatured'
 
 export default function Home({ featured = [], profileCount = 'thousands of' }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
+  const [liveResults, setLiveResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const debounceRef = useRef(null)
@@ -17,6 +19,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
   const handleSearch = async (q) => {
     if (!q.trim()) {
       setResults([])
+      setLiveResults([])
       return
     }
     setSearching(true)
@@ -24,8 +27,10 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
       const res = await fetch(`/api/celebrities?q=${encodeURIComponent(q)}`)
       const data = await res.json()
       setResults(data.celebrities || [])
+      setLiveResults(data.liveProfiles || [])
     } catch {
       setResults([])
+      setLiveResults([])
     } finally {
       setSearching(false)
     }
@@ -40,6 +45,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
       setShowSuggestions(true)
     } else {
       setResults([])
+      setLiveResults([])
       setShowSuggestions(false)
     }
   }
@@ -130,7 +136,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
               {searching && <div className="spinner" style={{ flexShrink: 0, marginRight: 8 }} />}
               {query && !searching && (
                 <button
-                  onClick={() => { setQuery(''); setResults([]); setShowSuggestions(false) }}
+                  onClick={() => { setQuery(''); setResults([]); setLiveResults([]); setShowSuggestions(false) }}
                   style={{
                     background: 'var(--surface2)',
                     border: 'none',
@@ -147,7 +153,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
             </div>
 
             {/* Search results dropdown */}
-            {showSuggestions && results.length > 0 && (
+            {showSuggestions && (results.length > 0 || liveResults.length > 0) && (
               <div style={{
                 position: 'absolute',
                 top: 'calc(100% + 8px)',
@@ -158,55 +164,161 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
                 borderRadius: 12,
                 overflow: 'hidden',
                 zIndex: 50,
-                boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                maxHeight: 480,
+                overflowY: 'auto',
               }}>
-                {results.map(cel => (
-                  <a key={cel.id} href={`/celebrity/${cel.slug}`} style={{ display: 'block' }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        padding: '12px 16px',
-                        transition: 'background 0.15s',
-                        borderBottom: '1px solid var(--border)',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
+                {/* Celebrities */}
+                {results.length > 0 && (
+                  <div>
+                    {liveResults.length > 0 && (
                       <div style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '50%',
-                        background: 'var(--gradient)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        fontSize: 16,
-                        flexShrink: 0,
-                        overflow: 'hidden',
+                        padding: '8px 16px 4px',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
                       }}>
-                        {cel.photo_url ? (
-                          <img src={cel.photo_url} alt={cel.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
-                        ) : (
-                          cel.name?.charAt(0).toUpperCase()
-                        )}
+                        Celebrity Profiles
                       </div>
-                      <div style={{ flex: 1, textAlign: 'left' }}>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>{cel.name}</div>
-                        {cel.instagram_handle && (
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>@{cel.instagram_handle}</div>
-                        )}
-                      </div>
-                      <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>View →</span>
+                    )}
+                    {results.map(cel => (
+                      <a key={cel.id} href={`/celebrity/${cel.slug}`} style={{ display: 'block' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '12px 16px',
+                            transition: 'background 0.15s',
+                            borderBottom: '1px solid var(--border)',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: 'var(--gradient)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 800,
+                            fontSize: 16,
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                          }}>
+                            {cel.photo_url ? (
+                              <img src={cel.photo_url} alt={cel.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                            ) : (
+                              cel.name?.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div style={{ flex: 1, textAlign: 'left' }}>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>{cel.name}</div>
+                            {cel.instagram_handle && (
+                              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>@{cel.instagram_handle}</div>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>View →</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                {/* Live Profiles (Purple Theme) */}
+                {liveResults.length > 0 && (
+                  <div>
+                    <div style={{
+                      padding: '8px 16px 6px',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#c084fc',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      borderTop: results.length > 0 ? '1px solid rgba(168, 85, 247, 0.25)' : 'none',
+                      background: 'rgba(147, 51, 234, 0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#a855f7', boxShadow: '0 0 8px #a855f7' }} />
+                      Live Tracker Profiles
                     </div>
-                  </a>
-                ))}
+                    {liveResults.map(live => (
+                      <a key={live.id} href={`/profile/${live.slug}`} style={{ display: 'block' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '12px 16px',
+                            transition: 'background 0.15s',
+                            borderBottom: '1px solid var(--border)',
+                            background: 'rgba(147, 51, 234, 0.03)',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(147, 51, 234, 0.12)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(147, 51, 234, 0.03)'}
+                        >
+                          <div style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 800,
+                            fontSize: 16,
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                            padding: 2
+                          }}>
+                            {live.photo_url ? (
+                              <img src={live.photo_url} alt={live.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} onError={e => e.target.style.display = 'none'} />
+                            ) : (
+                              (live.name || '?').charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div style={{ flex: 1, textAlign: 'left' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>{live.name}</span>
+                              <span style={{
+                                background: 'rgba(147, 51, 234, 0.18)',
+                                color: '#c084fc',
+                                border: '1px solid rgba(168, 85, 247, 0.35)',
+                                borderRadius: 10,
+                                padding: '1px 6px',
+                                fontSize: 10,
+                                fontWeight: 700
+                              }}>⚡ LIVE</span>
+                            </div>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                              {live.instagram_handle && <span>@{live.instagram_handle}</span>}
+                              {live.followers_count && <span style={{ color: '#c084fc' }}>• {(live.followers_count).toLocaleString()} followers</span>}
+                            </div>
+                          </div>
+                          <span style={{
+                            fontSize: 12,
+                            color: '#c084fc',
+                            fontWeight: 600,
+                            background: 'rgba(147, 51, 234, 0.15)',
+                            padding: '4px 10px',
+                            borderRadius: 20,
+                            border: '1px solid rgba(168, 85, 247, 0.35)'
+                          }}>Live Count →</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            {showSuggestions && query.trim() && !searching && results.length === 0 && (
+            {showSuggestions && query.trim() && !searching && results.length === 0 && liveResults.length === 0 && (
               <div style={{
                 position: 'absolute',
                 top: 'calc(100% + 8px)',
@@ -221,13 +333,13 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
                 fontSize: 14,
                 zIndex: 50,
               }}>
-                No celebrity found for &ldquo;{query}&rdquo;
+                No profiles found for &ldquo;{query}&rdquo;
               </div>
             )}
           </div>
         </div>
 
-        {/* Featured Celebrities — rendered from real server-side data */}
+        {/* Featured Celebrities & Live Profiles — rendered from real server-side data */}
         {!query && featured.length > 0 && (
           <div className="fade-in">
             <h2 style={{
@@ -246,7 +358,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
             
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {featured.map(c => <CelebrityCard key={c.id} celebrity={c} />)}
+              {featured.map(c => <CelebrityCard key={c.id + (c.isLive ? '_live' : '_cel')} celebrity={c} />)}
             </div>
           </div>
         )}
@@ -255,9 +367,8 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
   )
 }
 
-// Server-side: fetch real featured creators from Supabase so the HTML source
+// Server-side: fetch real featured creators and live profiles from Supabase so the HTML source
 // already contains all profile cards and real photo_url values.
-// No loading state, no useEffect, no client-side fetch for this list.
 export async function getServerSideProps({ res }) {
   if (res) {
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
@@ -267,26 +378,67 @@ export async function getServerSideProps({ res }) {
       return { props: { featured: [] } }
     }
 
-    const [{ data, error }, { count }] = await Promise.all([
-      supabase
+    // 1. Fetch featured celebrities where is_featured = true
+    let { data: featuredCelebs, error: celebError } = await supabase
+      .from('celebrities')
+      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
+      .neq('hide_search', true)
+      .eq('is_featured', true)
+      .order('order_index', { ascending: true })
+      .order('followers_count', { ascending: false })
+      .limit(10)
+
+    // Fallback if none are marked is_featured
+    if (!featuredCelebs || featuredCelebs.length === 0) {
+      const fallback = await supabase
         .from('celebrities')
-        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url')
+        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index')
         .neq('hide_search', true)
         .order('order_index', { ascending: true })
         .order('followers_count', { ascending: false })
-        .limit(5),
+        .limit(5)
+      featuredCelebs = fallback.data || []
+    }
+
+    // 2. Fetch featured live profiles
+    let featuredLive = []
+    try {
+      const liveIds = await getFeaturedLiveIds(supabase)
+      if (liveIds && liveIds.length > 0) {
+        const { data: liveData } = await supabase
+          .from('most_followed')
+          .select('id, name, instagram_handle, followers_count, photo_url, order_index')
+          .in('id', liveIds)
+          .limit(10)
+
+        if (liveData) {
+          featuredLive = liveData.map(item => ({
+            ...item,
+            slug: item.instagram_handle
+              ? item.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
+              : (item.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'),
+            isLive: true
+          }))
+        }
+      }
+    } catch (e) {
+      console.warn('Live featured fetch error:', e.message)
+    }
+
+    // Combine featured items
+    const combinedFeatured = [
+      ...(featuredCelebs || []).map(c => ({ ...c, isLive: false })),
+      ...featuredLive
+    ]
+
+    const [{ count }] = await Promise.all([
       supabase
         .from('celebrities')
         .select('id', { count: 'exact', head: true })
         .neq('hide_search', true)
     ])
 
-    if (error) {
-      console.error('Homepage getServerSideProps error:', error)
-      return { props: { featured: [] } }
-    }
-
-    return { props: { featured: proxyProfileImages(data || []), profileCount: count || 'thousands of' } }
+    return { props: { featured: proxyProfileImages(combinedFeatured), profileCount: count || 'thousands of' } }
   } catch (err) {
     console.error('Homepage getServerSideProps exception:', err)
     return { props: { featured: [] } }

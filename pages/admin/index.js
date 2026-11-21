@@ -222,10 +222,11 @@ function CelebrityForm({ initial, onSave, onCancel }) {
     if (initial) {
       return {
         ...initial,
-        name: initial.name_manual || '',
+        name: initial.name_manual || initial.name || '',
         instagram_handle: initial.instagram_handle || '',
         photo_url: initial.photo_url || '',
-        description: initial.description_manual || '',
+        description: initial.description_manual || initial.description || '',
+        is_featured: !!initial.is_featured,
         order_index: initial.order_index !== undefined && initial.order_index !== null ? initial.order_index.toString() : '0',
         followers_count: initial.followers_manual !== undefined && initial.followers_manual !== null ? initial.followers_manual.toString() : '',
         posts_count: initial.posts_manual !== undefined && initial.posts_manual !== null ? initial.posts_manual.toString() : '',
@@ -276,6 +277,7 @@ function CelebrityForm({ initial, onSave, onCancel }) {
         body: {
           ...form,
           id: initial?.id,
+          is_featured: !!form.is_featured,
           followers_count: form.followers_count ? Number(form.followers_count) : null,
           posts_count: form.posts_count ? Number(form.posts_count) : null,
           has_full_details: !!form.has_full_details,
@@ -960,8 +962,11 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
     return rawLanguageString.split(',').map(l => l.trim()).filter(Boolean);
   };
 
-  const [form, setForm] = useState(initial || {
-    name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0', language: '', instagram_handle: ''
+  const [form, setForm] = useState(initial ? {
+    ...initial,
+    is_featured: !!initial.is_featured
+  } : {
+    name: '', photo_url: '', followers_count: '', followers_text: '', order_index: '0', language: '', instagram_handle: '', is_featured: false
   })
   
   const [selectedCategories, setSelectedCategories] = useState(() => parseMultipleCategories(initial?.category))
@@ -1063,6 +1068,7 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
         body: {
           ...form,
           id: initial?.id || form.id,
+          is_featured: !!form.is_featured,
           order_index: form.order_index ? Number(form.order_index) : 0,
           category: combinedCategory,
           language: combinedLanguage,
@@ -1351,6 +1357,29 @@ function MostFollowedForm({ profiles = [], initial, onSave, onCancel }) {
           </div>
         )}
       </div>
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        margin: '6px 0',
+        padding: '10px 14px',
+        background: 'rgba(168, 85, 247, 0.08)',
+        border: '1px solid rgba(168, 85, 247, 0.25)',
+        borderRadius: 10
+      }}>
+        <input 
+          type="checkbox" 
+          id="mf_featured" 
+          checked={!!form.is_featured} 
+          onChange={e => set('is_featured', e.target.checked)} 
+          style={{ width: 16, height: 16, accentColor: '#a855f7' }} 
+        />
+        <label htmlFor="mf_featured" style={{ fontSize: 14, color: '#c084fc', fontWeight: 600, cursor: 'pointer' }}>
+          ⭐ Feature Live Profile on Homepage (Purple Theme)
+        </label>
+      </div>
+
       {error && <div style={{ color: '#ff5252', fontSize: 13 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
         <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
@@ -3532,6 +3561,48 @@ export default function AdminPanel() {
     }
   }
 
+  const toggleFeatured = async (cel) => {
+    const nextVal = !cel.is_featured
+    try {
+      const res = await adminFetch('/api/admin/celebrities', {
+        method: 'PUT',
+        body: {
+          ...cel,
+          is_featured: nextVal,
+          followers_count: cel.followers_count ? Number(cel.followers_count) : null,
+          posts_count: cel.posts_count ? Number(cel.posts_count) : null,
+          order_index: cel.order_index ? Number(cel.order_index) : 0,
+        }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setCelebrities(list => list.map(c => c.id === cel.id ? { ...c, is_featured: nextVal } : c))
+      showToast(nextVal ? '⭐ ' + cel.name + ' marked as Featured on Homepage!' : '✰ Removed ' + cel.name + ' from Featured')
+    } catch(e) {
+      alert('Error updating featured: ' + e.message)
+    }
+  }
+
+  const toggleLiveFeatured = async (profile) => {
+    const nextVal = !profile.is_featured
+    try {
+      const res = await adminFetch('/api/admin/most_followed', {
+        method: 'PUT',
+        body: {
+          id: profile.id,
+          action: 'toggle_featured',
+          is_featured: nextVal
+        }
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setMostFollowed(list => list.map(p => p.id === profile.id ? { ...p, is_featured: nextVal } : p))
+      showToast(nextVal ? '⭐ Live Profile "' + profile.name + '" featured on Homepage (Purple)!' : '✰ Removed "' + profile.name + '" from Homepage')
+    } catch(e) {
+      alert('Error updating live featured: ' + e.message)
+    }
+  }
+
   // (toggleSocialAudit and toggleAllSocialAudit removed — now a single global setting in Global Settings tab)
 
 
@@ -4408,6 +4479,7 @@ export default function AdminPanel() {
                           onClick={() => {
                             setEditingCel({
                               ...cel,
+                              is_featured: !!cel.is_featured,
                               followers_count: cel.followers_count?.toString() || '',
                               posts_count: cel.posts_count?.toString() || '',
                               order_index: cel.order_index?.toString() || '0',
@@ -4430,6 +4502,21 @@ export default function AdminPanel() {
                             setShowCelForm(false);
                           }}>
                           Edit
+                        </button>
+                        <button
+                          onClick={() => toggleFeatured(cel)}
+                          style={{
+                            background: cel.is_featured ? 'rgba(255,171,0,0.15)' : 'rgba(255,255,255,0.05)',
+                            border: cel.is_featured ? '1px solid rgba(255,171,0,0.4)' : '1px solid var(--border)',
+                            color: cel.is_featured ? '#ffab00' : 'var(--text-muted)',
+                            borderRadius: 8,
+                            padding: '6px 12px',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          {cel.is_featured ? '⭐ Featured on Home' : '✰ Feature on Home'}
                         </button>
                         <button
                           onClick={() => toggleHideSearch(cel)}
@@ -5653,8 +5740,13 @@ export default function AdminPanel() {
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 700, fontSize: 15 }}>{profile.name}</span>
+                          {profile.is_featured && (
+                            <span style={{ fontSize: 11, background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.35)', padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>
+                              ⭐ Featured on Home (Purple)
+                            </span>
+                          )}
                           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                             (Followers: <strong style={{ color: 'var(--text)' }}>{profile.followers_text?.trim() ? profile.followers_text : (profile.followers_count >= 1000000 ? `${(Math.floor(profile.followers_count / 100000) / 10).toString().replace(/\.0$/, '')}M` : profile.followers_count?.toLocaleString() || '—')}</strong>)
                           </span>
@@ -5717,9 +5809,24 @@ export default function AdminPanel() {
                           })()}</strong> &nbsp;·&nbsp; Language: <strong style={{ color: 'var(--text)' }}>{profile.language || 'None'}</strong> &nbsp;·&nbsp; Numeric: {profile.followers_count?.toLocaleString() || '0'}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+                        <button
+                          onClick={() => toggleLiveFeatured(profile)}
+                          style={{
+                            background: profile.is_featured ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                            border: profile.is_featured ? '1px solid #a855f7' : '1px solid var(--border)',
+                            color: profile.is_featured ? '#c084fc' : 'var(--text-muted)',
+                            borderRadius: 8,
+                            padding: '6px 10px',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          {profile.is_featured ? '⭐ Featured' : '✰ Feature'}
+                        </button>
                         <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }}
-                          onClick={() => { setEditingMostFollowed({ ...profile, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString(), category: profile.category || '', language: profile.language || '', instagram_handle: profile.instagram_handle || '' }); setShowMostFollowedForm(false) }}>
+                          onClick={() => { setEditingMostFollowed({ ...profile, is_featured: !!profile.is_featured, followers_count: profile.followers_count?.toString(), order_index: profile.order_index?.toString(), category: profile.category || '', language: profile.language || '', instagram_handle: profile.instagram_handle || '' }); setShowMostFollowedForm(false) }}>
                           Edit
                         </button>
                         <button
