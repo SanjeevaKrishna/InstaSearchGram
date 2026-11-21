@@ -363,7 +363,7 @@ export default function ProfilePage({ profile, slug, rank = null }) {
       }
     }
 
-    const interval = setInterval(() => {
+    const doTick = () => {
       // Dynamically check if night status changes during a long session
       const checkNow = new Date()
       const liveHour = checkNow.getHours() + checkNow.getMinutes() / 60
@@ -401,9 +401,19 @@ export default function ProfilePage({ profile, slug, rank = null }) {
         setTimeout(() => setChangeDir(null), 800)
         return nextVal
       })
-    }, intervalMs)
+    }
 
-    return () => clearInterval(interval)
+    // Trigger an immediate subtle live tick shortly after rotation stops so it feels dynamic right away
+    const initialTickTimeout = setTimeout(() => {
+      doTick()
+    }, 900)
+
+    const interval = setInterval(doTick, intervalMs)
+
+    return () => {
+      clearTimeout(initialTickTimeout)
+      clearInterval(interval)
+    }
   }, [isCountingUp, timeAdjustedBase, dailyGain])
 
   // 3. Live follower fetch: polls /api/live-count → laptop fetches Instagram
