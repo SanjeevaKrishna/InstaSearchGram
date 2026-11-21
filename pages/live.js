@@ -3900,32 +3900,39 @@ export async function getServerSideProps(context) {
     const queryTab = context?.query?.tab
     const initialTab = (queryTab === 'voting' || queryTab === 'daily_growth') ? 'daily_growth' : 'most_followed'
 
+    async function fetchAllMostFollowed() {
+      let all = []
+      let page = 0
+      const pageSize = 1000
+      while (true) {
+        const { data, error } = await supabase
+          .from('most_followed')
+          .select('*')
+          .order('followers_count', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+        if (error || !data || data.length === 0) break
+        all = all.concat(data)
+        if (data.length < pageSize) break
+        page++
+      }
+      return all
+    }
+
     const [
       settingsResult, 
-      profilesResult1, 
-      profilesResult2, 
+      allProfilesData,
       reelsResult
     ] = await Promise.all([
       supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
-      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
+      fetchAllMostFollowed(),
       supabase.from('viral_reels').select('*')
     ])
 
     if (settingsResult.error) throw settingsResult.error
-    if (profilesResult1.error) throw profilesResult1.error
-    if (profilesResult2.error) throw profilesResult2.error
     if (reelsResult.error) throw reelsResult.error
 
     const settingsData = settingsResult.data
     const reelsData = reelsResult.data
-
-    // Combine profiles page ranges (fetching further pages dynamically only if database grows past 2000)
-    let allProfilesData = (profilesResult1.data || []).concat(profilesResult2.data || [])
-    if ((profilesResult2.data || []).length === 1000) {
-      const { data: profilesResult3 } = await supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999)
-      if (profilesResult3) allProfilesData = allProfilesData.concat(profilesResult3)
-    }
 
     // Only show accounts with 100k+ followers in the public Live leaderboard,
     // EXCEPT Bigg Boss contestants who are allowed under 100k to appear in the Bigg Boss section.

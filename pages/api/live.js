@@ -49,56 +49,79 @@ export default async function handler(req, res) {
       return res.status(200).json(liveCache.data)
     }
 
+    async function fetchAllMostFollowed() {
+      let all = []
+      let page = 0
+      const pageSize = 1000
+      while (true) {
+        const { data, error } = await supabase
+          .from('most_followed')
+          .select('*')
+          .order('followers_count', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+        if (error || !data || data.length === 0) break
+        all = all.concat(data)
+        if (data.length < pageSize) break
+        page++
+      }
+      return all
+    }
+
+    async function fetchAllCelebrities() {
+      let all = []
+      let page = 0
+      const pageSize = 1000
+      while (true) {
+        const { data, error } = await supabase
+          .from('celebrities')
+          .select('name, slug, photo_url, followers_count')
+          .neq('hide_search', true)
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+        if (error || !data || data.length === 0) break
+        all = all.concat(data)
+        if (data.length < pageSize) break
+        page++
+      }
+      return all
+    }
+
     // Fetch live settings, profiles, viral reels, most viewed reels and celebrities concurrently
     const [
       settingsResult, 
-      profilesResult1, 
-      profilesResult2, 
+      combinedProfiles, 
       reelsResult, 
       mostViewedResult, 
-      celebritiesResult,
+      celebritiesData,
       indiaMostLikedResult,
       mostLikedReelsResult,
       mostLikedCommentsResult
     ] = await Promise.all([
       supabase.from('live_settings').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(0, 999),
-      supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(1000, 1999),
+      fetchAllMostFollowed(),
       supabase.from('viral_reels').select('*'),
       supabase.from('most_viewed_reels').select('*'),
-      supabase.from('celebrities').select('name, slug, photo_url, followers_count').neq('hide_search', true),
+      fetchAllCelebrities(),
       supabase.from('most_liked_posts').select('*'),
       supabase.from('most_liked_reels').select('*'),
       supabase.from('most_liked_comments').select('*')
     ])
 
     if (settingsResult.error) throw settingsResult.error
-    if (profilesResult1.error) throw profilesResult1.error
-    if (profilesResult2.error) throw profilesResult2.error
     if (reelsResult.error) throw reelsResult.error
     if (mostViewedResult.error) throw mostViewedResult.error
-    if (celebritiesResult.error) throw celebritiesResult.error
     if (indiaMostLikedResult.error) throw indiaMostLikedResult.error
     if (mostLikedReelsResult.error) throw mostLikedReelsResult.error
 
     const settingsData = settingsResult.data
     const reelsData = reelsResult.data
     const mostViewedData = mostViewedResult.data
-    const celebritiesData = celebritiesResult.data || []
 
     // Build mapping from trimmed name to slug, photo_url and followers_count
     const celebrityMap = {}
-    for (const c of celebritiesData) {
+    for (const c of (celebritiesData || [])) {
       if (c.name && c.slug) {
         celebrityMap[c.name.toLowerCase().trim()] = { slug: c.slug, photo_url: c.photo_url, followers_count: c.followers_count }
       }
-    }
-
-    // Combine profiles page ranges and fetch further pages dynamically only if database exceeds 2000
-    let combinedProfiles = (profilesResult1.data || []).concat(profilesResult2.data || [])
-    if ((profilesResult2.data || []).length === 1000) {
-      const { data: profilesResult3 } = await supabase.from('most_followed').select('*').order('followers_count', { ascending: false }).range(2000, 2999)
-      if (profilesResult3) combinedProfiles = combinedProfiles.concat(profilesResult3)
     }
 
     const profilesData = combinedProfiles.map(profile => ({

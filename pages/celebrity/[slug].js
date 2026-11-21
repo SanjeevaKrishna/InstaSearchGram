@@ -1791,13 +1791,23 @@ export async function getServerSideProps(context) {
     if (cachedLeaderboard.data && (now - cachedLeaderboard.timestamp < LEADERBOARD_CACHE_TTL)) {
       leaderboardData = cachedLeaderboard.data;
     } else {
-      const { data } = await supabase
-        .from('most_followed')
-        .select('name, followers_count, instagram_handle')
-        .order('followers_count', { ascending: false });
-      if (data) {
-        cachedLeaderboard = { data, timestamp: now };
-        leaderboardData = data;
+      let allLeaderboard = []
+      let page = 0
+      const pageSize = 1000
+      while (true) {
+        const { data, error } = await supabase
+          .from('most_followed')
+          .select('name, followers_count, instagram_handle')
+          .order('followers_count', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        if (error || !data || data.length === 0) break
+        allLeaderboard = allLeaderboard.concat(data)
+        if (data.length < pageSize) break
+        page++
+      }
+      if (allLeaderboard.length > 0) {
+        cachedLeaderboard = { data: allLeaderboard, timestamp: now };
+        leaderboardData = allLeaderboard;
       }
     }
 
