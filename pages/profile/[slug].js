@@ -1809,12 +1809,12 @@ export default function ProfilePage({ profile, slug, rank = null }) {
                         overflowX: 'auto',
                         overflowY: 'auto',
                         maxHeight: 460,
-                        padding: '14px 12px',
+                        padding: '14px 12px 14px 0',
                         WebkitOverflowScrolling: 'touch',
                         scrollbarWidth: 'thin',
                         scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
                       }}>
-                        <div style={{ minWidth: 600, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 6 }}>
+                        <div style={{ minWidth: 620, display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 6 }}>
                           {[...filteredDailyGains].reverse().map((day, idx) => {
                             const isSync = day.isFirst || day.isSynchronized
                             const barPct = isSync || day.increment === 0
@@ -1851,8 +1851,22 @@ export default function ProfilePage({ profile, slug, rank = null }) {
                                 onMouseMove={(e) => setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
                                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; setTooltip(null) }}
                               >
-                                {/* Date — left column */}
-                                <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                                {/* Date — sticky left column so it stays visible during horizontal scroll */}
+                                <div style={{
+                                  width: 90,
+                                  flexShrink: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  position: 'sticky',
+                                  left: 0,
+                                  zIndex: 10,
+                                  background: 'rgba(10, 14, 26, 0.96)',
+                                  backdropFilter: 'blur(8px)',
+                                  paddingLeft: 12,
+                                  paddingRight: 8,
+                                  borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+                                  boxShadow: '4px 0 10px -2px rgba(0, 0, 0, 0.6)'
+                                }}>
                                   <div>
                                     <div style={{ fontSize: 11.5, fontWeight: 800, color: isToday ? '#a78bfa' : '#f1f5f9', lineHeight: 1 }}>{label}</div>
                                     <div style={{ fontSize: 9.5, fontWeight: 600, color: isToday ? '#818cf8' : '#64748b', letterSpacing: '0.04em', marginTop: 2 }}>{weekday}{isToday ? ' · TODAY' : ''}</div>
