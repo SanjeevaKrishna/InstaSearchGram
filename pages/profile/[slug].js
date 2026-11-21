@@ -20,7 +20,14 @@ import {
   HeartCrack,
   CheckCircle2,
   Trophy,
-  X
+  X,
+  ChevronDown,
+  ChevronUp,
+  Target,
+  Clock,
+  ArrowUpRight,
+  HelpCircle,
+  Users
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import CommentSection from '../../components/CommentSection'
@@ -161,10 +168,11 @@ const getFollowerStats = (history = [], currentCount = 0, createdAt = null) => {
   return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed, isSynchronizedOnly }
 }
 
-export default function ProfilePage({ profile, slug, rank = null }) {
+export default function ProfilePage({ profile, slug, rank = null, trendingProfiles = [] }) {
   const router = useRouter()
   const [tooltip, setTooltip] = useState(null)
   const [selectedPeriod, setSelectedPeriod] = useState('last30')
+  const [openFaq, setOpenFaq] = useState(0)
 
   if (router.isFallback) {
     return (
@@ -187,6 +195,112 @@ export default function ProfilePage({ profile, slug, rank = null }) {
   const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false)
   const achievedMilestones = useMemo(() => generateMilestones(currentCount), [currentCount])
   const reversedMilestones = useMemo(() => [...achievedMilestones].reverse(), [achievedMilestones])
+
+  // Velocity and pacing calculations
+  const dailyVelocity = recentVelocity !== 0 ? recentVelocity : dailyGain !== 0 ? dailyGain : Math.round((monthlyGain || 0) / 30)
+  const hourlyVelocity = dailyVelocity / 24
+
+  // Growth Grade
+  const growthGrade = useMemo(() => {
+    if (dailyVelocity >= 15000) return { label: 'Viral Rocket Surge', color: '#ec4899', bg: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.3)', icon: Rocket }
+    if (dailyVelocity >= 3000) return { label: 'High Momentum Expansion', color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', icon: Flame }
+    if (dailyVelocity > 0) return { label: 'Steady Positive Growth', color: '#6366f1', bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)', icon: Zap }
+    if (dailyVelocity === 0) return { label: 'Stable Holding Pattern', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.3)', icon: Activity }
+    return { label: 'Follower Correction', color: '#f43f5e', bg: 'rgba(244,63,94,0.12)', border: 'rgba(244,63,94,0.3)', icon: TrendingDown }
+  }, [dailyVelocity])
+
+  // Future milestone targets & estimated dates
+  const futureMilestones = useMemo(() => {
+    const count = profile.followers_count || 0
+    if (!count || count <= 0) return []
+    const targets = []
+    
+    if (count < 100000) {
+      const next10k = Math.ceil((count + 1) / 10000) * 10000
+      targets.push(next10k)
+      targets.push(Math.ceil((next10k + 1) / 25000) * 25000)
+      targets.push(100000)
+    } else if (count < 1000000) {
+      const next50k = Math.ceil((count + 1) / 50000) * 50000
+      targets.push(next50k)
+      const next100k = Math.ceil((next50k + 1) / 100000) * 100000
+      if (!targets.includes(next100k)) targets.push(next100k)
+      targets.push(1000000)
+    } else if (count < 10000000) {
+      const next500k = Math.ceil((count + 1) / 500000) * 500000
+      targets.push(next500k)
+      const next1m = Math.ceil((next500k + 1) / 1000000) * 1000000
+      if (!targets.includes(next1m)) targets.push(next1m)
+      targets.push(next1m + 1000000)
+    } else if (count < 50000000) {
+      const next1m = Math.ceil((count + 1) / 1000000) * 1000000
+      targets.push(next1m)
+      const next5m = Math.ceil((next1m + 1) / 5000000) * 5000000
+      if (!targets.includes(next5m)) targets.push(next5m)
+      targets.push(next5m + 5000000)
+    } else {
+      const next5m = Math.ceil((count + 1) / 5000000) * 5000000
+      targets.push(next5m)
+      targets.push(next5m + 5000000)
+      targets.push(next5m + 10000000)
+    }
+
+    const uniqueTargets = [...new Set(targets)].filter(t => t > count).slice(0, 3)
+
+    return uniqueTargets.map(target => {
+      const needed = target - count
+      let estimatedDays = null
+      let estimatedDateStr = null
+
+      if (dailyVelocity && dailyVelocity > 0) {
+        estimatedDays = Math.ceil(needed / dailyVelocity)
+        const d = new Date()
+        d.setDate(d.getDate() + estimatedDays)
+        estimatedDateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      }
+
+      const prevBase = target >= 1000000 ? target - 1000000 : target >= 100000 ? target - 100000 : target - 10000
+      const progress = Math.max(5, Math.min(98, Math.round(((count - prevBase) / (target - prevBase)) * 100)))
+
+      return {
+        target,
+        needed,
+        progress,
+        estimatedDays,
+        estimatedDateStr
+      }
+    })
+  }, [profile.followers_count, dailyVelocity])
+
+  // Comprehensive FAQ list
+  const faqs = useMemo(() => [
+    {
+      q: `How many followers does ${profile.name} have on Instagram right now?`,
+      a: `As of right now, ${profile.name} (@${profile.instagram_handle || ''}) has approximately ${formatNumber(profile.followers_count)} (${Number(profile.followers_count || 0).toLocaleString()}) followers on Instagram. Spialr tracks this in real time, reflecting circadian daily active fluctuations.`
+    },
+    {
+      q: `What is ${profile.name}'s official Instagram handle?`,
+      a: `The official Instagram handle for ${profile.name} is @${profile.instagram_handle || 'N/A'}. You can verify their profile directly on Instagram at https://www.instagram.com/${profile.instagram_handle || ''}/.`
+    },
+    {
+      q: `How fast is ${profile.name}'s following growing each day?`,
+      a: `${profile.name} is currently pacing at an estimated ${dailyVelocity >= 0 ? '+' : ''}${formatNumber(dailyVelocity)} followers per day (approx. ~${Math.abs(Math.round(hourlyVelocity))} followers per hour), with an accumulated 30-day movement of ${monthlyGain >= 0 ? '+' : ''}${formatNumber(monthlyGain)} followers.`
+    },
+    {
+      q: `When will ${profile.name} reach their next major follower milestone?`,
+      a: futureMilestones.length > 0 && futureMilestones[0].estimatedDateStr
+        ? `Based on current growth velocity, ${profile.name} is projected to reach ${formatNumber(futureMilestones[0].target)} followers in approximately ${futureMilestones[0].estimatedDays} days (around ${futureMilestones[0].estimatedDateStr}).`
+        : `${profile.name} requires ${futureMilestones[0] ? formatNumber(futureMilestones[0].needed) : 'more'} followers to reach their next milestone. Future projections adjust dynamically with daily viral swings and engagement spikes.`
+    },
+    {
+      q: `Why does the live follower counter move or tick throughout the day?`,
+      a: `Instagram followers change constantly as people worldwide discover, follow, and unfollow accounts. Spialr combines verified periodic baseline scrapes with a diurnal engagement algorithm that simulates daytime peak activity (12 PM - 11:30 PM IST) and nighttime algorithmic resting periods (midnight - 7 AM IST).`
+    },
+    ...(rank ? [{
+      q: `What is ${profile.name}'s ranking among top creators?`,
+      a: `${profile.name} is currently ranked #${rank} among the most-followed accounts tracked on the Spialr live leaderboard.`
+    }] : [])
+  ], [profile.name, profile.instagram_handle, profile.followers_count, dailyVelocity, hourlyVelocity, monthlyGain, futureMilestones, rank])
 
   const [liveFollowers, setLiveFollowers] = useState(0)
   const [changeDir, setChangeDir] = useState(null)
@@ -573,47 +687,21 @@ export default function ProfilePage({ profile, slug, rank = null }) {
           }}
         />
 
-        {/* Structured Data: FAQPage Schema (Targets Google Search Rich Q&A Snippets) */}
+        {/* Structured Data: FAQPage Schema (Targets Google Search Rich Q&A Snippets & AdSense Quality) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "FAQPage",
-              "mainEntity": [
-                {
-                  "@type": "Question",
-                  "name": `How many followers does ${profile.name} have on Instagram?`,
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": `As of today, ${profile.name} (@${profile.instagram_handle || ''}) has approximately ${formatNumber(profile.followers_count)} (${(profile.followers_count || 0).toLocaleString()}) followers on Instagram, tracked with real-time live counter updates on Spialr.`
-                  }
-                },
-                {
-                  "@type": "Question",
-                  "name": `What is ${profile.name}'s official Instagram account?`,
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": `The official Instagram handle for ${profile.name} is @${profile.instagram_handle || 'N/A'}. You can visit https://www.instagram.com/${profile.instagram_handle || ''}/ or track live follower growth velocity and rankings on Spialr.`
-                  }
-                },
-                ...(rank ? [{
-                  "@type": "Question",
-                  "name": `What is ${profile.name}'s rank among top Instagram accounts?`,
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": `${profile.name} is currently ranked #${rank} on the Spialr Live Leaderboard of most followed Instagram accounts.`
-                  }
-                }] : []),
-                {
-                  "@type": "Question",
-                  "name": `How fast is ${profile.name}'s Instagram account growing?`,
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": `${profile.name} is gaining approximately ${dailyGain >= 0 ? '+' + formatNumber(dailyGain) : formatNumber(dailyGain)} followers per day with an estimated 30-day net growth of ${monthlyGain >= 0 ? '+' + formatNumber(monthlyGain) : formatNumber(monthlyGain)} followers.`
-                  }
+              "mainEntity": faqs.map(f => ({
+                "@type": "Question",
+                "name": f.q,
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": f.a
                 }
-              ]
+              }))
             })
           }}
         />
@@ -2095,21 +2183,345 @@ export default function ProfilePage({ profile, slug, rank = null }) {
             )
           })()}
 
-          {/* Crawlable SEO & Creator Overview Section for Google Search */}
-          <section className="card" style={{ padding: '22px 24px', marginTop: 24, marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={16} style={{ color: '#e1306c' }} />
-              About {profile.name}&apos;s Live Instagram Statistics & Growth
-            </h2>
-            <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.65, margin: '0 0 10px' }}>
-              Welcome to the real-time Instagram follower tracker for <strong>{profile.name}</strong> (<a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>@{profile.instagram_handle}</a>). 
-              {rank ? ` Ranked #${rank} among the most followed accounts on Spialr, ` : ' '}
-              <strong>{profile.name}</strong> currently has an audience of <strong>{formatNumber(profile.followers_count)}</strong> ({Number(profile.followers_count || 0).toLocaleString()}) followers on Instagram.
-            </p>
-            <p style={{ fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.65, margin: 0 }}>
-              Our automated intelligence system continuously monitors live follower counters, daily gain velocity, 31-day progressive growth trends, and weekly activity heatmap milestones. Check back daily to inspect real-time shifts in {profile.name}&apos;s Instagram following.
-            </p>
+          {/* ─────────────────────────────────────────────────────────────
+              SECTION 1: Performance & Growth Velocity Scorecard
+              (Scroll Moment 2: High-Value Analytics for Users & AdSense)
+          ───────────────────────────────────────────────────────────── */}
+          <div className="card" style={{ padding: '24px 22px', marginTop: 24, marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2))', border: '1px solid rgba(168,85,247,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <BarChart3 size={19} color="#a855f7" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16.5, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>Growth Velocity & Analytics Scorecard</h3>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>Real-time pace tracking and historical momentum</p>
+                </div>
+              </div>
+              {/* Growth Grade Badge */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: growthGrade.bg, border: `1px solid ${growthGrade.border}`, padding: '6px 14px', borderRadius: 100 }}>
+                <growthGrade.icon size={14} color={growthGrade.color} />
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: growthGrade.color }}>{growthGrade.label}</span>
+              </div>
+            </div>
+
+            {/* 4-Stat Metric Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+              {/* Box 1: 30-Day Growth */}
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>30-Day Net Growth</div>
+                <div style={{ fontSize: 19, fontWeight: 850, fontFamily: 'var(--font-display)', color: monthlyGain > 0 ? '#34d399' : monthlyGain < 0 ? '#fb7185' : 'var(--text)' }}>
+                  {monthlyGain > 0 ? `+${formatNumber(monthlyGain)}` : formatNumber(monthlyGain)}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                  {monthlyGain !== 0 && currentCount > 0 ? `${((monthlyGain / currentCount) * 100).toFixed(2)}% net change` : 'Calculated monthly'}
+                </div>
+              </div>
+
+              {/* Box 2: Daily Velocity */}
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Daily Average</div>
+                <div style={{ fontSize: 19, fontWeight: 850, fontFamily: 'var(--font-display)', color: dailyVelocity > 0 ? '#38bdf8' : dailyVelocity < 0 ? '#fb7185' : 'var(--text)' }}>
+                  {dailyVelocity > 0 ? `+${formatNumber(dailyVelocity)}` : formatNumber(dailyVelocity)}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                  followers / day pace
+                </div>
+              </div>
+
+              {/* Box 3: Hourly Velocity */}
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Hourly Momentum</div>
+                <div style={{ fontSize: 19, fontWeight: 850, fontFamily: 'var(--font-display)', color: hourlyVelocity > 0 ? '#a855f7' : hourlyVelocity < 0 ? '#fb7185' : 'var(--text)' }}>
+                  {hourlyVelocity > 0 ? `~${Math.round(hourlyVelocity)}` : hourlyVelocity < 0 ? `~${Math.round(hourlyVelocity)}` : '0'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                  estimated per hour
+                </div>
+              </div>
+
+              {/* Box 4: Peak Record */}
+              <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>All-Time Peak</div>
+                <div style={{ fontSize: 19, fontWeight: 850, fontFamily: 'var(--font-display)', color: '#fbbf24' }}>
+                  {formatNumber(peakFollowers)}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                  {isLosing ? `-${formatNumber(lostFollowers)} from peak` : 'Current ATH'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+              SECTION 2: Milestone Forecasting & Projections Roadmap
+              (Scroll Moment 3: Forward-Looking Projections)
+          ───────────────────────────────────────────────────────────── */}
+          {futureMilestones.length > 0 && (
+            <div className="card" style={{ padding: '24px 22px', marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2))', border: '1px solid rgba(236,72,153,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Rocket size={19} color="#ec4899" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16.5, fontWeight: 800, color: 'var(--text)', margin: 0 }}>Upcoming Milestone Forecasts</h3>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                    Projected completion dates based on current velocity ({dailyVelocity >= 0 ? '+' : ''}{formatNumber(dailyVelocity)} / day)
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {futureMilestones.map((m, idx) => (
+                  <div key={idx} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 15, fontWeight: 850, color: '#f1f5f9', fontFamily: 'var(--font-display)' }}>
+                          🎯 {formatNumber(m.target)} Milestone
+                        </span>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>
+                          ({m.needed > 0 ? `${formatNumber(m.needed)} to go` : 'Achieved'})
+                        </span>
+                      </div>
+                      <div>
+                        {m.estimatedDateStr ? (
+                          <span style={{ fontSize: 12, fontWeight: 750, color: '#38bdf8', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', padding: '4px 10px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            <Clock size={12} color="#38bdf8" />
+                            {m.estimatedDateStr} (~{m.estimatedDays} days)
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11.5, color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                            {dailyVelocity <= 0 ? 'Pacing requires steady positive daily growth' : 'Calculating...'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Progress Bar */}
+                    <div style={{ width: '100%', height: 7, borderRadius: 100, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', position: 'relative' }}>
+                      <div style={{ width: `${m.progress}%`, height: '100%', borderRadius: 100, background: 'linear-gradient(90deg, #a855f7, #ec4899)', transition: 'width 0.8s ease' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              SECTION 3: In-Depth Editorial & Trajectory Report
+              (Scroll Moment 4: Deep Crawlable Content for Google & AdSense)
+          ───────────────────────────────────────────────────────────── */}
+          <section className="card" style={{ padding: '24px 22px', marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(6,182,212,0.2))', border: '1px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Sparkles size={19} color="#34d399" />
+              </div>
+              <div>
+                <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                  {profile.name}&apos;s Audience Trajectory & Growth Report
+                </h2>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>Comprehensive audience intelligence analysis</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.7 }}>
+              <p style={{ margin: 0 }}>
+                Welcome to the official real-time Instagram follower tracking hub for <strong>{profile.name}</strong> (<a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>@{profile.instagram_handle}</a>).
+                {rank ? ` Ranked #${rank} among the most followed profiles monitored on Spialr, ` : ' '}
+                <strong>{profile.name}</strong> currently commands an active audience of <strong>{formatNumber(profile.followers_count)}</strong> ({Number(profile.followers_count || 0).toLocaleString()}) followers on Instagram.
+                {profile.category ? ` Renowned within the ${profile.category} vertical, ` : ' '}
+                the account exhibits recurring engagement cycles influenced by new post publications, viral media trends, and audience retention.
+              </p>
+
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontWeight: 750, color: 'var(--text)', fontSize: 13.5, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <Activity size={15} color="#818cf8" />
+                  Velocity & Trajectory Evaluation
+                </div>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.65 }}>
+                  Over the monitored 30-day tracking window, {profile.name}&apos;s account recorded a net follower shift of <strong>{monthlyGain >= 0 ? `+${monthlyGain.toLocaleString()}` : monthlyGain.toLocaleString()} followers</strong>. 
+                  With a weighted daily momentum of <strong>{dailyVelocity >= 0 ? `+${dailyVelocity.toLocaleString()}` : dailyVelocity.toLocaleString()} followers per day</strong> (translating to roughly ~{Math.abs(Math.round(hourlyVelocity))} net additions per hour during prime daytime traffic), the account displays {dailyVelocity > 1000 ? 'strong viral upward velocity' : dailyVelocity > 0 ? 'consistent organic audience expansion' : 'stable audience holding'}.
+                </p>
+              </div>
+
+              <p style={{ margin: 0 }}>
+                Spialr&apos;s real-time telemetry integrates high-precision periodic Instagram data scrapes with circadian daytime progression modeling. As millions of fans discover and interact with reels, stories, and photos between peak daytime hours (12:00 PM to 11:30 PM IST), follower additions naturally accelerate. During resting nocturnal windows (midnight to 7:00 AM IST), growth smoothly tapers to emulate authentic human social media behavior.
+              </p>
+            </div>
           </section>
+
+          {/* ─────────────────────────────────────────────────────────────
+              SECTION 4: Interactive Frequently Asked Questions (FAQ) Accordion
+              (Scroll Moment 5: Accordion Q&A with Matching Schema.org)
+          ───────────────────────────────────────────────────────────── */}
+          <div className="card" style={{ padding: '24px 22px', marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, rgba(56,189,248,0.2), rgba(99,102,241,0.2))', border: '1px solid rgba(56,189,248,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <HelpCircle size={19} color="#38bdf8" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 16.5, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                  Frequently Asked Questions About {profile.name}
+                </h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                  Key answers regarding live stats, update frequencies, and milestone pacing
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {faqs.map((faq, idx) => {
+                const isOpen = openFaq === idx
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      background: isOpen ? 'rgba(255, 255, 255, 0.04)' : 'var(--surface2)',
+                      border: `1px solid ${isOpen ? 'rgba(168, 85, 247, 0.35)' : 'var(--border)'}`,
+                      borderRadius: 14,
+                      overflow: 'hidden',
+                      transition: 'all 0.25s ease'
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? -1 : idx)}
+                      style={{
+                        width: '100%',
+                        padding: '16px 18px',
+                        background: 'none',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        gap: 12
+                      }}
+                    >
+                      <span style={{ fontSize: 14, fontWeight: 750, color: isOpen ? '#e2e8f0' : 'var(--text)', lineHeight: 1.4 }}>
+                        {faq.q}
+                      </span>
+                      <span style={{ color: isOpen ? '#a855f7' : 'var(--text-muted)', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                        {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div style={{ padding: '0 18px 16px', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65, borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: 12 }}>
+                        {faq.a}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+              SECTION 5: Explore Other Popular Real-Time Trackers
+              (Scroll Moment 6: Internal Discovery & Increased Dwell Time)
+          ───────────────────────────────────────────────────────────── */}
+          {trendingProfiles && trendingProfiles.length > 0 && (
+            <div className="card" style={{ padding: '24px 22px', marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.2))', border: '1px solid rgba(168,85,247,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={19} color="#c084fc" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 16.5, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                      Trending Live Trackers on Spialr
+                    </h3>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                      Explore real-time live counters for other verified creators
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/live"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: '#a855f7',
+                    textDecoration: 'none',
+                    background: 'rgba(168, 85, 247, 0.1)',
+                    border: '1px solid rgba(168, 85, 247, 0.25)',
+                    padding: '6px 14px',
+                    borderRadius: 100,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  View All Live Standings
+                  <ArrowUpRight size={13} />
+                </Link>
+              </div>
+
+              {/* Grid of Trending Profiles */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+                {trendingProfiles.map((tp) => {
+                  const profileSlug = tp.instagram_handle
+                    ? tp.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
+                    : tp.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
+
+                  return (
+                    <Link
+                      key={tp.id}
+                      href={`/profile/${profileSlug}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '12px 14px',
+                        background: 'var(--surface2)',
+                        border: '1px solid rgba(168, 85, 247, 0.2)',
+                        borderRadius: 14,
+                        textDecoration: 'none',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
+                        <img
+                          src={tp.photo_url || '/placeholder-avatar.png'}
+                          alt={tp.name}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '2px solid rgba(168, 85, 247, 0.5)'
+                          }}
+                        />
+                        <span
+                          style={{
+                            position: 'absolute',
+                            bottom: -1,
+                            right: -1,
+                            width: 10,
+                            height: 10,
+                            borderRadius: '50%',
+                            background: '#10b981',
+                            border: '2px solid #0f172a'
+                          }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 750, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {tp.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span>⚡ {formatNumber(tp.followers_count)}</span>
+                        </div>
+                      </div>
+                      <ArrowUpRight size={14} color="#64748b" style={{ flexShrink: 0 }} />
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Community Comments Section */}
           <CommentSection
@@ -2203,7 +2615,24 @@ export async function getServerSideProps(context) {
       console.warn('Rank calculation error in getServerSideProps:', rankErr)
     }
 
-    return { props: { profile: finalProfile, slug: decodedSlug, rank } }
+    // Fetch top 6 popular live profiles for internal links, discovery & AdSense quality score
+    let trendingProfiles = []
+    try {
+      const { data: trendData } = await supabase
+        .from('most_followed')
+        .select('id, name, instagram_handle, photo_url, followers_count, category')
+        .neq('id', finalProfile.id)
+        .gte('followers_count', 100000)
+        .order('followers_count', { ascending: false })
+        .limit(6)
+      if (trendData) {
+        trendingProfiles = trendData
+      }
+    } catch (trendErr) {
+      console.warn('Error fetching trending profiles:', trendErr)
+    }
+
+    return { props: { profile: finalProfile, slug: decodedSlug, rank, trendingProfiles } }
   } catch (err) {
     console.error('getServerSideProps error in profile page:', err)
     return { notFound: true }
