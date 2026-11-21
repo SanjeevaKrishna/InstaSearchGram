@@ -594,12 +594,8 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
     }
   }, [loading, growthMode, activeTab])
 
-  // Real-time live clock for Daily Growth tab
+  // Real-time live clock for Daily Growth and dropdown live timer
   useEffect(() => {
-    if (activeTab !== 'daily_growth') {
-      setGrowthLiveTime('')
-      return
-    }
     const tick = () => {
       const now = new Date()
       const hh = String(now.getHours()).padStart(2, '0')
@@ -610,7 +606,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  }, [activeTab])
+  }, [])
 
   // Reset display limit when filter state changes to optimize initial load & render speed
   useEffect(() => {
@@ -1190,7 +1186,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               setIsLangDropdownOpen(false);
                             }}
                             style={{
-                              padding: '8px 8px',
+                              padding: '8px 6px',
                               borderRadius: 10,
                               border: '1px solid',
                               borderColor: sectionSortMode === 'most_followed' ? 'rgba(168, 85, 247, 0.4)' : 'transparent',
@@ -1203,12 +1199,22 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 4,
+                              gap: 3,
+                              minHeight: 66,
                               transition: 'all 0.15s ease',
                             }}
                           >
                             <BarChart3 size={15} strokeWidth={2.5} />
                             <span>Most Followed</span>
+                            <span style={{
+                              fontSize: 9.5,
+                              fontWeight: 600,
+                              color: sectionSortMode === 'most_followed' ? '#a855f7' : 'var(--text-muted)',
+                              opacity: 0.75,
+                              lineHeight: 1
+                            }}>
+                              All-Time Rank
+                            </span>
                           </button>
 
                           <button
@@ -1218,7 +1224,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               setIsLangDropdownOpen(false);
                             }}
                             style={{
-                              padding: '8px 8px',
+                              padding: '8px 6px',
                               borderRadius: 10,
                               border: '1px solid',
                               borderColor: sectionSortMode === 'daily_growth' ? 'rgba(16, 185, 129, 0.4)' : 'transparent',
@@ -1231,12 +1237,41 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                               flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 4,
+                              gap: 3,
+                              minHeight: 66,
                               transition: 'all 0.15s ease',
                             }}
                           >
                             <TrendingUp size={15} strokeWidth={2.5} />
                             <span>Daily Growth</span>
+                            <div suppressHydrationWarning style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              background: 'rgba(16, 185, 129, 0.14)',
+                              border: '1px solid rgba(16, 185, 129, 0.28)',
+                              padding: '1.5px 6px',
+                              borderRadius: 10,
+                              lineHeight: 1
+                            }}>
+                              <span style={{
+                                width: 5,
+                                height: 5,
+                                borderRadius: '50%',
+                                background: '#10b981',
+                                boxShadow: '0 0 6px #10b981',
+                                flexShrink: 0
+                              }} />
+                              <span style={{
+                                fontFamily: 'monospace',
+                                fontSize: 9.5,
+                                fontWeight: 800,
+                                color: '#10b981',
+                                letterSpacing: '0.04em'
+                              }}>
+                                {growthLiveTime || 'LIVE'}
+                              </span>
+                            </div>
                           </button>
                         </div>
                       </div>
@@ -2827,7 +2862,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
             </div>
 
             {/* ── Left-aligned Live Timer ── */}
-            {growthLiveTime && (
+            {growthLiveTime && activeTab === 'daily_growth' && (
               <div suppressHydrationWarning style={{
                 display: 'inline-flex',
                 alignItems: 'center',
