@@ -31,6 +31,8 @@ export default function CommentDetailPage({ initialComment }) {
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href={`https://spialr.com/comment/${router.query.id || ''}`} key="canonical" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         {comment?.photo_url && <meta property="og:image" content={comment.photo_url} />}
@@ -70,11 +72,13 @@ export default function CommentDetailPage({ initialComment }) {
         </div>
 
         {/* 1. Ranking Number Badge */}
-        <div style={{
+        <h1 style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: 18
+          marginBottom: 18,
+          fontSize: 14,
+          margin: '0 0 18px 0'
         }}>
           <div style={{
             display: 'inline-flex',
@@ -93,7 +97,7 @@ export default function CommentDetailPage({ initialComment }) {
             <Award size={16} />
             <span>Rank #{rank} on Trending Comments</span>
           </div>
-        </div>
+        </h1>
 
         {/* 2. Comment Image (Above) */}
         {comment?.photo_url && (

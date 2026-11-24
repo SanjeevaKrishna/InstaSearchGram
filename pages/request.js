@@ -26,6 +26,7 @@ export default function RequestCreator() {
       <Head>
         <title>Request Creator / Suggest Profile — Spialr</title>
         <meta name="description" content="Suggest new creators, actors, singers, and meme pages to be tracked on Spialr's live rankings database." />
+        <link rel="canonical" href="https://spialr.com/request" key="canonical" />
       </Head>
             <main style={{ maxWidth: 600, margin: '0 auto', padding: '60px 20px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 800, marginBottom: 12, letterSpacing: '-0.02em', textAlign: 'center' }}>

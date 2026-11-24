@@ -54,7 +54,8 @@ export default function PostCard({ post }) {
         <div 
           onClick={(e) => {
             e.stopPropagation();
-            window.location.href = `/celebrity/${post.celebrity.slug}`;
+            const celSlug = (post.celebrity.instagram_handle || post.celebrity.slug || '').toLowerCase().trim().replace(/\./g, '-')
+            window.location.href = `/profile/${celSlug}`;
           }}
           style={{
             display: 'flex',
@@ -67,7 +68,7 @@ export default function PostCard({ post }) {
           }}
         >
           {post.celebrity.photo_url ? (
-            <img src={post.celebrity.photo_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+            <img src={post.celebrity.photo_url} alt={`${post.celebrity.name} avatar`} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
           ) : (
             <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>
               {post.celebrity.name?.charAt(0)}

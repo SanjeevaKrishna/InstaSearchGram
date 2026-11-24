@@ -832,10 +832,6 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
           name="description"
           content={`Track real-time Instagram followers count, live 31-day progressive growth timeline, and daily follower gains for top ${profileCount}+ creators, actors, gamers, and influencers on Spialr.`}
         />
-        <meta
-          name="keywords"
-          content="instagram followers, instagram followers count, live instagram follower count, instagram follower tracker, top 100 instagram accounts, most followed instagram accounts, creator growth timeline, instagram stats live, spialr"
-        />
         <link rel="canonical" href="https://spialr.com/live" key="canonical" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         
@@ -956,6 +952,22 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                <>Daily Follower <span className="gradient-text">Gainers & Losers</span></>
              )}
            </h1>
+           {activeTab === 'most_followed' && (
+             <p style={{
+               fontSize: 'clamp(12px, 3.2vw, 13.5px)',
+               color: 'var(--text-dim)',
+               marginTop: 10,
+               marginBottom: 0,
+               fontWeight: 450,
+               lineHeight: 1.6,
+               textAlign: 'center',
+               maxWidth: 680,
+               marginLeft: 'auto',
+               marginRight: 'auto'
+             }}>
+               Welcome to Spialr&apos;s verified creator leaderboard. This directory indexes top public Instagram profiles ranked strictly by total verified follower count. Standings are maintained through periodic snapshot recording from public accounts, updated on a rolling daily schedule. Discover account milestones, 30-day velocity, and historical growth timelines across popular creators, actors, singers, and digital personalities. To learn more about our data sources and calculation guidelines, review our transparent <Link href="/methodology" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Methodology</Link>.
+             </p>
+           )}
            {activeTab === 'daily_growth' && (
              <p style={{
                fontSize: 'clamp(11px, 3.2vw, 13px)',

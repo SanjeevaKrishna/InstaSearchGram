@@ -6,8 +6,9 @@ export default function Methodology() {
   return (
     <>
       <Head>
-        <title>How Spialr Data & Rankings Work — Methodology</title>
+        <title>How Spialr Data &amp; Rankings Work — Methodology</title>
         <meta name="description" content="Learn how Spialr collects public social metrics, builds creator directory leaderboards, and compiles ranking indexes transparently." />
+        <link rel="canonical" href="https://spialr.com/methodology" key="canonical" />
       </Head>
 
       

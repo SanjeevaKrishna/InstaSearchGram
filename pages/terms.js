@@ -6,6 +6,7 @@ export default function Terms() {
       <Head>
         <title>Terms of Service — Spialr</title>
         <meta name="description" content="Review the official Terms of Service of Spialr, detailing website guidelines, disclaimer of warranties, and legal limitations." />
+        <link rel="canonical" href="https://spialr.com/terms" key="canonical" />
       </Head>
             <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, marginBottom: 32, letterSpacing: '-0.02em' }}>

@@ -203,6 +203,8 @@ export default function MilestoneCelebrationPage({ profile, milestoneValue, achi
       <Head>
         <title>{profile?.name} - {formatMilestoneLabel(milestoneValue)} Milestone Celebration | Spialr</title>
         <meta name="description" content={`Official celebration video for ${profile?.name} reaching ${formatMilestoneLabel(milestoneValue)} Instagram followers on Spialr.`} />
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href={`https://spialr.com/milestone/${slug}/${formatMilestoneLabel(milestoneValue).toLowerCase()}`} key="canonical" />
       </Head>
 
       {/* Confetti Canvas Overlay */}

@@ -34,6 +34,10 @@ export default function Footer() {
           }}>
             <Link href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Home</Link>
             <Link href="/all" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>All Profiles</Link>
+            <Link href="/category/actors" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Actors</Link>
+            <Link href="/category/singers" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Singers</Link>
+            <Link href="/category/creators" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Creators</Link>
+            <Link href="/category/sports" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Sports</Link>
             <Link href="/trending" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Trending Reels</Link>
             <Link href="/live" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Live Standings</Link>
             <Link href="/converter" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.target.style.color = 'var(--text)'} onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}>Converter</Link>
@@ -126,7 +130,20 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Section 3: Legal & Safety */}
+          {/* Section 3: Categories */}
+          <div>
+            <h4 style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 16, fontSize: 14 }}>Categories</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link href="/category/actors" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Actors</Link>
+              <Link href="/category/singers" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Singers</Link>
+              <Link href="/category/creators" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Creators</Link>
+              <Link href="/category/influencers" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Influencers</Link>
+              <Link href="/category/sports" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Sports</Link>
+              <Link href="/category/meme-pages" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Meme Pages</Link>
+            </div>
+          </div>
+
+          {/* Section 4: Legal & Safety */}
           <div>
             <h4 style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 16, fontSize: 14 }}>Policies & Legal</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -137,7 +154,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Section 4: Contact & Feedback */}
+          {/* Section 5: Contact & Feedback */}
           <div>
             <h4 style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 16, fontSize: 14 }}>Support</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -156,7 +173,7 @@ export default function Footer() {
         {/* Disclaimer & Copyright */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <p style={{ lineHeight: 1.6, fontSize: 11.5, color: 'var(--text-muted)', margin: 0 }}>
-            <strong>Disclaimer:</strong> Spialr is an independent analytics directory and search resource for Instagram. We are not officially affiliated, associated, authorized, endorsed by, or connected with Meta Platforms, Inc., Instagram, or any of their subsidiaries. All creator names, profile photos, images, and content are the sole property of their respective copyright owners and are utilized under fair-use guidelines for analytics and information curation.
+            <strong>Disclaimer:</strong> Spialr is an independent analytics directory and search resource for Instagram. We are not affiliated, associated, authorized, endorsed by, or connected with Meta Platforms, Inc. or Instagram. All creator names, profile photos, and media are the property of their respective copyright owners and are shown strictly for identification and comparative analytical reference. For content removal or takedown inquiries, please review our <a href="/dmca" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>DMCA Policy</a>.
           </p>
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, fontSize: 12 }}>
             <span>© {new Date().getFullYear()} Spialr. All rights reserved.</span>

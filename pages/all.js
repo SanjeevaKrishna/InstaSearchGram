@@ -52,7 +52,8 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (compare && selectedCel && e.key === 'Enter') {
-        router.push(`/celebrity/${compare}?compare=${selectedCel.slug}`)
+        const celSlug = (selectedCel.instagram_handle || selectedCel.slug || '').toLowerCase().trim().replace(/\./g, '-')
+        router.push(`/profile/${compare}?compare=${celSlug}`)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -106,7 +107,8 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
         onDoubleClick={(e) => {
           if (compare) {
             e.preventDefault()
-            router.push(`/celebrity/${compare}?compare=${cel.slug}`)
+            const celSlug = (cel.instagram_handle || cel.slug || '').toLowerCase().trim().replace(/\./g, '-')
+            router.push(`/profile/${compare}?compare=${celSlug}`)
           }
         }}
         style={{
@@ -219,8 +221,9 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
     if (compare) {
       return <div key={cel.id}>{content}</div>
     } else {
+      const celSlug = (cel.instagram_handle || cel.slug || '').toLowerCase().trim().replace(/\./g, '-')
       return (
-        <Link key={cel.id} href={`/celebrity/${cel.slug}`} style={{ textDecoration: 'none' }}>
+        <Link key={cel.id} href={`/profile/${celSlug}`} style={{ textDecoration: 'none' }}>
           {content}
         </Link>
       )
@@ -230,9 +233,8 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
   return (
     <>
       <Head>
-        <title>All Instagram Profiles & Celebrities Directory | Spialr</title>
+        <title>All Instagram Profiles &amp; Celebrities Directory | Spialr</title>
         <meta name="description" content="Explore the complete directory of popular Instagram creators, celebrities, actors, and influencers. Benchmark stats, view followers, and compare profiles on Spialr." />
-        <meta name="keywords" content="all instagram profiles, celebrity directory, compare instagram accounts, instagram creator list, spialr" />
         <link rel="canonical" href="https://spialr.com/all" key="canonical" />
       </Head>
 
@@ -448,7 +450,10 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
               animation: 'fadeIn 0.2s var(--spring) forwards',
               cursor: 'pointer'
             }}
-            onClick={() => router.push(`/celebrity/${compare}?compare=${selectedCel.slug}`)}
+            onClick={() => {
+              const celSlug = (selectedCel.instagram_handle || selectedCel.slug || '').toLowerCase().trim().replace(/\./g, '-')
+              router.push(`/profile/${compare}?compare=${celSlug}`)
+            }}
           >
             Compare
           </button>

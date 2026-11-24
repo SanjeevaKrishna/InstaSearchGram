@@ -13,7 +13,7 @@ export const postsBatch2 = [
     },
     excerpt: 'Inflated numbers undermine brand trust. Learn how to spot fake accounts, engagement pods, unnatural geographic distributions, and sudden overnight growth anomalies.',
     content: `
-      <p>As marketing budgets allocate billions of dollars annually to social creator partnerships, the incentive to artificially inflate follower counts and engagement metrics has never been higher. For talent agencies, brands, and genuine creators, understanding how to perform an empirical account authenticity audit is essential.</p>
+      <p>As marketing budgets allocate billions of dollars annually to social creator partnerships, the incentive to artificially inflate follower counts and engagement metrics has never been higher. For talent agencies, brands, and genuine creators, understanding how to perform a thorough account authenticity audit is essential.</p>
 
       <h2>1. The Follower-to-Engagement Discrepancy</h2>
       <p>The most immediate red flag is a gross mathematical mismatch between audience size and actual engagement. An account boasting 600,000 followers that routinely garners only 150 to 300 likes and 4 comments on high-effort video posts demonstrates an engagement rate of less than 0.05%.</p>
@@ -100,7 +100,7 @@ export const postsBatch2 = [
   {
     slug: 'best-times-to-post-on-instagram-data-study',
     title: 'The Optimal Times to Post on Instagram: Insights from Cross-Category Engagement Data',
-    description: 'Discover the best times and days to publish on Instagram based on data aggregated across thousands of creator accounts. Learn how audience habits dictate optimal engagement windows.',
+    description: 'Discover the best times and days to publish on Instagram based on creator activity patterns and audience active windows. Learn how audience habits dictate optimal engagement.',
     publishedAt: '2026-10-07',
     readTime: '7 min read',
     category: 'Instagram Growth',

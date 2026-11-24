@@ -433,6 +433,7 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
         <title>{celebrity ? `${celebrity.name} Search Results & Posts — Spialr` : 'Search Results — Spialr'}</title>
         <meta name="description" content={celebrity ? `Search results and filtered post archive for ${celebrity.name} on Spialr.` : 'Search results for Instagram creators and posts on Spialr.'} />
         <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href="https://spialr.com/results" key="canonical" />
       </Head>
 
       
@@ -442,7 +443,7 @@ export default function ResultsPage({ initialCelebrity = null, initialPosts = []
             if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
               router.back()
             } else if (slug) {
-              router.push(`/celebrity/${slug}`)
+              router.push(`/profile/${slug}`)
             } else {
               router.push('/')
             }

@@ -23,7 +23,8 @@ export default function CelebrityCard({ celebrity }) {
   }
 
   const isLive = !!celebrity.isLive
-  const targetHref = isLive ? `/profile/${celebrity.slug}` : `/celebrity/${celebrity.slug}`
+  const profileSlug = (celebrity.instagram_handle || celebrity.slug || '').toLowerCase().trim().replace(/\./g, '-')
+  const targetHref = `/profile/${profileSlug}`
 
   return (
     <Link href={targetHref}>

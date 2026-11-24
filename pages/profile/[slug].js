@@ -30,7 +30,6 @@ import {
   Users
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import CommentSection from '../../components/CommentSection'
 import { generateMilestones, formatMilestoneLabel, findMilestoneAchievedDate } from '../../lib/milestones'
 
 const InstagramIcon = ({ size = 24, style = {} }) => (
@@ -84,6 +83,17 @@ const getSquareColor = (increment, hasData) => {
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+const formatDateLabel = (dateStr) => {
+  if (!dateStr) return 'Recent'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    return `${d.getUTCDate()} ${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+  } catch {
+    return 'Recent'
+  }
+}
 
 const getFollowerStats = (history = [], currentCount = 0, createdAt = null) => {
   // Systematic tracking begins from Aug 28 or 29 (2026-08-28). Remove old pre-Aug 28 test dates.
@@ -168,7 +178,7 @@ const getFollowerStats = (history = [], currentCount = 0, createdAt = null) => {
   return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed, isSynchronizedOnly }
 }
 
-export default function ProfilePage({ profile, slug, rank = null, trendingProfiles = [] }) {
+export default function ProfilePage({ profile, slug, rank = null, trendingProfiles = [], celebrityData = null, isEnriched = true }) {
   const router = useRouter()
   const [tooltip, setTooltip] = useState(null)
   const [selectedPeriod, setSelectedPeriod] = useState('last30')
@@ -200,6 +210,27 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
   // Velocity and pacing calculations
   const dailyVelocity = recentVelocity !== 0 ? recentVelocity : dailyGain !== 0 ? dailyGain : Math.round((monthlyGain || 0) / 30)
   const hourlyVelocity = dailyVelocity / 24
+
+  // Calculate daily deltas for unique data-driven narrative
+  const dailyDeltas = useMemo(() => {
+    const deltas = []
+    for (let i = 1; i < valid.length; i++) {
+      if (valid[i].count && valid[i - 1].count) {
+        deltas.push({ date: valid[i].date, delta: valid[i].count - valid[i - 1].count })
+      }
+    }
+    return deltas
+  }, [valid])
+
+  const bestDay = useMemo(() => {
+    if (dailyDeltas.length === 0) return null
+    return dailyDeltas.reduce((max, cur) => cur.delta > max.delta ? cur : max, dailyDeltas[0])
+  }, [dailyDeltas])
+
+  const worstDay = useMemo(() => {
+    if (dailyDeltas.length === 0) return null
+    return dailyDeltas.reduce((min, cur) => cur.delta < min.delta ? cur : min, dailyDeltas[0])
+  }, [dailyDeltas])
 
   // Growth Grade
   const growthGrade = useMemo(() => {
@@ -276,8 +307,8 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
   // Comprehensive FAQ list
   const faqs = useMemo(() => [
     {
-      q: `How many followers does ${profile.name} have on Instagram right now?`,
-      a: `As of right now, ${profile.name} (@${profile.instagram_handle || ''}) has approximately ${formatNumber(profile.followers_count)} (${Number(profile.followers_count || 0).toLocaleString()}) followers on Instagram. Spialr tracks this in real time, reflecting circadian daily active fluctuations.`
+      q: `How many followers does ${profile.name} have on Instagram?`,
+      a: `As of the latest verified record, ${profile.name} (@${profile.instagram_handle || ''}) has approximately ${formatNumber(profile.followers_count)} (${Number(profile.followers_count || 0).toLocaleString()}) followers on Instagram. Spialr benchmarks profile standings using publicly available records updated on a rolling cycle.`
     },
     {
       q: `What is ${profile.name}'s official Instagram handle?`,
@@ -285,23 +316,23 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
     },
     {
       q: `How fast is ${profile.name}'s following growing each day?`,
-      a: `${profile.name} is currently pacing at an estimated ${dailyVelocity >= 0 ? '+' : ''}${formatNumber(dailyVelocity)} followers per day (approx. ~${Math.abs(Math.round(hourlyVelocity))} followers per hour), with an accumulated 30-day movement of ${monthlyGain >= 0 ? '+' : ''}${formatNumber(monthlyGain)} followers.`
+      a: `${profile.name} is pacing at an estimated ${dailyVelocity >= 0 ? '+' : ''}${formatNumber(dailyVelocity)} followers per day based on recent historical tracking, with a net 30-day movement of ${monthlyGain >= 0 ? '+' : ''}${formatNumber(monthlyGain)} followers.`
     },
     {
       q: `When will ${profile.name} reach their next major follower milestone?`,
       a: futureMilestones.length > 0 && futureMilestones[0].estimatedDateStr
-        ? `Based on current growth velocity, ${profile.name} is projected to reach ${formatNumber(futureMilestones[0].target)} followers in approximately ${futureMilestones[0].estimatedDays} days (around ${futureMilestones[0].estimatedDateStr}).`
-        : `${profile.name} requires ${futureMilestones[0] ? formatNumber(futureMilestones[0].needed) : 'more'} followers to reach their next milestone. Future projections adjust dynamically with daily viral swings and engagement spikes.`
+        ? `Estimate based on the last 30 days' average: ${profile.name} is projected to reach ${formatNumber(futureMilestones[0].target)} followers in approximately ${futureMilestones[0].estimatedDays} days (around ${futureMilestones[0].estimatedDateStr}).`
+        : `${profile.name} requires ${futureMilestones[0] ? formatNumber(futureMilestones[0].needed) : 'more'} followers to reach their next milestone. Projections update with trailing performance averages.`
     },
     {
-      q: `Why does the live follower counter move or tick throughout the day?`,
-      a: `Instagram followers change constantly as people worldwide discover, follow, and unfollow accounts. Spialr combines verified periodic baseline scrapes with a diurnal engagement algorithm that simulates daytime peak activity (12 PM - 11:30 PM IST) and nighttime algorithmic resting periods (midnight - 7 AM IST).`
+      q: `How often is this follower count updated on Spialr?`,
+      a: `Spialr records follower standings on a rolling schedule from publicly accessible profile data. Live increments between snapshots reflect estimated pacing based on 30-day trailing averages.`
     },
     ...(rank ? [{
       q: `What is ${profile.name}'s ranking among top creators?`,
-      a: `${profile.name} is currently ranked #${rank} among the most-followed accounts tracked on the Spialr live leaderboard.`
+      a: `${profile.name} is currently ranked #${rank} among the accounts indexed on the Spialr live leaderboard.`
     }] : [])
-  ], [profile.name, profile.instagram_handle, profile.followers_count, dailyVelocity, hourlyVelocity, monthlyGain, futureMilestones, rank])
+  ], [profile.name, profile.instagram_handle, profile.followers_count, dailyVelocity, monthlyGain, futureMilestones, rank])
 
   // Generate SVG Points for Cumulative Follower Growth Curve & Forecast
   const chartData = useMemo(() => {
@@ -428,7 +459,7 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
     })
   }, [profile.followers_count])
 
-  const [liveFollowers, setLiveFollowers] = useState(0)
+  const [liveFollowers, setLiveFollowers] = useState(profile?.followers_count || 0)
   const [changeDir, setChangeDir] = useState(null)
   const [isCountingUp, setIsCountingUp] = useState(true)
 
@@ -737,31 +768,12 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
           name="description"
           content={`Check ${profile.name}'s Instagram account (@${profile.instagram_handle || ''}): real-time follower count (${formatNumber(profile.followers_count)})${rank ? ` - Ranked #${rank} Most Followed` : ''}, daily follower gains, and 31-day progressive growth on Spialr.`}
         />
-        <meta
-          name="keywords"
-          content={[
-            profile.name,
-            `${profile.name} instagram`,
-            `${profile.name} insta`,
-            `${profile.name} instagram account`,
-            `${profile.name} instagram id`,
-            `${profile.name} instagram followers`,
-            `${profile.name} followers on instagram`,
-            `${profile.name} insta account`,
-            `${profile.name} follower counter`,
-            profile.instagram_handle ? `@${profile.instagram_handle}` : null,
-            profile.instagram_handle ? `@${profile.instagram_handle} instagram` : null,
-            profile.instagram_handle ? `${profile.instagram_handle} followers` : null,
-            `how many followers does ${profile.name} have`,
-            `${profile.name} live follower count`,
-            rank ? `${profile.name} instagram rank` : null,
-            rank ? `rank #${rank} instagram` : null,
-            profile.category ? `${profile.category} instagram creators` : null,
-            profile.language ? `${profile.language} instagram creators` : null,
-            'spialr'
-          ].filter(Boolean).join(', ')}
-        />
         <link rel="canonical" href={`https://spialr.com/profile/${slug || profile.instagram_handle || ''}`} key="canonical" />
+        {isEnriched ? (
+          <meta name="robots" content="index, follow, max-image-preview:large" />
+        ) : (
+          <meta name="robots" content="noindex, follow" />
+        )}
         <meta property="og:type" content="profile" />
         <meta property="og:title" content={`${profile.name} (@${profile.instagram_handle || ''}) Instagram Followers Live & Stats | Spialr`} />
         <meta property="og:description" content={`Real-time Instagram follower count (${formatNumber(profile.followers_count)})${rank ? ` - Ranked #${rank}` : ''}, live daily gains, and 31-day growth history for ${profile.name} on Spialr.`} />
@@ -1267,7 +1279,7 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                     justifyContent: 'center',
                     gap: 5
                   }}>
-                    <span>{liveFollowers ? liveFollowers.toLocaleString() : '—'}</span>
+                    <span>{(liveFollowers || profile.followers_count || 0).toLocaleString()}</span>
                     {changeDir && !isLiveFetched && (
                       <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.9 }}>
                         {changeDir === 'up' ? '▲' : '▼'}
@@ -1281,7 +1293,7 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                         <span style={{ fontSize: 9.5, color: '#6ee7b7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Live Followers</span>
                       </>
                     ) : (
-                      <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Real Time Followers</span>
+                      <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estimated Followers</span>
                     )}
                   </div>
                 </div>
@@ -1349,6 +1361,52 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                   <div style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Votes</div>
                 </div>
               </div>
+
+              {/* Verified Last Updated Notice */}
+              <div style={{
+                marginTop: 10,
+                textAlign: 'center',
+                fontSize: 11,
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}>
+                <Clock size={12} style={{ color: 'var(--accent)' }} />
+                <span>
+                  Last verified: <strong>{formatDateLabel(profile.last_scraped_at || profile.updated_at || (valid.length > 0 ? valid[valid.length - 1].date : null))}</strong> • Snapshot benchmark
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Highlights & Top Media Quick Filters */}
+          <div className="card" style={{ padding: '20px 22px', marginBottom: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Sparkles size={16} strokeWidth={2.5} style={{ color: 'var(--accent)' }} />
+                <h2 style={{ fontSize: 15, fontWeight: 750, color: 'var(--text)', margin: 0 }}>Content Highlights &amp; Discovery</h2>
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Top indexed posts</span>
+            </div>
+            <div className="profile-filter-grid">
+              <Link href={`/results?slug=${encodeURIComponent(celebrityData?.slug || profile.instagram_handle || slug)}&filter=most_liked`} className="profile-filter-btn" style={{ textDecoration: 'none' }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>❤️</span>
+                <span className="profile-filter-title">Most Liked</span>
+              </Link>
+              <Link href={`/results?slug=${encodeURIComponent(celebrityData?.slug || profile.instagram_handle || slug)}&filter=most_commented`} className="profile-filter-btn" style={{ textDecoration: 'none' }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>💬</span>
+                <span className="profile-filter-title">Most Commented</span>
+              </Link>
+              <Link href={`/results?slug=${encodeURIComponent(celebrityData?.slug || profile.instagram_handle || slug)}&filter=most_viewed`} className="profile-filter-btn" style={{ textDecoration: 'none' }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>👁️</span>
+                <span className="profile-filter-title">Most Viewed</span>
+              </Link>
+              <Link href={`/results?slug=${encodeURIComponent(celebrityData?.slug || profile.instagram_handle || slug)}&filter=first_post`} className="profile-filter-btn" style={{ textDecoration: 'none' }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>⭐</span>
+                <span className="profile-filter-title">First Post</span>
+              </Link>
             </div>
           </div>
 
@@ -2710,33 +2768,35 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.7 }}>
               <p style={{ margin: 0 }}>
-                Welcome to the official real-time Instagram follower tracking hub for <strong>{profile.name}</strong> (<a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>@{profile.instagram_handle}</a>).
-                {rank ? ` Ranked #${rank} among the most followed profiles monitored on Spialr, ` : ' '}
-                <strong>{profile.name}</strong> currently commands an active audience of <strong>{formatNumber(profile.followers_count)}</strong> ({Number(profile.followers_count || 0).toLocaleString()}) followers on Instagram.
-                {profile.category ? ` Renowned within the ${profile.category} vertical, ` : ' '}
-                the account exhibits recurring engagement cycles influenced by new post publications, viral media trends, and audience retention.
+                Welcome to the verified Instagram follower analytics summary for <strong>{profile.name}</strong> (<a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>@{profile.instagram_handle}</a>).
+                {rank ? ` Ranked #${rank} among all public profiles indexed on Spialr, ` : ' '}
+                <strong>{profile.name}</strong> maintains a tracked follower base of <strong>{formatNumber(profile.followers_count)}</strong> ({Number(profile.followers_count || 0).toLocaleString()} followers).
+                {profile.category ? ` Categorized in the ${profile.category} vertical, ` : ' '}
+                this account reflects daily baseline changes captured from periodic public snapshots.
               </p>
 
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: 14, padding: '16px 18px' }}>
                 <div style={{ fontWeight: 750, color: 'var(--text)', fontSize: 13.5, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 7 }}>
                   <Activity size={15} color="#818cf8" />
-                  Velocity & Trajectory Evaluation
+                  30-Day Snapshot Performance
                 </div>
                 <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.65 }}>
-                  Over the monitored 30-day tracking window, {profile.name}&apos;s account recorded a net follower shift of <strong>{monthlyGain >= 0 ? `+${monthlyGain.toLocaleString()}` : monthlyGain.toLocaleString()} followers</strong>. 
-                  With a weighted daily momentum of <strong>{dailyVelocity >= 0 ? `+${dailyVelocity.toLocaleString()}` : dailyVelocity.toLocaleString()} followers per day</strong> (translating to roughly ~{Math.abs(Math.round(hourlyVelocity))} net additions per hour during prime daytime traffic), the account displays {dailyVelocity > 1000 ? 'strong viral upward velocity' : dailyVelocity > 0 ? 'consistent organic audience expansion' : 'stable audience holding'}.
+                  Over the monitored window, {profile.name}&apos;s profile recorded a net shift of <strong>{monthlyGain >= 0 ? `+${monthlyGain.toLocaleString()}` : monthlyGain.toLocaleString()} followers</strong> with an average daily pace of <strong>{dailyVelocity >= 0 ? `+${dailyVelocity.toLocaleString()}` : dailyVelocity.toLocaleString()} per day</strong>.
+                  {bestDay && bestDay.delta > 0 && ` The peak single-day gain registered was +${bestDay.delta.toLocaleString()} on ${formatDateLabel(bestDay.date)}.`}
+                  {worstDay && worstDay.delta < 0 && ` The lowest single-day recording recorded a fluctuation of ${worstDay.delta.toLocaleString()} on ${formatDateLabel(worstDay.date)}.`}
+                  {celebrityData?.posts_count && ` Spialr indexes ${celebrityData.posts_count} posts for this creator.`}
                 </p>
               </div>
 
               <p style={{ margin: 0 }}>
-                Spialr&apos;s real-time telemetry integrates high-precision periodic Instagram data scrapes with circadian daytime progression modeling. As millions of fans discover and interact with reels, stories, and photos between peak daytime hours (12:00 PM to 11:30 PM IST), follower additions naturally accelerate. During resting nocturnal windows (midnight to 7:00 AM IST), growth smoothly tapers to emulate authentic human social media behavior.
+                Standings and rankings are derived strictly from publicly observable Instagram follower statistics recorded on a rolling schedule. To learn how Spialr collects and calculates these benchmarks, visit our <Link href="/methodology" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Methodology</Link>.
               </p>
             </div>
           </section>
 
           {/* ─────────────────────────────────────────────────────────────
-              SECTION 4: Interactive Frequently Asked Questions (FAQ) Accordion
-              (Scroll Moment 5: Accordion Q&A with Matching Schema.org)
+              SECTION 4: Frequently Asked Questions (FAQ) (SSR-Rendered Semantic HTML)
+              (Scroll Moment 5: Semantic Q&A for Complete Crawler Indexing)
           ───────────────────────────────────────────────────────────── */}
           <div className="card" style={{ padding: '24px 22px', marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
@@ -2754,50 +2814,40 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {faqs.map((faq, idx) => {
-                const isOpen = openFaq === idx
-                return (
-                  <div
-                    key={idx}
+              {faqs.map((faq, idx) => (
+                <details
+                  key={idx}
+                  open={idx === 0}
+                  style={{
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 14,
+                    overflow: 'hidden',
+                    transition: 'border-color 0.25s ease'
+                  }}
+                >
+                  <summary
                     style={{
-                      background: isOpen ? 'rgba(255, 255, 255, 0.04)' : 'var(--surface2)',
-                      border: `1px solid ${isOpen ? 'rgba(168, 85, 247, 0.35)' : 'var(--border)'}`,
-                      borderRadius: 14,
-                      overflow: 'hidden',
-                      transition: 'all 0.25s ease'
+                      padding: '16px 18px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: 14,
+                      fontWeight: 750,
+                      color: 'var(--text)',
+                      lineHeight: 1.4,
+                      listStyle: 'none'
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setOpenFaq(isOpen ? -1 : idx)}
-                      style={{
-                        width: '100%',
-                        padding: '16px 18px',
-                        background: 'none',
-                        border: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        gap: 12
-                      }}
-                    >
-                      <span style={{ fontSize: 14, fontWeight: 750, color: isOpen ? '#e2e8f0' : 'var(--text)', lineHeight: 1.4 }}>
-                        {faq.q}
-                      </span>
-                      <span style={{ color: isOpen ? '#a855f7' : 'var(--text-muted)', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                        {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                      </span>
-                    </button>
-                    {isOpen && (
-                      <div style={{ padding: '0 18px 16px', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65, borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: 12 }}>
-                        {faq.a}
-                      </div>
-                    )}
+                    <span>{faq.q}</span>
+                    <span style={{ color: 'var(--accent)', fontSize: 16, flexShrink: 0, marginLeft: 10 }}>▾</span>
+                  </summary>
+                  <div style={{ padding: '0 18px 16px', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.65, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                    {faq.a}
                   </div>
-                )
-              })}
+                </details>
+              ))}
             </div>
           </div>
 
@@ -2907,13 +2957,6 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
             </div>
           )}
 
-          {/* Community Comments Section */}
-          <CommentSection
-            targetType="profile"
-            targetSlug={profile.instagram_handle || slug}
-            targetName={profile.name || profile.instagram_handle}
-          />
-
         </div>
       </div>
     </>
@@ -2964,19 +3007,45 @@ export async function getServerSideProps(context) {
       })
 
       if (!matched) {
-        console.error(`[profile 404] No match for slug="${decodedSlug}". Tried handle exact, dots, name-slug, name-plain.`)
-        return { notFound: true }
+        // Fallback: check celebrities table directly if not in most_followed
+        const { data: celMatch } = await supabase
+          .from('celebrities')
+          .select('*')
+          .or(`slug.eq.${decodedSlug},instagram_handle.ilike.${decodedSlug},instagram_handle.ilike.${slugWithDots}`)
+          .limit(1)
+          .maybeSingle()
+
+        if (celMatch) {
+          finalProfile = {
+            id: celMatch.id,
+            name: celMatch.name,
+            instagram_handle: celMatch.instagram_handle,
+            followers_count: celMatch.followers_count,
+            category: celMatch.category || 'Creator',
+            photo_url: celMatch.photo_url,
+            follower_history: [],
+            created_at: celMatch.created_at,
+            celebrity_id: celMatch.id,
+            posts_count: celMatch.posts_count,
+            average_views: celMatch.average_views,
+            followers_interaction: celMatch.followers_interaction,
+            account_created_year: celMatch.account_created_year
+          }
+        } else {
+          console.error(`[profile 404] No match for slug="${decodedSlug}". Tried handle exact, dots, name-slug, name-plain, celebrities.`)
+          return { notFound: true }
+        }
+      } else {
+        // Step 3: Fetch full profile by id
+        const { data: fullProfile, error: fullErr } = await supabase
+          .from('most_followed')
+          .select('*')
+          .eq('id', matched.id)
+          .single()
+
+        if (fullErr || !fullProfile) return { notFound: true }
+        finalProfile = fullProfile
       }
-
-      // Step 3: Fetch full profile by id
-      const { data: fullProfile, error: fullErr } = await supabase
-        .from('most_followed')
-        .select('*')
-        .eq('id', matched.id)
-        .single()
-
-      if (fullErr || !fullProfile) return { notFound: true }
-      finalProfile = fullProfile
     }
 
     if (!finalProfile) return { notFound: true }
@@ -2988,7 +3057,6 @@ export async function getServerSideProps(context) {
         const { count, error: countErr } = await supabase
           .from('most_followed')
           .select('id', { count: 'exact', head: true })
-          .gte('followers_count', 100000)
           .gt('followers_count', finalProfile.followers_count)
 
         if (!countErr && typeof count === 'number') {
@@ -2998,6 +3066,29 @@ export async function getServerSideProps(context) {
     } catch (rankErr) {
       console.warn('Rank calculation error in getServerSideProps:', rankErr)
     }
+
+    // Fetch matching celebrity data (posts, reels, etc.)
+    let celebrityData = null
+    try {
+      if (finalProfile.celebrity_id) {
+        celebrityData = finalProfile
+      } else if (finalProfile.instagram_handle) {
+        const { data: cel } = await supabase
+          .from('celebrities')
+          .select('id, name, slug, instagram_handle, posts_count, average_views, followers_interaction, account_created_year')
+          .ilike('instagram_handle', finalProfile.instagram_handle)
+          .maybeSingle()
+        if (cel) celebrityData = cel
+      }
+    } catch (celErr) {
+      console.warn('Celebrity match error in profile page:', celErr)
+    }
+
+    const isEnriched = Boolean(
+      (finalProfile.followers_count && finalProfile.followers_count >= 100000) ||
+      (finalProfile.follower_history && finalProfile.follower_history.length >= 2) ||
+      celebrityData
+    )
 
     // Fetch top 6 popular live profiles for internal links, discovery & AdSense quality score
     let trendingProfiles = []
@@ -3016,7 +3107,7 @@ export async function getServerSideProps(context) {
       console.warn('Error fetching trending profiles:', trendErr)
     }
 
-    return { props: { profile: finalProfile, slug: decodedSlug, rank, trendingProfiles } }
+    return { props: { profile: finalProfile, slug: decodedSlug, rank, trendingProfiles, celebrityData, isEnriched } }
   } catch (err) {
     console.error('getServerSideProps error in profile page:', err)
     return { notFound: true }

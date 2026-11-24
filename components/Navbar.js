@@ -149,21 +149,6 @@ export default function Navbar() {
                   <Link href="/converter" className="dropdown-item" onClick={closeDropdown}>
                     <Sparkles size={14} style={{ marginRight: 8, color: 'var(--accent)' }} /> Dot Art Converter
                   </Link>
-
-
-                  <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
-
-                  {/* Crawlers / SEO tools */}
-                  <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)' }}>
-                      <span>Sitemap: <a href="/sitemap.xml" target="_blank" style={{ color: 'var(--accent)', fontWeight: 600 }}>sitemap.xml</a></span>
-                      <span style={{ color: '#00c853', fontWeight: 600 }}>Verified</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)' }}>
-                      <span>ads.txt Status:</span>
-                      <span style={{ color: '#00c853', fontWeight: 600 }}>Active</span>
-                    </div>
-                  </div>
                 </div>
             </div>
           </div>

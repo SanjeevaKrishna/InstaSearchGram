@@ -6,6 +6,7 @@ export default function Disclaimer() {
       <Head>
         <title>Disclaimer — Spialr</title>
         <meta name="description" content="View the external links and information accuracy disclaimer of Spialr. We are an independent search directory not affiliated with Instagram." />
+        <link rel="canonical" href="https://spialr.com/disclaimer" key="canonical" />
       </Head>
             <main style={{ maxWidth: 700, margin: '0 auto', padding: '60px 20px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, marginBottom: 32, letterSpacing: '-0.02em' }}>

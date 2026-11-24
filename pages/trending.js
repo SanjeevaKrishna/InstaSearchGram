@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -10,25 +10,9 @@ import { supabase } from '../lib/supabase'
 import { proxyProfileImages } from '../lib/imageProxy'
 
 
-// Deterministic trend indicator calculation based on Reel ID/index
-const getTrend = (reel, index) => {
-  let trendType = 'stable'
-  let trendVal = ''
-  const hash = (index + (reel.creator_name ? reel.creator_name.length : 0)) % 6
-  if (index === 0 && hash === 0) {
-    trendType = 'up'
-    trendVal = '+4'
-  } else if (hash === 1 || hash === 4) {
-    trendType = 'up'
-    trendVal = `+${(index % 3) + 1}`
-  } else if (hash === 2) {
-    trendType = 'down'
-    trendVal = `-${(index % 2) + 1}`
-  } else if (hash === 5) {
-    trendType = 'new'
-    trendVal = 'NEW'
-  }
-  return { trendType, trendVal }
+// Trend indicator placeholder (only displays if verified historical diff exists)
+const getTrend = () => {
+  return { trendType: 'stable', trendVal: '' }
 }
 
 const generateReelSlug = (reel) => {
@@ -190,7 +174,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
         <div className="row-avatar-container" style={{ width: 44, height: 44, flexShrink: 0 }}>
           <div className="row-avatar-inner">
             {reel.creator_photo_url ? (
-              <img src={reel.creator_photo_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+              <img src={reel.creator_photo_url} alt={`${reel.creator_name || "Creator"} avatar`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
             ) : initials}
           </div>
         </div>
@@ -300,7 +284,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
             <div className="row-avatar-container" style={{ width: 42, height: 42, flexShrink: 0 }}>
               <div className="row-avatar-inner">
                 {reel.creator_photo_url ? (
-                  <img src={reel.creator_photo_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+                  <img src={reel.creator_photo_url} alt={`${reel.creator_name || "Creator"} avatar`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
                 ) : initials}
               </div>
             </div>
@@ -449,7 +433,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
       <div className="row-avatar-container">
         <div className="row-avatar-inner">
           {reel.creator_photo_url ? (
-            <img src={reel.creator_photo_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+            <img src={reel.creator_photo_url} alt={`${reel.creator_name || "Creator"} avatar`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
           ) : initials}
         </div>
       </div>
@@ -457,7 +441,7 @@ function LeaderboardRow({ reel, absoluteRank, isMostViewed, isComment, isTrendin
       {/* Video Cover Thumbnail (Portrait Aspect Ratio) */}
       <div className="row-thumbnail">
         {reel.photo_url ? (
-          <img src={reel.photo_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
+          <img src={reel.photo_url} alt={`${reel.title || reel.creator_name || "Trending reel"} thumbnail`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => {e.target.style.display='none'}} />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             <Film size={18} />
@@ -611,21 +595,32 @@ export default function TrendingPage({ initialData = null }) {
     return () => clearInterval(interval)
   }, [])
 
-  const postsForDisplay = indiaMostLikedPosts.filter(p => {
-    if (postFilterMode === 'most_liked') {
-      return p.show_in_most_liked === true
-    }
-    // 'all' section: present available posts moved to all section
-    return p.show_in_all_posts !== false
-  })
+  const parseMetricNumber = (text) => {
+    if (!text) return 0
+    const str = text.toString().trim().toLowerCase().replace(/,/g, '')
+    const match = str.match(/([0-9.]+)/)
+    if (!match) return 0
+    const num = parseFloat(match[1])
+    if (isNaN(num)) return 0
+    if (str.includes('b') || str.includes('billion')) return num * 1000000000
+    if (str.includes('m') || str.includes('million')) return num * 1000000
+    if (str.includes('k') || str.includes('thousand')) return num * 1000
+    if (str.includes('crore') || str.includes('cr')) return num * 10000000
+    if (str.includes('lakh') || str.includes('l') || str.includes('lac')) return num * 100000
+    return num
+  }
 
-  const reelsForDisplay = mostViewedReels.filter(r => {
-    if (reelFilterMode === 'original') {
-      return r.show_in_original === true
-    }
-    // 'all' section: current reels moved to all section
-    return r.show_in_all_reels !== false
-  })
+  const postsForDisplay = useMemo(() => {
+    return [...indiaMostLikedPosts]
+      .filter(p => postFilterMode === 'most_liked' ? p.show_in_most_liked === true : p.show_in_all_posts !== false)
+      .sort((a, b) => parseMetricNumber(b.likes_text) - parseMetricNumber(a.likes_text))
+  }, [indiaMostLikedPosts, postFilterMode])
+
+  const reelsForDisplay = useMemo(() => {
+    return [...mostViewedReels]
+      .filter(r => reelFilterMode === 'original' ? r.show_in_original === true : r.show_in_all_reels !== false)
+      .sort((a, b) => parseMetricNumber(b.views_text || b.views) - parseMetricNumber(a.views_text || a.views))
+  }, [mostViewedReels, reelFilterMode])
 
   const activeReels = activeTab === 'trending' 
     ? viralReels 
@@ -636,7 +631,6 @@ export default function TrendingPage({ initialData = null }) {
       <Head>
         <title>Daily Viral Instagram Reels & Trending Posts Leaderboard | Spialr</title>
         <meta name="description" content="Discover top daily viral Instagram reels, most liked posts, and viral comments. Track real-time engagement analytics and creator rankings on Spialr." />
-        <meta name="keywords" content="viral instagram reels, trending reels india, most liked instagram posts, top instagram comments, viral reels leaderboard, spialr" />
         <link rel="canonical" href="https://spialr.com/trending" key="canonical" />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Daily Viral Instagram Reels & Trending Posts Leaderboard | Spialr" />
@@ -1591,8 +1585,9 @@ export async function getServerSideProps({ res }) {
   }
   const parseCountText = (text) => {
     if (!text) return 0;
-    const cleaned = text.toString().trim().toLowerCase();
-    const numMatch = cleaned.match(/^([0-9.]+)/);
+    const str = text.toString().trim().toLowerCase();
+    const cleaned = str.replace(/,/g, '');
+    const numMatch = cleaned.match(/([0-9.]+)/);
     if (!numMatch) return 0;
     const num = parseFloat(numMatch[1]);
     if (isNaN(num)) return 0;
@@ -1601,7 +1596,7 @@ export async function getServerSideProps({ res }) {
     if (cleaned.includes('m') || cleaned.includes('million')) return num * 1000000;
     if (cleaned.includes('k') || cleaned.includes('thousand')) return num * 1000;
     if (cleaned.includes('crore') || cleaned.includes('cr')) return num * 10000000;
-    if (cleaned.includes('lakh') || cleaned.includes('l')) return num * 100000;
+    if (cleaned.includes('lakh') || cleaned.includes('l') || cleaned.includes('lac')) return num * 100000;
     return num;
   }
 

@@ -53,9 +53,8 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
   return (
     <>
       <Head>
-        <title>Spialr - Most Followed Instagram Accounts in India.</title>
+        <title>Spialr - Most Followed Instagram Accounts in India</title>
         <meta name="description" content={`Discover ${featured.length > 0 ? profileCount : 'verified'} top Instagram accounts ordered by followers count. Search and find Instagram posts, reels, and trending profiles in India and globally — without endless scrolling.`} />
-        <meta name="keywords" content="top 100 instagram accounts in india, most followed instagram accounts, top instagram creators, spialr, instagram follower rankings, famous instagram profiles, search instagram reels, list of top instagram accounts" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href="https://spialr.com" key="canonical" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -362,6 +361,47 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
             </div>
           </div>
         )}
+
+        {/* How Rankings Work Section */}
+        <section style={{
+          marginTop: 48,
+          padding: '28px 24px',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 20,
+        }}>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 20,
+            fontWeight: 800,
+            color: 'var(--text)',
+            margin: '0 0 10px 0',
+            letterSpacing: '-0.02em'
+          }}>
+            How Spialr Rankings Work
+          </h2>
+          <p style={{
+            fontSize: 14,
+            color: 'var(--text-muted)',
+            lineHeight: 1.65,
+            margin: '0 0 16px 0'
+          }}>
+            Spialr organizes public digital performance metrics across popular Instagram creators, actors, and digital personalities. Profile leaderboards are computed transparently based on total verified public follower standings, refreshed on a rolling schedule. We do not use private APIs or estimated follower counts for ranking. To inspect our data collection criteria and verification standards, read our full <Link href="/methodology" style={{ color: 'var(--accent)', textDecoration: 'underline', fontWeight: 600 }}>Methodology</Link>.
+          </p>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <Link href="/live" style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
+              View Live Leaderboard →
+            </Link>
+            <span style={{ color: 'var(--border)' }}>•</span>
+            <Link href="/trending" style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
+              Explore Trending Content →
+            </Link>
+            <span style={{ color: 'var(--border)' }}>•</span>
+            <Link href="/methodology" style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
+              Read Data Methodology →
+            </Link>
+          </div>
+        </section>
       </main>
     </>
   )

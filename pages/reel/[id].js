@@ -138,13 +138,13 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, position: 'relative' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: 'var(--surface2)', border: '2px solid var(--border)', flexShrink: 0 }}>
                   {reel.photo_url
-                    ? <img src={reel.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                    ? <img src={reel.photo_url} alt={`${reel.creator_name || 'Creator'} profile avatar`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'var(--accent)' }}>{initials}</div>
                   }
                 </div>
                 <div style={{ minWidth: 0 }}>
                   {reel.creator_slug
-                    ? <a href={'/celebrity/' + reel.creator_slug} style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', textDecoration: 'none', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}</a>
+                    ? <a href={'/profile/' + reel.creator_slug} style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', textDecoration: 'none', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}</a>
                     : <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}</span>
                   }
                   <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{reel.category_name || 'Instagram'} · Rank #{reel.rank}</div>
@@ -178,11 +178,9 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               </div>
 
               {/* Title */}
-              {reel.title && (
-                <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, margin: '0 0 20px', fontStyle: 'italic', position: 'relative' }}>
-                  "{reel.title}"
-                </p>
-              )}
+              <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', lineHeight: 1.5, margin: '0 0 16px', position: 'relative' }}>
+                {reel.title ? `"${reel.title}"` : `${reel.creator_name || 'Creator'} - Instagram Reel #${reel.rank}`}
+              </h1>
 
               {/* CTA */}
               <a
@@ -251,7 +249,7 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)' }}
                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
                         <div style={{ height: 160, position: 'relative', background: 'var(--surface2)' }}>
-                          <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={item.photo_url} alt={`${item.title || item.creator_name || 'Instagram reel'} thumbnail`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           <div style={{ position: 'absolute', bottom: 5, right: 5, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{item.views_text || item.likes_text}</div>
                         </div>
                         <div style={{ padding: '8px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>{item.title || 'Watch'}</div>
@@ -275,7 +273,7 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)' }}
                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
                         <div style={{ height: 160, position: 'relative', background: 'var(--surface2)' }}>
-                          <img src={item.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={item.photo_url} alt={`${item.title || item.creator_name || 'Instagram reel'} thumbnail`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           <div style={{ position: 'absolute', bottom: 5, right: 5, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{item.views_text || item.likes_text}</div>
                         </div>
                         <div style={{ padding: '8px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>{item.title || 'Watch'}</div>
@@ -289,7 +287,7 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
             {/* ── VIEW FULL PROFILE ── */}
             {reel.creator_slug && (
               <div
-                onClick={() => router.push(`/celebrity/${reel.creator_slug}`)}
+                onClick={() => router.push(`/profile/${reel.creator_slug}`)}
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none' }}

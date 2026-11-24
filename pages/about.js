@@ -7,8 +7,9 @@ export default function About({ profileCount = 'thousands of' }) {
   return (
     <>
       <Head>
-        <title>About Spialr — Instagram Rankings, Insights & Trending Reels</title>
+        <title>About Spialr — Instagram Rankings, Insights &amp; Trending Reels</title>
         <meta name="description" content="Discover Spialr - a professional analytics platform featuring live creator ranks, trending Reels ranking, total views, reel likes, post likes, and instant keyword search." />
+        <link rel="canonical" href="https://spialr.com/about" key="canonical" />
       </Head>
       
             

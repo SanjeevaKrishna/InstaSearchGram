@@ -25,7 +25,7 @@ export default function BlogIndex({ posts, categories }) {
         <title>Spialr Blog &amp; Insights — Social Media Analytics, Growth &amp; Algorithm Guides</title>
         <meta 
           name="description" 
-          content="Explore data-backed articles, creator economy guides, engagement rate benchmarks, and Instagram algorithm analyses written by the Spialr research team." 
+          content="Explore actionable articles, creator economy guides, engagement rate benchmarks, and practical social growth analyses published on Spialr." 
         />
         <link rel="canonical" href="https://spialr.com/blog" key="canonical" />
 
@@ -33,7 +33,7 @@ export default function BlogIndex({ posts, categories }) {
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://spialr.com/blog" key="og:url" />
         <meta property="og:title" content="Spialr Blog & Insights — Social Media Analytics & Creator Guides" />
-        <meta property="og:description" content="Explore data-backed articles, creator economy guides, engagement rate benchmarks, and Instagram algorithm analyses." />
+        <meta property="og:description" content="Explore actionable articles, creator economy guides, engagement rate benchmarks, and practical creator growth analyses." />
         <meta property="og:site_name" content="Spialr" />
 
         {/* Twitter */}
@@ -99,7 +99,7 @@ export default function BlogIndex({ posts, categories }) {
             lineHeight: 1.6,
             margin: '0 auto'
           }}>
-            In-depth guides, empirical algorithm analyses, engagement rate benchmarks, and strategic frameworks designed for creators, marketers, and social data analysts.
+            In-depth guides, practical algorithm breakdowns, engagement rate benchmarks, and strategic frameworks designed for creators, marketers, and social media analysts.
           </p>
         </div>
 
