@@ -1381,34 +1381,6 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
             </div>
           </div>
 
-          {/* Highlights & Top Media Quick Filters */}
-          <div className="card" style={{ padding: '20px 22px', marginBottom: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Sparkles size={16} strokeWidth={2.5} style={{ color: 'var(--accent)' }} />
-                <h2 style={{ fontSize: 15, fontWeight: 750, color: 'var(--text)', margin: 0 }}>Content Highlights &amp; Discovery</h2>
-              </div>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Top indexed posts</span>
-            </div>
-            <div className="profile-filter-grid">
-              <Link href={`/results?slug=${encodeURIComponent(celebrityData?.slug || profile.instagram_handle || slug)}&filter=most_liked`} className="profile-filter-btn" style={{ textDecoration: 'none' }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>❤️</span>
-                <span className="profile-filter-title">Most Liked</span>
-              </Link>
-              <Link href={`/results?slug=${encodeURIComponent(celebrityData?.slug || profile.instagram_handle || slug)}&filter=most_commented`} className="profile-filter-btn" style={{ textDecoration: 'none' }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>💬</span>
-                <span className="profile-filter-title">Most Commented</span>
-              </Link>
-              <Link href={`/results?slug=${encodeURIComponent(celebrityData?.slug || profile.instagram_handle || slug)}&filter=most_viewed`} className="profile-filter-btn" style={{ textDecoration: 'none' }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>👁️</span>
-                <span className="profile-filter-title">Most Viewed</span>
-              </Link>
-              <Link href={`/results?slug=${encodeURIComponent(celebrityData?.slug || profile.instagram_handle || slug)}&filter=first_post`} className="profile-filter-btn" style={{ textDecoration: 'none' }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>⭐</span>
-                <span className="profile-filter-title">First Post</span>
-              </Link>
-            </div>
-          </div>
 
           {/* Social Drama & Growth Meter widget */}
           {isLosing ? (
@@ -3075,7 +3047,7 @@ export async function getServerSideProps(context) {
       } else if (finalProfile.instagram_handle) {
         const { data: cel } = await supabase
           .from('celebrities')
-          .select('id, name, slug, instagram_handle, posts_count, average_views, followers_interaction, account_created_year')
+          .select('id, name, slug, instagram_handle, posts_count, average_views, followers_interaction, account_created_year, total_reel_views, total_reel_likes, total_post_likes, total_comments, total_shares, total_reposts')
           .ilike('instagram_handle', finalProfile.instagram_handle)
           .maybeSingle()
         if (cel) celebrityData = cel

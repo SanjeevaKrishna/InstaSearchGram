@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import CelebrityCard from '../components/CelebrityCard'
@@ -15,6 +15,17 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const debounceRef = useRef(null)
   const searchRef = useRef(null)
+
+  const allSearchResults = useMemo(() => {
+    const combined = [...results, ...liveResults]
+    const seen = new Set()
+    return combined.filter(item => {
+      const handle = (item.instagram_handle || item.slug || '').toLowerCase().trim()
+      if (!handle || seen.has(handle)) return false
+      seen.add(handle)
+      return true
+    })
+  }, [results, liveResults])
 
   const handleSearch = async (q) => {
     if (!q.trim()) {
@@ -152,7 +163,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
             </div>
 
             {/* Search results dropdown */}
-            {showSuggestions && (results.length > 0 || liveResults.length > 0) && (
+            {showSuggestions && allSearchResults.length > 0 && (
               <div style={{
                 position: 'absolute',
                 top: 'calc(100% + 8px)',
@@ -167,153 +178,54 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
                 maxHeight: 480,
                 overflowY: 'auto',
               }}>
-                {/* Celebrities */}
-                {results.length > 0 && (
-                  <div>
-                    {liveResults.length > 0 && (
-                      <div style={{
-                        padding: '8px 16px 4px',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: 'var(--text-muted)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        Celebrity Profiles
+                {allSearchResults.map(cel => {
+                  const slug = (cel.instagram_handle || cel.slug || '').toLowerCase().trim().replace(/\./g, '-')
+                  return (
+                    <Link key={cel.id + '_' + slug} href={`/profile/${slug}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          padding: '12px 16px',
+                          transition: 'background 0.15s',
+                          borderBottom: '1px solid var(--border)',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <div style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: '50%',
+                          background: 'var(--gradient)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: 16,
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                          padding: 2,
+                        }}>
+                          {cel.photo_url ? (
+                            <img src={cel.photo_url} alt={cel.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} onError={e => e.target.style.display = 'none'} />
+                          ) : (
+                            cel.name?.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cel.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                            {cel.instagram_handle && <span>@{cel.instagram_handle}</span>}
+                            {cel.followers_count ? <span>• {Number(cel.followers_count).toLocaleString()} followers</span> : null}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, flexShrink: 0 }}>View →</span>
                       </div>
-                    )}
-                    {results.map(cel => (
-                      <a key={cel.id} href={`/celebrity/${cel.slug}`} style={{ display: 'block' }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            padding: '12px 16px',
-                            transition: 'background 0.15s',
-                            borderBottom: '1px solid var(--border)',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <div style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: '50%',
-                            background: 'var(--gradient)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 800,
-                            fontSize: 16,
-                            flexShrink: 0,
-                            overflow: 'hidden',
-                          }}>
-                            {cel.photo_url ? (
-                              <img src={cel.photo_url} alt={cel.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
-                            ) : (
-                              cel.name?.charAt(0).toUpperCase()
-                            )}
-                          </div>
-                          <div style={{ flex: 1, textAlign: 'left' }}>
-                            <div style={{ fontWeight: 600, fontSize: 14 }}>{cel.name}</div>
-                            {cel.instagram_handle && (
-                              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>@{cel.instagram_handle}</div>
-                            )}
-                          </div>
-                          <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>View →</span>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                )}
-
-                {/* Live Profiles (Purple Theme) */}
-                {liveResults.length > 0 && (
-                  <div>
-                    <div style={{
-                      padding: '8px 16px 6px',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: '#c084fc',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      borderTop: results.length > 0 ? '1px solid rgba(168, 85, 247, 0.25)' : 'none',
-                      background: 'rgba(147, 51, 234, 0.08)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6
-                    }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#a855f7', boxShadow: '0 0 8px #a855f7' }} />
-                      Live Tracker Profiles
-                    </div>
-                    {liveResults.map(live => (
-                      <a key={live.id} href={`/profile/${live.slug}`} style={{ display: 'block' }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            padding: '12px 16px',
-                            transition: 'background 0.15s',
-                            borderBottom: '1px solid var(--border)',
-                            background: 'rgba(147, 51, 234, 0.03)',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(147, 51, 234, 0.12)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(147, 51, 234, 0.03)'}
-                        >
-                          <div style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 800,
-                            fontSize: 16,
-                            flexShrink: 0,
-                            overflow: 'hidden',
-                            padding: 2
-                          }}>
-                            {live.photo_url ? (
-                              <img src={live.photo_url} alt={live.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} onError={e => e.target.style.display = 'none'} />
-                            ) : (
-                              (live.name || '?').charAt(0).toUpperCase()
-                            )}
-                          </div>
-                          <div style={{ flex: 1, textAlign: 'left' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontWeight: 600, fontSize: 14 }}>{live.name}</span>
-                              <span style={{
-                                background: 'rgba(147, 51, 234, 0.18)',
-                                color: '#c084fc',
-                                border: '1px solid rgba(168, 85, 247, 0.35)',
-                                borderRadius: 10,
-                                padding: '1px 6px',
-                                fontSize: 10,
-                                fontWeight: 700
-                              }}>⚡ LIVE</span>
-                            </div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 8, alignItems: 'center' }}>
-                              {live.instagram_handle && <span>@{live.instagram_handle}</span>}
-                              {live.followers_count && <span style={{ color: '#c084fc' }}>• {(live.followers_count).toLocaleString()} followers</span>}
-                            </div>
-                          </div>
-                          <span style={{
-                            fontSize: 12,
-                            color: '#c084fc',
-                            fontWeight: 600,
-                            background: 'rgba(147, 51, 234, 0.15)',
-                            padding: '4px 10px',
-                            borderRadius: 20,
-                            border: '1px solid rgba(168, 85, 247, 0.35)'
-                          }}>Live Count →</span>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                )}
+                    </Link>
+                  )
+                })}
               </div>
             )}
 
@@ -357,7 +269,7 @@ export default function Home({ featured = [], profileCount = 'thousands of' }) {
             
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {featured.map(c => <CelebrityCard key={c.id + (c.isLive ? '_live' : '_cel')} celebrity={c} />)}
+              {featured.map(c => <CelebrityCard key={c.id || c.slug || c.instagram_handle} celebrity={c} />)}
             </div>
           </div>
         )}
@@ -456,8 +368,7 @@ export async function getServerSideProps({ res }) {
             ...item,
             slug: item.instagram_handle
               ? item.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
-              : (item.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'),
-            isLive: true
+              : (item.name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
           }))
         }
       }
@@ -465,11 +376,16 @@ export async function getServerSideProps({ res }) {
       console.warn('Live featured fetch error:', e.message)
     }
 
-    // Combine featured items
-    const combinedFeatured = [
-      ...(featuredCelebs || []).map(c => ({ ...c, isLive: false })),
-      ...featuredLive
-    ]
+    // Combine featured items deduplicated by handle
+    const seenHandles = new Set()
+    const combinedFeatured = []
+    for (const c of [...(featuredCelebs || []), ...featuredLive]) {
+      const handle = (c.instagram_handle || c.slug || '').toLowerCase().trim()
+      if (handle && !seenHandles.has(handle)) {
+        seenHandles.add(handle)
+        combinedFeatured.push(c)
+      }
+    }
 
     const [{ count }] = await Promise.all([
       supabase

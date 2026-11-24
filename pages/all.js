@@ -62,7 +62,7 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
 
   // Group by first letter, excluding comparing celebrity and dot art converter
   const grouped = celebrities.reduce((acc, cel) => {
-    if (compare && cel.slug === compare) return acc
+    if (compare && (cel.slug === compare || cel.instagram_handle === compare)) return acc
 
     // Do not show dot art converter in comparison selection list
     const isDotConverter = 
@@ -76,22 +76,29 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
 
     if (compare && isDotConverter) return acc
 
-    // Filter by search query (case-insensitive name check)
+    // Filter by search query (case-insensitive name check or handle check)
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      if (!cel.name?.toLowerCase().includes(q)) {
+      const q = searchQuery.toLowerCase().trim().replace(/^@/, '')
+      const matchName = cel.name?.toLowerCase().includes(q)
+      const matchHandle = cel.instagram_handle?.toLowerCase().includes(q)
+      if (!matchName && !matchHandle) {
         return acc
       }
     }
 
-    const letter = (cel.name?.charAt(0) || '#').toUpperCase()
+    const firstChar = (cel.name?.trim()?.charAt(0) || '#').toUpperCase()
+    const letter = /[A-Z]/.test(firstChar) ? firstChar : '#'
     if (!acc[letter]) acc[letter] = []
     acc[letter].push(cel)
     return acc
   }, {})
 
-  // Sort keys alphabetically
-  const sortedLetters = Object.keys(grouped).sort()
+  // Sort keys alphabetically with # first matching the alphabet scrubber
+  const sortedLetters = Object.keys(grouped).sort((a, b) => {
+    if (a === '#') return -1
+    if (b === '#') return 1
+    return a.localeCompare(b)
+  })
 
   const renderProfileItem = (cel, index, letter) => {
     const isSelected = selectedCel && selectedCel.id === cel.id
@@ -534,41 +541,64 @@ export async function getServerSideProps(context) {
   const { compare } = context.query
 
   try {
-    // 1. Fetch all celebrities
-    let celebrities = []
-    let from = 0
-    let to = 999
+    // 1. Fetch all profiles from most_followed (1300+ accounts)
+    let allProfiles = []
+    let page = 0
+    const pageSize = 1000
     while (true) {
       const { data: pageData, error: pageError } = await supabase
-        .from('celebrities')
-        .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url, is_featured, order_index, account_created_year')
-        .order('order_index', { ascending: true })
-        .order('name')
-        .neq('hide_search', true)
-        .range(from, to)
+        .from('most_followed')
+        .select('id, name, instagram_handle, followers_count, photo_url, category, order_index')
+        .order('name', { ascending: true })
+        .range(page * pageSize, (page + 1) * pageSize - 1)
 
-      if (pageError) throw pageError
-      celebrities = celebrities.concat(pageData || [])
-      if (!pageData || pageData.length < 1000) break
-      from += 1000
-      to += 1000
+      if (pageError || !pageData || pageData.length === 0) break
+      allProfiles = allProfiles.concat(pageData)
+      if (pageData.length < pageSize) break
+      page++
     }
+
+    // Also include any celebrities from 'celebrities' table not already present in most_followed
+    const existingHandles = new Set(allProfiles.map(p => (p.instagram_handle || '').toLowerCase().trim()).filter(Boolean))
+    const { data: celebs } = await supabase
+      .from('celebrities')
+      .select('id, name, slug, instagram_handle, followers_count, posts_count, photo_url')
+      .neq('hide_search', true)
+    if (celebs) {
+      for (const c of celebs) {
+        const handle = (c.instagram_handle || c.slug || '').toLowerCase().trim()
+        if (handle && !existingHandles.has(handle)) {
+          existingHandles.add(handle)
+          allProfiles.push(c)
+        }
+      }
+    }
+
+    // Sort all profiles alphabetically by name
+    allProfiles.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 
     // 2. Fetch compare celebrity if compare query param is present
     let originalCelebrity = null
     if (compare) {
-      const { data: compData, error: compError } = await supabase
+      const { data: compData } = await supabase
         .from('celebrities')
         .select('*')
         .eq('slug', compare)
-        .single()
-      if (!compError && compData) {
+        .maybeSingle()
+      if (compData) {
         originalCelebrity = compData
+      } else {
+        const { data: compLive } = await supabase
+          .from('most_followed')
+          .select('*')
+          .eq('instagram_handle', compare)
+          .maybeSingle()
+        if (compLive) originalCelebrity = compLive
       }
     }
 
-    // Proxy all Supabase Storage image URLs through Vercel CDN
-    const proxiedCelebrities = proxyProfileImages(celebrities)
+    // Proxy all profile images through Vercel CDN
+    const proxiedCelebrities = proxyProfileImages(allProfiles)
     if (originalCelebrity) {
       originalCelebrity = { ...originalCelebrity, photo_url: proxyImageUrl(originalCelebrity.photo_url) }
     }
