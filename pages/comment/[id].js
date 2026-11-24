@@ -161,48 +161,20 @@ export default function CommentDetailPage({ initialComment }) {
           </div>
         )}
 
-        {/* 4. Mini Essay About the Position */}
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 16,
-          padding: '22px 24px',
-          lineHeight: 1.8,
-          fontSize: 14.5,
-          color: 'var(--text)',
-          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.02)'
-        }}>
-          <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 18,
-            fontWeight: 800,
-            color: 'var(--text)',
-            marginBottom: 12,
-            letterSpacing: '-0.01em'
+        {comment?.description && comment?.description !== comment?.title && (
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: '14px 18px',
+            color: 'var(--text-dim)',
+            fontSize: 14,
+            lineHeight: 1.6,
+            textAlign: 'center'
           }}>
-            About Rank #{rank} Position
-          </h2>
-
-          <p style={{ marginBottom: 14, color: 'var(--text-dim)' }}>
-            This comment by <strong>{authorName}</strong> currently holds the <strong>#{rank} position</strong> on Spialr\'s Daily Trending Comments Leaderboard. With an impressive milestone of <strong>{likesText} likes</strong>, it stands out as one of the most widely appreciated and shared community interactions on Instagram.
-          </p>
-
-          {comment?.why_notable ? (
-            <p style={{ marginBottom: 14, color: 'var(--text-dim)' }}>
-              <strong>Why this position is notable:</strong> {comment.why_notable}
-            </p>
-          ) : (
-            <p style={{ marginBottom: 14, color: 'var(--text-dim)' }}>
-              Securing the #{rank} spot reflects exceptional resonance across social media, where timing, wit, and cultural relevance sparked thousands of replies, shares, and reactions directly beneath the original video.
-            </p>
-          )}
-
-          {comment?.description && comment?.description !== comment?.title && (
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13.5, fontStyle: 'italic', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-              "{comment.description}"
-            </p>
-          )}
-        </div>
+            &ldquo;{comment.description}&rdquo;
+          </div>
+        )}
       </main>
 
       <BottomNav />

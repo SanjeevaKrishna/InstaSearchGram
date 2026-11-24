@@ -257,11 +257,6 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
           {compare ? 'Select Profile to Compare:' : 'All Available Profiles & Creators:'}
         </h1>
 
-        {!compare && (
-          <p style={{ fontSize: 14.5, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 24, maxWidth: 700 }}>
-            Browse through the verified directory of Instagram creators, influencers, actors, athletes, and public figures. Select any profile to inspect real-time followers, engagement ratios, average reel views, or use the compare feature to benchmark any two creators side-by-side.
-          </p>
-        )}
 
         {originalCelebrity && (
           <div style={{ fontSize: 15, color: 'var(--text-muted)', marginBottom: 24 }}>

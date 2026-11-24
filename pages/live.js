@@ -952,22 +952,7 @@ export default function LivePage({ initialLiveData = null, initialTab = 'most_fo
                <>Daily Follower <span className="gradient-text">Gainers & Losers</span></>
              )}
            </h1>
-           {activeTab === 'most_followed' && (
-             <p style={{
-               fontSize: 'clamp(12px, 3.2vw, 13.5px)',
-               color: 'var(--text-dim)',
-               marginTop: 10,
-               marginBottom: 0,
-               fontWeight: 450,
-               lineHeight: 1.6,
-               textAlign: 'center',
-               maxWidth: 680,
-               marginLeft: 'auto',
-               marginRight: 'auto'
-             }}>
-               Welcome to Spialr&apos;s verified creator leaderboard. This directory indexes top public Instagram profiles ranked strictly by total verified follower count. Standings are maintained through periodic snapshot recording from public accounts, updated on a rolling daily schedule. Discover account milestones, 30-day velocity, and historical growth timelines across popular creators, actors, singers, and digital personalities. To learn more about our data sources and calculation guidelines, review our transparent <Link href="/methodology" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Methodology</Link>.
-             </p>
-           )}
+           
            {activeTab === 'daily_growth' && (
              <p style={{
                fontSize: 'clamp(11px, 3.2vw, 13px)',
