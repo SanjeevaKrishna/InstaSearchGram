@@ -2613,79 +2613,58 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                 </div>
               </div>
 
-              {/* Historical Follower Snapshots Log Table */}
-              {chartData.tableLogs && chartData.tableLogs.length > 0 && (
-                <div style={{ marginTop: 24, borderTop: '1px solid var(--border)', paddingTop: 18 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
-                      Historical Follower Snapshots
+              {/* Forward-Looking Growth Horizon & Runway Matrix */}
+              <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Target size={14} color="var(--accent)" /> Projected Growth Horizons
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    Based on 30-day verified velocity
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                  {/* 7-Day Horizon */}
+                  <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                      7-Day Forecast
                     </div>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      Showing past snapshot intervals
-                    </span>
+                    <div style={{ fontSize: 17, fontWeight: 850, color: '#38bdf8', fontFamily: 'var(--font-display)' }}>
+                      {formatNumber(Math.round(chartData.currentVal + (dailyVelocity * 7)))}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: dailyVelocity >= 0 ? '#10b981' : '#f43f5e', marginTop: 4, fontWeight: 600 }}>
+                      {dailyVelocity >= 0 ? `+${formatNumber(dailyVelocity * 7)}` : formatNumber(dailyVelocity * 7)} est.
+                    </div>
                   </div>
 
-                  <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                          <th style={{ padding: '10px 14px', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date</th>
-                          <th style={{ padding: '10px 14px', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Followers</th>
-                          <th style={{ padding: '10px 14px', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Daily Gain / Loss</th>
-                          <th style={{ padding: '10px 14px', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right' }}>Benchmark Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {chartData.tableLogs.map((log, idx) => {
-                          const dateFormatted = log.date ? new Date(log.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent'
-                          const isLatest = idx === 0
-                          const deltaPositive = log.delta > 0
-                          const deltaNegative = log.delta < 0
-                          return (
-                            <tr
-                              key={`tbl-${idx}`}
-                              style={{
-                                borderBottom: idx === chartData.tableLogs.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.04)',
-                                background: isLatest ? 'rgba(168, 85, 247, 0.05)' : 'transparent',
-                                transition: 'background 0.15s ease'
-                              }}
-                            >
-                              <td style={{ padding: '10px 14px', fontWeight: isLatest ? 700 : 500, color: isLatest ? 'var(--text)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}>
-                                {dateFormatted} {isLatest && <span style={{ fontSize: 9.5, background: 'rgba(168,85,247,0.2)', color: '#c084fc', padding: '1px 5px', borderRadius: 6, marginLeft: 6, fontWeight: 700 }}>LATEST</span>}
-                              </td>
-                              <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap' }}>
-                                {Number(log.count).toLocaleString()}
-                              </td>
-                              <td style={{ padding: '10px 14px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                {log.delta !== null && log.delta !== undefined ? (
-                                  <span style={{ color: deltaPositive ? '#10b981' : deltaNegative ? '#f43f5e' : 'var(--text-muted)' }}>
-                                    {deltaPositive ? `+${Number(log.delta).toLocaleString()}` : deltaNegative ? Number(log.delta).toLocaleString() : '—'}
-                                  </span>
-                                ) : (
-                                  <span style={{ color: 'var(--text-muted)' }}>Baseline</span>
-                                )}
-                              </td>
-                              <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                <span style={{
-                                  fontSize: 10.5,
-                                  padding: '2px 8px',
-                                  borderRadius: 10,
-                                  fontWeight: 600,
-                                  background: isLatest ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.05)',
-                                  color: isLatest ? '#10b981' : 'var(--text-muted)',
-                                  border: `1px solid ${isLatest ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)'}`
-                                }}>
-                                  {isLatest ? 'Verified Snapshot' : 'Stored Snapshot'}
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                  {/* 30-Day Horizon */}
+                  <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                      30-Day Forecast
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 850, color: '#c084fc', fontFamily: 'var(--font-display)' }}>
+                      {formatNumber(Math.round(chartData.currentVal + (dailyVelocity * 30)))}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: dailyVelocity >= 0 ? '#10b981' : '#f43f5e', marginTop: 4, fontWeight: 600 }}>
+                      {dailyVelocity >= 0 ? `+${formatNumber(dailyVelocity * 30)}` : formatNumber(dailyVelocity * 30)} est.
+                    </div>
+                  </div>
+
+                  {/* 90-Day Quarterly Horizon */}
+                  <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                      90-Day Horizon
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 850, color: '#f472b6', fontFamily: 'var(--font-display)' }}>
+                      {formatNumber(Math.round(chartData.currentVal + (dailyVelocity * 90)))}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: dailyVelocity >= 0 ? '#10b981' : '#f43f5e', marginTop: 4, fontWeight: 600 }}>
+                      {dailyVelocity >= 0 ? `+${formatNumber(dailyVelocity * 90)}` : formatNumber(dailyVelocity * 90)} est.
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
