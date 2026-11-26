@@ -375,14 +375,16 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
     const maxCount = Math.max(...allCounts)
     const range = maxCount - minCount || 1
 
-    const width = 640
-    const height = 180
-    const padX = 35
-    const padY = 25
+    const width = 680
+    const height = 230
+    const padLeft = 70
+    const padRight = 25
+    const padTop = 30
+    const padBottom = 35
 
     const totalPointsCount = points.length + futurePoints.length
-    const getX = (index) => padX + (index / (totalPointsCount - 1)) * (width - (padX * 2))
-    const getY = (val) => height - padY - ((val - minCount) / range) * (height - (padY * 2))
+    const getX = (index) => padLeft + (index / (totalPointsCount - 1)) * (width - padLeft - padRight)
+    const getY = (val) => height - padBottom - ((val - minCount) / range) * (height - padTop - padBottom)
 
     const plottedHistory = points.map((p, idx) => ({
       ...p,
@@ -413,12 +415,32 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
     }
 
     const lastHist = plottedHistory[plottedHistory.length - 1]
-    const areaPath = `${historyPath} L ${lastHist.x} ${height - padY} L ${plottedHistory[0].x} ${height - padY} Z`
+    const areaPath = `${historyPath} L ${lastHist.x} ${height - padBottom} L ${plottedHistory[0].x} ${height - padBottom} Z`
 
     const startVal = points[0].count
     const currentVal = points[points.length - 1].count
     const netGrowth = currentVal - startVal
     const netPct = startVal > 0 ? ((netGrowth / startVal) * 100).toFixed(1) : 0
+
+    // Y-axis numerical levels (4 horizontal reference markers)
+    const yLevels = [
+      { pct: 1.0, val: maxCount, y: getY(maxCount) },
+      { pct: 0.67, val: Math.round(minCount + range * 0.67), y: getY(minCount + range * 0.67) },
+      { pct: 0.33, val: Math.round(minCount + range * 0.33), y: getY(minCount + range * 0.33) },
+      { pct: 0.0, val: minCount, y: getY(minCount) },
+    ]
+
+    // Table logs for rich HTML table representation (last 10 snapshots)
+    const tableLogs = points.slice(-10).reverse().map((pt, i, arr) => {
+      const nextInReverse = arr[i + 1]
+      const delta = nextInReverse ? pt.count - nextInReverse.count : (dailyVelocity !== 0 ? dailyVelocity : null)
+      return {
+        date: pt.date,
+        count: pt.count,
+        delta: delta,
+        synthetic: pt.synthetic
+      }
+    })
 
     return {
       plottedHistory,
@@ -433,7 +455,16 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
       netGrowth,
       netPct,
       width,
-      height
+      height,
+      padLeft,
+      padRight,
+      padTop,
+      padBottom,
+      yLevels,
+      tableLogs,
+      startDate: points[0]?.date,
+      currentDate: points[points.length - 1]?.date,
+      forecastDate: futurePoints[futurePoints.length - 1]?.date
     }
   }, [profile.follower_history, profile.followers_count, dailyVelocity])
 
@@ -2356,7 +2387,7 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                       Cumulative Growth Trajectory &amp; Forecast
                     </h3>
                     <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '3px 0 0' }}>
-                      Historical trendline with predictive milestone projection
+                      Historical trendline with numerical milestone markers and projection
                     </p>
                   </div>
                 </div>
@@ -2398,7 +2429,7 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                 </div>
               </div>
 
-              {/* Responsive SVG Chart */}
+              {/* Responsive SVG Chart with Numerical Markers */}
               <div style={{ position: 'relative', width: '100%', overflowX: 'auto' }}>
                 <svg
                   viewBox={`0 0 ${chartData.width} ${chartData.height}`}
@@ -2421,21 +2452,70 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                     </linearGradient>
                   </defs>
 
-                  {/* Horizontal Guide Grid Lines */}
-                  {[0.25, 0.5, 0.75].map((pct, i) => {
-                    const y = 25 + pct * (chartData.height - 50)
-                    return (
+                  {/* Horizontal Guide Grid Lines & Y-Axis Numbers */}
+                  {chartData.yLevels.map((lvl, i) => (
+                    <g key={`y-grid-${i}`}>
                       <line
-                        key={i}
-                        x1="35"
-                        y1={y}
-                        x2={chartData.width - 35}
-                        y2={y}
-                        stroke="rgba(255, 255, 255, 0.05)"
+                        x1={chartData.padLeft}
+                        y1={lvl.y}
+                        x2={chartData.width - chartData.padRight}
+                        y2={lvl.y}
+                        stroke="rgba(255, 255, 255, 0.08)"
                         strokeDasharray="3 3"
                       />
-                    )
-                  })}
+                      <text
+                        x={chartData.padLeft - 10}
+                        y={lvl.y + 3.5}
+                        fill="#94a3b8"
+                        fontSize="10"
+                        fontWeight="700"
+                        textAnchor="end"
+                        fontFamily="var(--font-display), monospace, sans-serif"
+                      >
+                        {formatNumber(lvl.val)}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* X-Axis Baseline & Milestone Date Labels */}
+                  <line
+                    x1={chartData.padLeft}
+                    y1={chartData.height - chartData.padBottom}
+                    x2={chartData.width - chartData.padRight}
+                    y2={chartData.height - chartData.padBottom}
+                    stroke="rgba(255, 255, 255, 0.12)"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={chartData.padLeft}
+                    y={chartData.height - 12}
+                    fill="#94a3b8"
+                    fontSize="10"
+                    fontWeight="600"
+                    textAnchor="start"
+                  >
+                    {chartData.startDate ? new Date(chartData.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Start'}
+                  </text>
+                  <text
+                    x={chartData.plottedHistory[chartData.plottedHistory.length - 1]?.x}
+                    y={chartData.height - 12}
+                    fill="#c084fc"
+                    fontSize="10"
+                    fontWeight="700"
+                    textAnchor="middle"
+                  >
+                    ● Today (Snapshot)
+                  </text>
+                  <text
+                    x={chartData.width - chartData.padRight}
+                    y={chartData.height - 12}
+                    fill="#38bdf8"
+                    fontSize="10"
+                    fontWeight="600"
+                    textAnchor="end"
+                  >
+                    +21d Forecast →
+                  </text>
 
                   {/* Area Fill */}
                   <path d={chartData.areaPath} fill="url(#growthAreaGrad)" />
@@ -2532,6 +2612,80 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                   <span>Estimated Velocity Projection</span>
                 </div>
               </div>
+
+              {/* Historical Follower Snapshots Log Table */}
+              {chartData.tableLogs && chartData.tableLogs.length > 0 && (
+                <div style={{ marginTop: 24, borderTop: '1px solid var(--border)', paddingTop: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                      Historical Follower Snapshots
+                    </div>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      Showing past snapshot intervals
+                    </span>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                          <th style={{ padding: '10px 14px', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date</th>
+                          <th style={{ padding: '10px 14px', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Followers</th>
+                          <th style={{ padding: '10px 14px', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Daily Gain / Loss</th>
+                          <th style={{ padding: '10px 14px', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right' }}>Benchmark Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {chartData.tableLogs.map((log, idx) => {
+                          const dateFormatted = log.date ? new Date(log.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent'
+                          const isLatest = idx === 0
+                          const deltaPositive = log.delta > 0
+                          const deltaNegative = log.delta < 0
+                          return (
+                            <tr
+                              key={`tbl-${idx}`}
+                              style={{
+                                borderBottom: idx === chartData.tableLogs.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.04)',
+                                background: isLatest ? 'rgba(168, 85, 247, 0.05)' : 'transparent',
+                                transition: 'background 0.15s ease'
+                              }}
+                            >
+                              <td style={{ padding: '10px 14px', fontWeight: isLatest ? 700 : 500, color: isLatest ? 'var(--text)' : 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                                {dateFormatted} {isLatest && <span style={{ fontSize: 9.5, background: 'rgba(168,85,247,0.2)', color: '#c084fc', padding: '1px 5px', borderRadius: 6, marginLeft: 6, fontWeight: 700 }}>LATEST</span>}
+                              </td>
+                              <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap' }}>
+                                {Number(log.count).toLocaleString()}
+                              </td>
+                              <td style={{ padding: '10px 14px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                {log.delta !== null && log.delta !== undefined ? (
+                                  <span style={{ color: deltaPositive ? '#10b981' : deltaNegative ? '#f43f5e' : 'var(--text-muted)' }}>
+                                    {deltaPositive ? `+${Number(log.delta).toLocaleString()}` : deltaNegative ? Number(log.delta).toLocaleString() : '—'}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)' }}>Baseline</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                <span style={{
+                                  fontSize: 10.5,
+                                  padding: '2px 8px',
+                                  borderRadius: 10,
+                                  fontWeight: 600,
+                                  background: isLatest ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.05)',
+                                  color: isLatest ? '#10b981' : 'var(--text-muted)',
+                                  border: `1px solid ${isLatest ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)'}`
+                                }}>
+                                  {isLatest ? 'Verified Snapshot' : 'Stored Snapshot'}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
