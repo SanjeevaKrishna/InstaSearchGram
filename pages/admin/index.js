@@ -5645,16 +5645,7 @@ export default function AdminPanel() {
                       boxShadow: '0 4px 14px rgba(2,132,199,0.3)'
                     }}
                   >
-                    ⚡ Resume Scrape with {scrapeServer === 'auto' ? 'Auto-Failover' : scrapeServer.toUpperCase()}
-                  </button>
-                      border: 'none',
-                      borderRadius: 12,
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(2,132,199,0.3)'
-                    }}
-                  >
-                    ▶️ Scrape Only Remaining Unscraped for Today
+                    ▶️ Resume Scrape with {scrapeServer === 'auto' ? 'Auto-Failover' : scrapeServer.toUpperCase()}
                   </button>
 
                   {lastTurboFailures?.length > 0 && (
