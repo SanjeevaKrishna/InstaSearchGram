@@ -28,12 +28,16 @@ import {
   ArrowUpRight,
   HelpCircle,
   Users,
-  Search
+  Search,
+  Star,
+  Crown,
+  Shield
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { generateMilestones, formatMilestoneLabel, findMilestoneAchievedDate } from '../../lib/milestones'
 import OgiveGrowthChart from '../../components/OgiveGrowthChart'
 import ComparativePulseTable from '../../components/ComparativePulseTable'
+import MilestoneTrophyBadge, { getMilestoneTier, SilverTrophySvg, GoldTrophySvg, BronzeTrophySvg, DiamondTrophySvg, CenturionTrophySvg } from '../../components/MilestoneTrophyBadge'
 
 const InstagramIcon = ({ size = 24, style = {} }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
@@ -358,15 +362,16 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
   const milestoneTrophies = useMemo(() => {
     const count = profile.followers_count || 0
     const list = [
-      { target: 10000, label: '10K', title: 'Community Spark', icon: '🌱' },
-      { target: 50000, label: '50K', title: 'Rising Vanguard', icon: '⭐' },
-      { target: 100000, label: '100K', title: 'Silver Creator', icon: '🥈' },
-      { target: 500000, label: '500K', title: 'Half-Million Titan', icon: '🏆' },
-      { target: 1000000, label: '1M', title: 'Gold Millionaire', icon: '🥇' },
-      { target: 5000000, label: '5M', title: '5M Supernova', icon: '👑' },
-      { target: 10000000, label: '10M', title: 'Diamond Icon', icon: '💎' },
-      { target: 50000000, label: '50M', title: '50M Mega Star', icon: '🌌' },
-      { target: 100000000, label: '100M', title: 'Centurion Legend', icon: '🪐' }
+      { target: 1000, label: '1K', title: 'Bronze Starter', renderSvg: (s) => <BronzeTrophySvg size={s} /> },
+      { target: 10000, label: '10K', title: 'Community Spark', renderSvg: (s) => <Star size={s} color="#6366f1" /> },
+      { target: 50000, label: '50K', title: 'Rising Vanguard', renderSvg: (s) => <Star size={s} color="#8b5cf6" /> },
+      { target: 100000, label: '100K', title: 'Silver Creator', renderSvg: (s) => <SilverTrophySvg size={s} /> },
+      { target: 500000, label: '500K', title: 'Half-Million Titan', renderSvg: (s) => <SilverTrophySvg size={s} /> },
+      { target: 1000000, label: '1M', title: 'Gold Millionaire', renderSvg: (s) => <GoldTrophySvg size={s} /> },
+      { target: 5000000, label: '5M', title: '5M Supernova', renderSvg: (s) => <GoldTrophySvg size={s} /> },
+      { target: 10000000, label: '10M', title: 'Diamond Icon', renderSvg: (s) => <DiamondTrophySvg size={s} /> },
+      { target: 50000000, label: '50M', title: '50M Mega Star', renderSvg: (s) => <Crown size={s} color="#ec4899" /> },
+      { target: 100000000, label: '100M', title: 'Centurion Legend', renderSvg: (s) => <CenturionTrophySvg size={s} /> }
     ]
 
     return list.map(t => {
@@ -379,6 +384,11 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
   const [liveFollowers, setLiveFollowers] = useState(profile?.followers_count || 0)
   const [changeDir, setChangeDir] = useState(null)
   const [isCountingUp, setIsCountingUp] = useState(true)
+
+  // Current active milestone tier (Bronze, Silver, Gold, Diamond, Centurion)
+  const currentTier = useMemo(() => {
+    return getMilestoneTier(liveFollowers || profile.followers_count || 0)
+  }, [liveFollowers, profile.followers_count])
 
   // Live follower count from laptop fetch
   const [liveFetchedCount, setLiveFetchedCount] = useState(null) // null = not yet received
@@ -1165,10 +1175,26 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
           <div className="card profile-hero-card">
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 6, background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)' }} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <div style={{ marginBottom: 18 }}>
+              {/* Avatar with Floating Milestone Trophy Pin */}
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
                 <img src={profile.photo_url || '/placeholder-avatar.png'} alt={profile.name}
                   className="profile-avatar"
-                  style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(168,85,247,0.4)', boxShadow: '0 0 20px rgba(168,85,247,0.2)' }} />
+                  style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: `3px solid ${currentTier.borderColor}`,
+                    boxShadow: `0 0 24px ${currentTier.glowColor}`
+                  }}
+                />
+
+                {/* Floating Trophy Badge beside profile pic (Top-Right) */}
+                <MilestoneTrophyBadge
+                  followersCount={liveFollowers || profile.followers_count || 0}
+                  mode="avatar-pin"
+                  onClick={() => setIsMilestonesModalOpen(true)}
+                />
               </div>
               <h1 className="profile-title" style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, margin: '0 0 6px', lineHeight: 1.25 }}>{profile.name}</h1>
               {profile.instagram_handle && (
@@ -1195,6 +1221,15 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                   </span>
                 </div>
               )}
+
+              {/* Creator Milestone Trophy Badge Pill */}
+              <div style={{ marginBottom: 14 }}>
+                <MilestoneTrophyBadge
+                  followersCount={liveFollowers || profile.followers_count || 0}
+                  mode="hero-pill"
+                  onClick={() => setIsMilestonesModalOpen(true)}
+                />
+              </div>
               <div className="profile-tags-container" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
                 {profile.category && (() => {
                   const firstCat = profile.category.split(',')[0].trim();
@@ -1490,9 +1525,47 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                   overflow: 'hidden'
                 }}
               >
+                {/* Active Trophy Showcase Spotlight */}
+                <div style={{
+                  padding: '16px 20px',
+                  background: currentTier.pillBg,
+                  borderBottom: `1px solid ${currentTier.pillBorder}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14
+                }}>
+                  <div style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    background: currentTier.bg,
+                    border: `1.5px solid ${currentTier.accent}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: `0 4px 14px ${currentTier.shadow}`,
+                    flexShrink: 0
+                  }}>
+                    {currentTier.iconSvg}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: currentTier.textColor }}>
+                        {currentTier.title} ({currentTier.label}+)
+                      </span>
+                      <span style={{ fontSize: 10, background: 'rgba(255, 255, 255, 0.15)', color: currentTier.textColor, padding: '1px 6px', borderRadius: 8, fontWeight: 700 }}>
+                        Current Plaque
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {currentTier.desc}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Modal Header */}
                 <div style={{
-                  padding: '18px 20px',
+                  padding: '16px 20px',
                   borderBottom: '1px solid var(--border)',
                   display: 'flex',
                   alignItems: 'center',
@@ -2570,28 +2643,30 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                 <div
                   key={idx}
                   style={{
-                    background: tr.isAchieved ? 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(234,88,12,0.04) 100%)' : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${tr.isAchieved ? 'rgba(245,158,11,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                    background: tr.isAchieved ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.015)',
+                    border: `1px solid ${tr.isAchieved ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)'}`,
                     borderRadius: 14,
-                    padding: '14px 10px',
+                    padding: '16px 12px',
                     textAlign: 'center',
-                    opacity: tr.isAchieved ? 1 : 0.65,
+                    opacity: tr.isAchieved ? 1 : 0.55,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 6
                   }}
                 >
-                  <span style={{ fontSize: 24, filter: tr.isAchieved ? 'none' : 'grayscale(1)' }}>{tr.icon}</span>
-                  <div style={{ fontSize: 14, fontWeight: 850, color: tr.isAchieved ? '#f59e0b' : 'var(--text-muted)', fontFamily: 'var(--font-display)' }}>
+                  <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {tr.renderSvg ? tr.renderSvg(24) : <Trophy size={20} />}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: tr.isAchieved ? '#f8fafc' : 'var(--text-muted)', fontFamily: 'var(--font-display)' }}>
                     {tr.label}
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600 }}>{tr.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{tr.title}</div>
                   <div style={{
-                    fontSize: 9.5,
+                    fontSize: 10,
                     fontWeight: 750,
                     color: tr.isAchieved ? '#10b981' : '#f59e0b',
-                    background: tr.isAchieved ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
+                    background: tr.isAchieved ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.1)',
                     padding: '2px 8px',
                     borderRadius: 6,
                     marginTop: 2
