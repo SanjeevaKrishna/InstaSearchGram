@@ -1,9 +1,41 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import BottomNav from '../../components/BottomNav'
-import { ArrowLeft, Calendar, Users, ExternalLink, Heart, Eye, Film, Play, ChevronDown } from 'lucide-react'
+import {
+  ArrowLeft,
+  Calendar,
+  Users,
+  ExternalLink,
+  Heart,
+  Eye,
+  Film,
+  Play,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  TrendingUp,
+  Award,
+  Zap,
+  HelpCircle,
+  BarChart2
+} from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+
+const parseNumber = (text) => {
+  if (!text) return 0
+  const cleaned = text.toString().trim().toLowerCase()
+  const numMatch = cleaned.match(/^([0-9.]+)/)
+  if (!numMatch) return 0
+  const num = parseFloat(numMatch[1])
+  if (isNaN(num)) return 0
+  if (cleaned.includes('b') || cleaned.includes('billion')) return num * 1000000000
+  if (cleaned.includes('m') || cleaned.includes('million')) return num * 1000000
+  if (cleaned.includes('k') || cleaned.includes('thousand')) return num * 1000
+  if (cleaned.includes('crore') || cleaned.includes('cr')) return num * 10000000
+  if (cleaned.includes('lakh') || cleaned.includes('l')) return num * 100000
+  return num
+}
 
 export default function ReelDetailPage({ initialReel, moreFromCreator = [], topCategoryReels = [], celebrityProfile }) {
   const router = useRouter()
@@ -68,26 +100,63 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
 
   const initials = reel && reel.creator_name ? (reel.creator_name.replace('@', '').substring(0, 1).toUpperCase()) : 'A'
 
-  // Determine if this is "thin content" (missing major engagement stats and details) to avoid indexing placeholder nodes
-  const isThinContent = !reel || (!reel.views_text && !reel.likes_text && !reel.title && !reel.description);
+  // Performance calculations
+  const viewsNum = parseNumber(reel?.views_text)
+  const likesNum = parseNumber(reel?.likes_text)
+  const engagementRatio = (viewsNum > 0 && likesNum > 0) ? ((likesNum / viewsNum) * 100).toFixed(1) : null
+
+  // Qualitative resonance tier
+  const resonanceTier = useMemo(() => {
+    if (!engagementRatio) return null
+    const r = parseFloat(engagementRatio)
+    if (r >= 8) return { label: 'Top 1% Viral Resonance', color: '#10b981', bg: 'rgba(16,185,129,0.1)', text: 'Exceptional like-to-view conversion reflecting deep viral audience appreciation.' }
+    if (r >= 4.5) return { label: 'High Viral Efficiency', color: '#6366f1', bg: 'rgba(99,102,241,0.1)', text: 'Strong community engagement surpassing category averages.' }
+    return { label: 'Broad Discovery Reach', color: '#38bdf8', bg: 'rgba(56,189,248,0.1)', text: 'High-volume algorithmic discovery across Instagram surfaces.' }
+  }, [engagementRatio])
 
   // SEO configuration
   const pageTitle = reel ? `Watch ${reel.creator_name || 'Creator'} Reel (Ranked #${reel.rank} in ${reel.category_name}) — Spialr` : 'Watch Instagram Reel — Spialr'
-  const pageDescription = reel ? `Watch this popular reel by ${reel.creator_name || 'creator'} on Spialr. Metrics: ${reel.views_text || 'N/A'} views, ${reel.likes_text || 'N/A'} likes. Currently ranked #${reel.rank} in the ${reel.category_name} category.` : 'Watch viral reels on Spialr.'
+  const pageDescription = reel ? `Watch this viral reel by ${reel.creator_name || 'creator'} on Spialr. Metrics: ${reel.views_text || 'N/A'} views, ${reel.likes_text || 'N/A'} likes. Currently ranked #${reel.rank} in ${reel.category_name}.` : 'Watch viral reels on Spialr.'
   const canonicalUrl = reel ? `https://spialr.com/reel/${router.query.id || id}` : 'https://spialr.com'
 
   const hasFollowers = followersDisplay && followersDisplay !== '0'
   const hasViews = reel && reel.views_text && reel.views_text !== '0'
   const hasLikes = reel && reel.likes_text && reel.likes_text !== '0'
 
-  // Dynamic statistics phrasing for the insights text
-  let statsPart = ''
-  if (hasViews && hasLikes) {
-    statsPart = `, with <strong>${reel.views_text}</strong> views and <strong>${reel.likes_text}</strong> likes`
-  } else if (hasViews) {
-    statsPart = `, with <strong>${reel.views_text}</strong> views`
-  } else if (hasLikes) {
-    statsPart = `, with <strong>${reel.likes_text}</strong> likes`
+  const faqItems = [
+    {
+      q: `What is this reel's ranking on Spialr?`,
+      a: `This post currently holds Rank #${reel?.rank || 1} on Spialr's ${reel?.category_name || 'Instagram'} leaderboard based on verified view counts and community interaction.`
+    },
+    ...(hasLikes ? [{
+      q: `How many likes has this post accumulated?`,
+      a: `Public snapshot records confirm ${reel?.likes_text} likes for this post.`
+    }] : []),
+    ...(hasViews ? [{
+      q: `How many views does this reel have?`,
+      a: `This reel has achieved ${reel?.views_text} views based on latest indexed public data.`
+    }] : []),
+    ...(engagementRatio ? [{
+      q: `What is the engagement efficiency ratio for this reel?`,
+      a: `This reel achieves an engagement ratio of ${engagementRatio}%, meaning approximately 1 out of every ${Math.round(100 / parseFloat(engagementRatio))} viewers liked the post.`
+    }] : []),
+    {
+      q: 'How can I watch the original reel directly on Instagram?',
+      a: 'Click the "Open Reel on Instagram" button on this page to view the original video, read user comments, and engage directly.'
+    }
+  ]
+
+  const jsonLdFaq = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: f.a
+      }
+    }))
   }
 
   return (
@@ -96,18 +165,39 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
         <link rel="canonical" href={canonicalUrl} key="canonical" />
-        {isThinContent && <meta name="robots" content="noindex, follow" />}
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        {reel?.photo_url && <meta property="og:image" content={reel.photo_url} />}
+        <meta property="og:type" content="video.other" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }}
+        />
       </Head>
 
       <main style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 100px' }}>
 
-        {/* Back */}
+        {/* Back to Leaderboard */}
         <button
-          onClick={() => router.back()}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '6px 10px', borderRadius: 20, marginLeft: -10, marginBottom: 16 }}
+          onClick={() => router.push('/trending')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'var(--surface2)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: '7px 14px',
+            borderRadius: 20,
+            marginBottom: 16,
+            transition: 'all 0.2s ease'
+          }}
           className="back-btn-hover"
         >
-          <ArrowLeft size={14} /> Back
+          <ArrowLeft size={14} /> Back to Leaderboard
         </button>
 
         {loading ? (
@@ -118,141 +208,328 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
             <p style={{ fontSize: 14, opacity: 0.8 }}>{error}</p>
           </div>
         ) : !reel ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>Not found.</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>Reel not found.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-            {/* ── HERO CARD ── */}
+            {/* ── CARD 1: VIDEO SHOWCASE HERO ── */}
             <div style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
               borderRadius: 20,
-              padding: '24px 20px',
+              padding: '22px 20px',
               position: 'relative',
               overflow: 'hidden'
             }}>
-              {/* bg glow */}
-              <div style={{ position: 'absolute', top: '-30%', right: '-10%', width: '55%', height: '120%', background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
               {/* Creator row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: 'var(--surface2)', border: '2px solid var(--border)', flexShrink: 0 }}>
-                  {reel.photo_url
-                    ? <img src={reel.photo_url} alt={`${reel.creator_name || 'Creator'} profile avatar`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                  {reel.creator_photo_url
+                    ? <img src={reel.creator_photo_url} alt={`${reel.creator_name || 'Creator'} avatar`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'var(--accent)' }}>{initials}</div>
                   }
                 </div>
-                <div style={{ minWidth: 0 }}>
-                  {reel.creator_slug
-                    ? <a href={'/profile/' + reel.creator_slug} style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', textDecoration: 'none', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}</a>
-                    : <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}</span>
-                  }
-                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{reel.category_name || 'Instagram'} · Rank #{reel.rank}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  {reel.creator_slug ? (
+                    <a href={'/profile/' + reel.creator_slug} style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent)', textDecoration: 'none', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
+                      {reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name || 'anonymous'}`}
+                    </span>
+                  )}
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {reel.category_name || 'Instagram'} · Rank #{reel.rank}
+                  </div>
                 </div>
+
                 {/* Rank badge */}
-                <div style={{ marginLeft: 'auto', flexShrink: 0, background: 'linear-gradient(135deg,#6366f1,#a855f7)', color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 20, letterSpacing: '0.04em', boxShadow: '0 2px 10px rgba(99,102,241,0.35)' }}>
-                  #{reel.rank}
+                <div style={{
+                  flexShrink: 0,
+                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  padding: '5px 12px',
+                  borderRadius: 20,
+                  letterSpacing: '0.04em',
+                  boxShadow: '0 2px 10px rgba(99,102,241,0.3)'
+                }}>
+                  Rank #{reel.rank}
                 </div>
               </div>
 
-              {/* Big stat number(s) */}
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20, position: 'relative' }}>
-                {hasLikes && (
-                  <div style={{ flex: 1, minWidth: 130, background: 'linear-gradient(135deg,rgba(255,42,95,0.07),rgba(255,42,95,0.03))', border: '1px solid rgba(255,42,95,0.18)', borderRadius: 14, padding: '16px 18px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#ff2a5f', textTransform: 'uppercase', marginBottom: 4 }}>❤️ Total Likes</div>
-                    <div style={{ fontSize: 30, fontWeight: 900, color: '#ff2a5f', letterSpacing: '-0.03em', lineHeight: 1, textShadow: '0 0 24px rgba(255,42,95,0.28)' }}>{reel.likes_text}</div>
-                  </div>
-                )}
-                {hasViews && (
-                  <div style={{ flex: 1, minWidth: 130, background: 'linear-gradient(135deg,rgba(168,85,247,0.07),rgba(168,85,247,0.03))', border: '1px solid rgba(168,85,247,0.18)', borderRadius: 14, padding: '16px 18px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#a855f7', textTransform: 'uppercase', marginBottom: 4 }}>👁️ Total Views</div>
-                    <div style={{ fontSize: 30, fontWeight: 900, color: '#a855f7', letterSpacing: '-0.03em', lineHeight: 1, textShadow: '0 0 24px rgba(168,85,247,0.28)' }}>{reel.views_text}</div>
-                  </div>
-                )}
-                {hasFollowers && (
-                  <div style={{ flex: 1, minWidth: 130, background: 'linear-gradient(135deg,rgba(99,102,241,0.07),rgba(99,102,241,0.03))', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 14, padding: '16px 18px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: '#6366f1', textTransform: 'uppercase', marginBottom: 4 }}>👤 Followers</div>
-                    <div style={{ fontSize: 30, fontWeight: 900, color: '#6366f1', letterSpacing: '-0.03em', lineHeight: 1, textShadow: '0 0 24px rgba(99,102,241,0.28)' }}>{followersDisplay}</div>
-                  </div>
-                )}
-              </div>
+              {/* Large Video Thumbnail Cover */}
+              {reel.photo_url && (
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  aspectRatio: '16 / 10',
+                  maxHeight: 380,
+                  borderRadius: 14,
+                  overflow: 'hidden',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  marginBottom: 16
+                }}>
+                  <img
+                    src={reel.photo_url}
+                    alt={reel.title || 'Trending Instagram Reel'}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    onError={e => e.target.style.display = 'none'}
+                  />
+                  {/* Play Overlay */}
+                  <a
+                    href={reel.instagram_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'rgba(0, 0, 0, 0.25)',
+                      textDecoration: 'none',
+                      transition: 'background 0.2s ease'
+                    }}
+                    className="video-overlay-hover"
+                  >
+                    <div style={{
+                      width: 58,
+                      height: 58,
+                      borderRadius: '50%',
+                      background: 'rgba(0, 0, 0, 0.65)',
+                      border: '2px solid rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(6px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                      transition: 'transform 0.2s ease'
+                    }}
+                    className="play-icon-bounce"
+                    >
+                      <Play size={22} fill="currentColor" style={{ marginLeft: 3 }} />
+                    </div>
+                  </a>
+                </div>
+              )}
 
-              {/* Title */}
-              <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', lineHeight: 1.5, margin: '0 0 16px', position: 'relative' }}>
+              {/* Title & Caption */}
+              <h1 style={{ fontSize: 16.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.5, margin: '0 0 16px' }}>
                 {reel.title ? `"${reel.title}"` : `${reel.creator_name || 'Creator'} - Instagram Reel #${reel.rank}`}
               </h1>
 
-              {/* CTA */}
-              <a
-                href={reel.instagram_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg,#e1306c,#fd1d1d,#f77737)', color: '#fff', padding: '12px 20px', borderRadius: 12, fontWeight: 700, fontSize: 14, textDecoration: 'none', boxShadow: '0 4px 16px rgba(225,48,108,0.35)', transition: 'all 0.2s', position: 'relative' }}
-                className="watch-reel-cta"
-              >
-                <ExternalLink size={16} />
-                Open Post on Instagram
-              </a>
+              {/* CTA: Open Post on Instagram */}
+              {reel.instagram_link && (
+                <a
+                  href={reel.instagram_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    background: 'linear-gradient(135deg, #e1306c, #fd1d1d, #f77737)',
+                    color: '#fff',
+                    padding: '13px 20px',
+                    borderRadius: 12,
+                    fontWeight: 750,
+                    fontSize: 14.5,
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 16px rgba(225,48,108,0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                  className="watch-reel-cta"
+                >
+                  <ExternalLink size={16} />
+                  <span>Open Reel on Instagram</span>
+                </a>
+              )}
 
-              {/* Date */}
+              {/* Recorded Date */}
               {reel.created_at && (
-                <div style={{ textAlign: 'center', marginTop: 12, fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, position: 'relative' }}>
-                  <Calendar size={11} />
-                  {getFormattedDate(reel.created_at)}
+                <div style={{ textAlign: 'center', marginTop: 12, fontSize: 11.5, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                  <Calendar size={12} />
+                  <span>Indexed: {getFormattedDate(reel.created_at)}</span>
                 </div>
               )}
             </div>
 
-            {/* ── FAQ SECTION ── */}
+            {/* ── CARD 2: PERFORMANCE & VIRAL RESONANCE SCORECARD ── */}
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 20,
+              padding: '22px 20px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <BarChart2 size={18} color="#818cf8" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                    Viral Resonance &amp; Performance Metrics
+                  </h3>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                    Public metrics recorded on Spialr&apos;s rolling leaderboard
+                  </p>
+                </div>
+              </div>
+
+              {/* Stat Boxes */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 16 }}>
+                {hasViews && (
+                  <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: '#a855f7', textTransform: 'uppercase', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      <Eye size={12} /> Total Views
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 850, color: '#c084fc', fontFamily: 'var(--font-display)' }}>
+                      {reel.views_text}
+                    </div>
+                  </div>
+                )}
+                {hasLikes && (
+                  <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: '#ff2a5f', textTransform: 'uppercase', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      <Heart size={12} /> Total Likes
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 850, color: '#ff2a5f', fontFamily: 'var(--font-display)' }}>
+                      {reel.likes_text}
+                    </div>
+                  </div>
+                )}
+                {hasFollowers && (
+                  <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: '#6366f1', textTransform: 'uppercase', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      <Users size={12} /> Creator Followers
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 850, color: '#818cf8', fontFamily: 'var(--font-display)' }}>
+                      {followersDisplay}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Engagement Efficiency Gauge */}
+              {engagementRatio && (
+                <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', marginTop: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
+                      Like-to-View Efficiency:
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: resonanceTier?.color || 'var(--accent)' }}>
+                      {engagementRatio}% Conversion
+                    </span>
+                  </div>
+                  {/* Gauge bar */}
+                  <div style={{ width: '100%', height: 7, borderRadius: 10, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', position: 'relative' }}>
+                    <div style={{
+                      width: `${Math.min(100, (parseFloat(engagementRatio) / 12) * 100)}%`,
+                      height: '100%',
+                      borderRadius: 10,
+                      background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)'
+                    }} />
+                  </div>
+                  {resonanceTier && (
+                    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: resonanceTier.color, background: resonanceTier.bg, padding: '3px 8px', borderRadius: 6 }}>
+                        {resonanceTier.label}
+                      </span>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                        {resonanceTier.text}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── CARD 3: CREATOR INTELLIGENCE & SPIALR PROFILE RUNWAY ── */}
+            {reel.creator_slug ? (
+              <div
+                onClick={() => router.push(`/profile/${reel.creator_slug}`)}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 20,
+                  padding: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 14,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                className="creator-card-hover"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', background: 'var(--surface2)', border: '2px solid var(--border)', flexShrink: 0 }}>
+                    {reel.creator_photo_url ? (
+                      <img src={reel.creator_photo_url} alt={reel.creator_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--accent)' }}>{initials}</div>
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>{reel.creator_name?.startsWith('@') ? reel.creator_name : `@${reel.creator_name}`}</span>
+                      <span style={{ fontSize: 10, background: 'rgba(99,102,241,0.15)', color: '#818cf8', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                        Creator Profile
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
+                      Inspect historical follower growth, Ogive curve &amp; 30-day velocity →
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 20, color: 'var(--accent)', paddingRight: 4 }}>
+                  →
+                </div>
+              </div>
+            ) : null}
+
+            {/* ── CARD 4: FREQUENTLY ASKED QUESTIONS (FAQ) ── */}
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>❓ Quick Questions</div>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <HelpCircle size={17} color="#a855f7" />
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>
+                  Questions About This Reel
+                </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {[
-                  {
-                    q: `What is ${reel.creator_name || 'this creator'}'s rank?`,
-                    a: `This post is currently ranked #${reel.rank} in the ${reel.category_name} category on Spialr.`
-                  },
-                  ...(hasLikes ? [{
-                    q: `How many likes does this post have?`,
-                    a: `This post has ${reel.likes_text} likes as recorded by Spialr.`
-                  }] : []),
-                  ...(hasViews ? [{
-                    q: `How many views does this reel have?`,
-                    a: `This reel has ${reel.views_text} views based on the latest public metrics.`
-                  }] : []),
-                  {
-                    q: 'How do I view this post on Instagram?',
-                    a: 'Click the "Open Post on Instagram" button above to open the official post directly.'
-                  },
-                  {
-                    q: `Which category does this belong to?`,
-                    a: `This post is listed under the ${reel.category_name || 'Instagram'} category on Spialr, which tracks top-performing content in this niche.`
-                  }
-                ].map((faq, idx) => (
+                {faqItems.map((faq, idx) => (
                   <ReelFAQItem key={idx} faq={faq} />
                 ))}
               </div>
             </div>
 
-            {/* ── MORE FROM CREATOR ── */}
+            {/* ── CARD 5: MORE FROM THIS CREATOR ── */}
             {moreFromCreator.length > 0 && (
               <div>
-                <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🎥 More from {reel.creator_name || 'Creator'}
+                <h3 style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 12, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Film size={16} color="#ec4899" /> More from {reel.creator_name || 'Creator'}
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))', gap: 12 }}>
                   {moreFromCreator.map(item => (
                     <a key={item.id} href={`/reel/${generateReelSlug(item)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', transition: 'all 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
+                      <div
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', transition: 'all 0.2s' }}
+                        className="thumb-card-hover"
+                      >
                         <div style={{ height: 160, position: 'relative', background: 'var(--surface2)' }}>
-                          <img src={item.photo_url} alt={`${item.title || item.creator_name || 'Instagram reel'} thumbnail`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <div style={{ position: 'absolute', bottom: 5, right: 5, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{item.views_text || item.likes_text}</div>
+                          <img src={item.photo_url} alt={`${item.title || 'Instagram reel'} thumbnail`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                          <div style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
+                            {item.views_text || item.likes_text}
+                          </div>
                         </div>
-                        <div style={{ padding: '8px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>{item.title || 'Watch'}</div>
+                        <div style={{ padding: '8px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>
+                          {item.title || 'Watch Reel'}
+                        </div>
                       </div>
                     </a>
                   ))}
@@ -260,43 +537,32 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
               </div>
             )}
 
-            {/* ── TOP IN CATEGORY ── */}
+            {/* ── CARD 6: TOP IN CATEGORY ── */}
             {topCategoryReels.length > 0 && (
               <div>
-                <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <h3 style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 12, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   🔥 Top in {reel.category_name}
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))', gap: 12 }}>
                   {topCategoryReels.map(item => (
                     <a key={item.id} href={`/reel/${generateReelSlug(item)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', transition: 'all 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
+                      <div
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', transition: 'all 0.2s' }}
+                        className="thumb-card-hover"
+                      >
                         <div style={{ height: 160, position: 'relative', background: 'var(--surface2)' }}>
-                          <img src={item.photo_url} alt={`${item.title || item.creator_name || 'Instagram reel'} thumbnail`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <div style={{ position: 'absolute', bottom: 5, right: 5, background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{item.views_text || item.likes_text}</div>
+                          <img src={item.photo_url} alt={`${item.title || 'Instagram reel'} thumbnail`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                          <div style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
+                            {item.views_text || item.likes_text}
+                          </div>
                         </div>
-                        <div style={{ padding: '8px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>{item.title || 'Watch'}</div>
+                        <div style={{ padding: '8px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>
+                          {item.title || 'Watch Reel'}
+                        </div>
                       </div>
                     </a>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* ── VIEW FULL PROFILE ── */}
-            {reel.creator_slug && (
-              <div
-                onClick={() => router.push(`/profile/${reel.creator_slug}`)}
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.2s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none' }}
-              >
-                <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>View Full Profile</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Follower growth & stats for {reel.creator_name || 'this creator'}</div>
-                </div>
-                <span style={{ fontSize: 18, color: 'var(--accent)' }}>→</span>
               </div>
             )}
 
@@ -307,9 +573,12 @@ export default function ReelDetailPage({ initialReel, moreFromCreator = [], topC
       <BottomNav />
 
       <style jsx global>{`
-        .back-btn-hover:hover { background: var(--surface2) !important; color: var(--text) !important; }
-        .watch-reel-cta:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(225,48,108,0.45) !important; }
+        .back-btn-hover:hover { background: var(--surface3) !important; color: var(--text) !important; }
+        .watch-reel-cta:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(225,48,108,0.4) !important; }
         .watch-reel-cta:active { transform: translateY(0); }
+        .creator-card-hover:hover { border-color: var(--accent) !important; transform: translateY(-1px); }
+        .thumb-card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .video-overlay-hover:hover .play-icon-bounce { transform: scale(1.1); background: rgba(225, 48, 108, 0.85) !important; }
       `}</style>
     </>
   )
@@ -447,7 +716,6 @@ export async function getServerSideProps(context) {
       return num;
     }
 
-    // Sort according to live API logic
     let sortedReels = []
     if (matchedTable === 'viral_reels') {
       sortedReels = (tableData || []).sort((a, b) => {
@@ -463,7 +731,7 @@ export async function getServerSideProps(context) {
         if (countA !== countB) return countB - countA
         return new Date(b.created_at) - new Date(a.created_at)
       })
-    } else { // most_liked_posts or most_liked_reels
+    } else {
       sortedReels = (tableData || []).sort((a, b) => {
         const countA = parseCountText(a.likes_text)
         const countB = parseCountText(b.likes_text)
@@ -474,7 +742,26 @@ export async function getServerSideProps(context) {
 
     const rankVal = sortedReels.findIndex(r => r.id === id) + 1
     const nameKey = (reel.creator_name || '').replace('@', '').toLowerCase().trim()
-    const celebrity = celebrityMap[nameKey] || null
+    let celebrity = celebrityMap[nameKey] || null
+
+    // If not found in celebrities, check most_followed table
+    if (!celebrity) {
+      const { data: mfMatch } = await supabase
+        .from('most_followed')
+        .select('name, instagram_handle, photo_url, followers_count')
+        .or(`instagram_handle.ilike.%${nameKey}%,name.ilike.%${nameKey}%`)
+        .limit(1)
+        .maybeSingle()
+
+      if (mfMatch) {
+        celebrity = {
+          name: mfMatch.name,
+          slug: (mfMatch.instagram_handle || mfMatch.name || '').toLowerCase().trim().replace(/\./g, '-'),
+          photo_url: mfMatch.photo_url,
+          followers_count: mfMatch.followers_count
+        }
+      }
+    }
 
     const enrichedReel = {
       ...reel,
@@ -488,7 +775,7 @@ export async function getServerSideProps(context) {
     // Top Category Reels (excluding current)
     const topCategoryReels = sortedReels
       .filter(r => r.id !== id)
-      .slice(0, 5)
+      .slice(0, 6)
       .map(r => {
         const rNameKey = (r.creator_name || '').replace('@', '').toLowerCase().trim()
         const rMatch = celebrityMap[rNameKey]
@@ -502,7 +789,7 @@ export async function getServerSideProps(context) {
     // More from this creator
     const moreFromCreator = sortedReels
       .filter(r => r.id !== id && (r.creator_name || '').replace('@', '').toLowerCase().trim() === nameKey)
-      .slice(0, 5)
+      .slice(0, 6)
       .map(r => {
         const rNameKey = (r.creator_name || '').replace('@', '').toLowerCase().trim()
         const rMatch = celebrityMap[rNameKey]
@@ -533,11 +820,8 @@ function ReelFAQItem({ faq }) {
   const [open, setOpen] = useState(false)
   return (
     <div style={{
-      background: 'var(--surface2)',
-      borderRadius: 12,
-      border: '1px solid var(--border)',
-      overflow: 'hidden',
-      transition: 'all 0.2s ease'
+      borderBottom: '1px solid var(--border)',
+      transition: 'background 0.2s ease'
     }}>
       <button
         onClick={() => setOpen(!open)}
@@ -548,36 +832,21 @@ function ReelFAQItem({ faq }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 12,
-          padding: '14px 18px',
-          background: 'none',
+          padding: '14px 20px',
+          background: open ? 'var(--surface2)' : 'transparent',
           border: 'none',
-          cursor: 'pointer',
-          textAlign: 'left',
           color: 'var(--text)',
-          fontSize: 14,
-          fontWeight: 700
+          fontSize: 13.5,
+          fontWeight: 700,
+          cursor: 'pointer',
+          textAlign: 'left'
         }}
       >
         <span>{faq.q}</span>
-        <span style={{
-          color: 'var(--accent)',
-          display: 'inline-flex',
-          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-          transition: 'transform 0.2s ease',
-          flexShrink: 0
-        }}>
-          <ChevronDown size={18} />
-        </span>
+        {open ? <ChevronUp size={16} color="var(--accent)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
       </button>
       {open && (
-        <div style={{
-          padding: '0 18px 16px',
-          fontSize: 13,
-          color: 'var(--text-dim)',
-          lineHeight: 1.65,
-          borderTop: '1px solid var(--border)',
-          paddingTop: 12
-        }}>
+        <div style={{ padding: '0 20px 14px', background: 'var(--surface2)', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.6 }}>
           {faq.a}
         </div>
       )}
