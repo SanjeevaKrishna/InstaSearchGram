@@ -16,6 +16,7 @@ import {
   BarChart2
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { proxyImageUrl, proxyProfileImages } from '../../lib/imageProxy'
 
 const formatFollowers = (n) => {
   if (!n) return null
@@ -52,12 +53,15 @@ const generateCommentSlug = (item) => {
 export default function CommentDetailPage({ initialComment, topComments = [], topFeaturedCreators = [] }) {
   const router = useRouter()
   const [comment, setComment] = useState(initialComment)
+  const [dpFailed, setDpFailed] = useState(false)
 
   useEffect(() => {
     setComment(initialComment)
+    setDpFailed(false)
   }, [initialComment])
 
   const authorName = comment?.creator_name ? comment.creator_name.replace(/^@/, '') : 'Instagram User'
+  const authorDp = (!dpFailed && (comment?.creator_photo_url || comment?.photo_url)) ? (comment.creator_photo_url || comment.photo_url) : null
   const commentText = comment?.title || comment?.description || 'Instagram Comment'
   const likesText = comment?.likes_text || 'thousands of'
   const rank = comment?.rank || 1
@@ -80,7 +84,7 @@ export default function CommentDetailPage({ initialComment, topComments = [], to
         <link rel="canonical" href={`https://spialr.com/comment/${router.query.id || ''}`} key="canonical" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        {comment?.photo_url && <meta property="og:image" content={comment.photo_url} />}
+        {authorDp && <meta property="og:image" content={authorDp} />}
       </Head>
 
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '24px 18px 120px' }}>
@@ -146,26 +150,49 @@ export default function CommentDetailPage({ initialComment, topComments = [], to
           }}>
             {/* Author Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                {/* Profile DP */}
                 <div style={{
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #e1306c, #833ab4)',
+                  overflow: 'hidden',
+                  background: 'var(--surface2)',
+                  border: '2px solid rgba(225, 48, 108, 0.35)',
+                  boxShadow: '0 2px 12px rgba(225, 48, 108, 0.15)',
+                  flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff',
-                  fontSize: 18,
-                  fontWeight: 800
+                  justifyContent: 'center'
                 }}>
-                  {authorName.charAt(0).toUpperCase()}
+                  {authorDp ? (
+                    <img
+                      src={authorDp}
+                      alt={`${authorName} profile DP`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      onError={() => setDpFailed(true)}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(135deg, #e1306c, #833ab4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontSize: 20,
+                      fontWeight: 800
+                    }}>
+                      {authorName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>
+                  <div style={{ fontSize: 16.5, fontWeight: 800, color: 'var(--text)' }}>
                     @{authorName}
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                     Verified Community Interaction
                   </div>
                 </div>
@@ -337,6 +364,7 @@ export default function CommentDetailPage({ initialComment, topComments = [], to
                 {topComments.map(item => {
                   const itemSlug = generateCommentSlug(item)
                   const itemAuthor = item.creator_name ? item.creator_name.replace(/^@/, '') : 'User'
+                  const itemDp = item.creator_photo_url || item.photo_url || null
                   const itemText = item.title || item.description || 'Viral Comment'
                   return (
                     <Link
@@ -357,9 +385,52 @@ export default function CommentDetailPage({ initialComment, topComments = [], to
                       className="top-comment-item-hover"
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1, paddingRight: 12 }}>
-                        <span style={{ fontSize: 13, fontWeight: 850, color: item.rank <= 3 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }}>
+                        {/* Rank */}
+                        <span style={{ fontSize: 13, fontWeight: 850, color: item.rank <= 3 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, width: 22, textAlign: 'center' }}>
                           #{item.rank}
                         </span>
+
+                        {/* Profile DP */}
+                        <div style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          background: 'var(--surface)',
+                          border: '1.5px solid rgba(255, 255, 255, 0.12)',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {itemDp ? (
+                            <img
+                              src={itemDp}
+                              alt={itemAuthor}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={e => {
+                                e.target.style.display = 'none'
+                                e.target.parentElement.innerHTML = `<div style="width:100%;height:100%;background:linear-gradient(135deg,#e1306c,#833ab4);display:flex;alignItems:center;justifyContent:center;color:#fff;fontSize:14px;fontWeight:800;">${itemAuthor.charAt(0).toUpperCase()}</div>`
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              background: 'linear-gradient(135deg, #e1306c, #833ab4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#fff',
+                              fontSize: 14,
+                              fontWeight: 800
+                            }}>
+                              {itemAuthor.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Author & Text */}
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 750, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             @{itemAuthor}
@@ -369,6 +440,8 @@ export default function CommentDetailPage({ initialComment, topComments = [], to
                           </div>
                         </div>
                       </div>
+
+                      {/* Likes */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                         <Heart size={13} fill="#ff2a5f" color="#ff2a5f" />
                         <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>
@@ -525,8 +598,24 @@ export async function getServerSideProps(context) {
 
     const rankVal = sortedComments.findIndex(c => c.id === id) + 1
 
+    // Check if creator has a photo in most_followed if creator_photo_url is empty
+    let authorPhoto = comment.creator_photo_url || null
+    if (!authorPhoto) {
+      const authorKey = (comment.creator_name || '').replace('@', '').toLowerCase().trim()
+      const { data: celMatch } = await supabase
+        .from('most_followed')
+        .select('photo_url')
+        .or(`instagram_handle.ilike.%${authorKey}%,name.ilike.%${authorKey}%`)
+        .limit(1)
+        .maybeSingle()
+      if (celMatch && celMatch.photo_url) {
+        authorPhoto = celMatch.photo_url
+      }
+    }
+
     const enrichedComment = {
       ...comment,
+      creator_photo_url: authorPhoto ? proxyImageUrl(authorPhoto) : null,
       rank: rankVal
     }
 
@@ -536,6 +625,7 @@ export async function getServerSideProps(context) {
       .slice(0, 10)
       .map(c => ({
         ...c,
+        creator_photo_url: c.creator_photo_url ? proxyImageUrl(c.creator_photo_url) : null,
         rank: sortedComments.findIndex(item => item.id === c.id) + 1
       }))
 
@@ -546,11 +636,16 @@ export async function getServerSideProps(context) {
       .order('followers_count', { ascending: false })
       .limit(4)
 
+    const proxiedFeatured = (topFeaturedCreators || []).map(c => ({
+      ...c,
+      photo_url: proxyImageUrl(c.photo_url)
+    }))
+
     return {
       props: {
         initialComment: enrichedComment,
         topComments: topComments || [],
-        topFeaturedCreators: topFeaturedCreators || []
+        topFeaturedCreators: proxiedFeatured || []
       }
     }
   } catch (err) {
