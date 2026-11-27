@@ -2039,6 +2039,7 @@ export default function AdminPanel() {
     return []
   })
   const [skipLoading, setSkipLoading] = useState(false)
+  const [scrapeServer, setScrapeServer] = useState('auto') // 'auto' | 'server1' | 'server2' | 'server3' | 'server4' | 'server5'
   const allScrapeAbortRef = useRef(null)
 
   // 🔴 Live Follower Fetch state (laptop-based)
@@ -3114,7 +3115,7 @@ export default function AdminPanel() {
           'Content-Type': 'application/json',
           'x-admin-token': token || ''
         },
-        body: JSON.stringify({ onlyMissing, targetIds: sendTargetIds }),
+        body: JSON.stringify({ onlyMissing, targetIds: sendTargetIds, serverChoice: scrapeServer }),
         signal: allScrapeAbortRef.current.signal
       })
 
@@ -3139,8 +3140,19 @@ export default function AdminPanel() {
             try {
               const data = JSON.parse(line.slice(6))
               if (data.type === 'start') {
-                setAllScrapeProgress(prev => ({ ...prev, total: data.total }))
+                setAllScrapeProgress(prev => ({ ...prev, total: data.total, serverChoice: data.serverChoice }))
                 lastProgress.total = data.total
+              } else if (data.type === 'server_switch') {
+                setAllScrapeLogs(prev => [
+                  ...prev.slice(-40),
+                  {
+                    timestamp: new Date().toLocaleTimeString(),
+                    handle: data.handle,
+                    status: 'switch',
+                    text: `⚡ Failover: ${data.failedServer} ➔ ${data.nextServer}`,
+                    isSwitch: true
+                  }
+                ])
               } else if (data.type === 'progress') {
                 lastProgress = {
                   current: data.current,
@@ -3156,7 +3168,9 @@ export default function AdminPanel() {
                   currentHandle: data.handle,
                   status: data.status,
                   updated: data.updated,
-                  failed: data.failed
+                  failed: data.failed,
+                  serverUsed: data.serverUsed,
+                  failoverNote: data.failoverNote
                 })
                 setAllScrapeLogs(prev => [
                   ...prev.slice(-40),
@@ -3166,7 +3180,9 @@ export default function AdminPanel() {
                     name: data.name,
                     status: data.status,
                     text: data.formattedText,
-                    error: data.error
+                    error: data.error,
+                    serverUsed: data.serverUsed,
+                    failoverNote: data.failoverNote
                   }
                 ])
               } else if (data.type === 'connection_lost') {
@@ -5448,9 +5464,74 @@ export default function AdminPanel() {
                 )}
               </div>
               
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
                 Runs a sequential scrape for every account with an Instagram handle. Uses a <strong>3.5-second safety delay</strong> between each request. Broken or invalid usernames are gracefully skipped without stopping the batch.
               </p>
+
+              {/* Multi-Server Selection Bar */}
+              <div style={{
+                marginBottom: 16,
+                padding: '12px 14px',
+                background: 'rgba(255, 255, 255, 0.75)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                borderRadius: 12
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>⚡ Active Scraper Engine / Server:</span>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 750,
+                      background: scrapeServer === 'auto' ? '#d1fae5' : '#e0f2fe',
+                      color: scrapeServer === 'auto' ? '#047857' : '#0369a1',
+                      padding: '2px 8px',
+                      borderRadius: 6
+                    }}>
+                      {scrapeServer === 'auto' ? '⚡ Auto-Failover (All 5 Connected)' : `Single Engine: ${scrapeServer.toUpperCase()}`}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    Switch servers anytime if one engine experiences rate limits
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'auto', label: '⚡ Auto-Failover (All 5 Connected)', desc: 'Recommended: tries Server 1, cascades to 2/3/4/5 if blocked' },
+                    { id: 'server1', label: 'Server 1: Direct Web', desc: 'Default Instagram SSR web scrape' },
+                    { id: 'server2', label: 'Server 2: Mobile App API', desc: 'Native Android app API (bypasses web login walls)' },
+                    { id: 'server3', label: 'Server 3: Embed Frame', desc: 'Instagram Embed Frame API' },
+                    { id: 'server4', label: 'Server 4: Search Index', desc: 'Search engine crawler snapshot' },
+                    { id: 'server5', label: 'Server 5: Rotating UA', desc: 'Rotating User-Agent pool' },
+                  ].map(srv => {
+                    const active = scrapeServer === srv.id
+                    return (
+                      <button
+                        key={srv.id}
+                        type="button"
+                        disabled={allScrapeRunning}
+                        onClick={() => setScrapeServer(srv.id)}
+                        style={{
+                          padding: '5px 11px',
+                          borderRadius: 8,
+                          fontSize: 11.5,
+                          fontWeight: active ? 800 : 600,
+                          background: active ? '#059669' : '#ffffff',
+                          color: active ? '#ffffff' : '#374151',
+                          border: `1px solid ${active ? '#059669' : '#d1d5db'}`,
+                          cursor: allScrapeRunning ? 'not-allowed' : 'pointer',
+                          opacity: allScrapeRunning && !active ? 0.6 : 1,
+                          boxShadow: active ? '0 2px 6px rgba(5,150,105,0.25)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={srv.desc}
+                      >
+                        {srv.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
               {allScrapeRunning ? (
                 <div style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: 16, padding: '18px 20px', boxShadow: '0 4px 14px rgba(0,0,0,0.05)' }}>
@@ -5494,8 +5575,18 @@ export default function AdminPanel() {
 
                   {/* Real-time Status Badges */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, fontSize: 12, marginBottom: 14 }}>
-                    <div style={{ color: '#09090b', fontWeight: 600 }}>
-                      Currently processing: <strong style={{ color: '#0284c7' }}>@{allScrapeProgress.currentHandle || '...'}</strong> {allScrapeProgress.currentName ? `(${allScrapeProgress.currentName})` : ''}
+                    <div style={{ color: '#09090b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span>Currently processing: <strong style={{ color: '#0284c7' }}>@{allScrapeProgress.currentHandle || '...'}</strong> {allScrapeProgress.currentName ? `(${allScrapeProgress.currentName})` : ''}</span>
+                      {allScrapeProgress.serverUsed && (
+                        <span style={{ background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: 4, fontSize: 10.5, fontWeight: 700 }}>
+                          📡 {allScrapeProgress.serverUsed}
+                        </span>
+                      )}
+                      {allScrapeProgress.failoverNote && (
+                        <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4, fontSize: 10.5, fontWeight: 700 }}>
+                          ⚡ Failover: {allScrapeProgress.failoverNote}
+                        </span>
+                      )}
                     </div>
                     <div style={{ display: 'flex', gap: 12 }}>
                       <span style={{ color: '#059669', fontWeight: 700 }}>✅ {allScrapeProgress.updated} Updated</span>
@@ -5507,9 +5598,14 @@ export default function AdminPanel() {
                   {allScrapeLogs.length > 0 && (
                     <div style={{ maxHeight: 130, overflowY: 'auto', background: '#fafafa', border: '1px solid #f4f4f5', borderRadius: 10, padding: '8px 12px', fontSize: 11, fontFamily: 'monospace' }}>
                       {allScrapeLogs.slice(-6).map((l, idx) => (
-                        <div key={idx} style={{ color: l.status === 'success' ? '#059669' : '#dc2626', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div key={idx} style={{ color: l.isSwitch ? '#d97706' : l.status === 'success' ? '#059669' : '#dc2626', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <span style={{ color: '#a1a1aa' }}>[{l.timestamp}]</span>
-                          <span>{l.status === 'success' ? `✅ @${l.handle} -> ${l.text}` : `⚠️ @${l.handle} skipped: ${l.error}`}</span>
+                          {l.serverUsed && (
+                            <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '0 4px', borderRadius: 3, fontSize: 9.5, fontWeight: 700 }}>
+                              {l.serverUsed.split(' ')[0]}
+                            </span>
+                          )}
+                          <span>{l.isSwitch ? l.text : l.status === 'success' ? `✅ @${l.handle} -> ${l.text}` : `⚠️ @${l.handle} skipped: ${l.error}`}</span>
                         </div>
                       ))}
                     </div>
@@ -5531,7 +5627,7 @@ export default function AdminPanel() {
                       boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
                     }}
                   >
-                    ⚡ Turbo Scrape All {mostFollowed.filter(p => p.instagram_handle).length} Accounts (~3 mins)
+                    ⚡ Turbo Scrape All {mostFollowed.filter(p => p.instagram_handle).length} Accounts ({scrapeServer === 'auto' ? 'Auto-Failover' : scrapeServer.toUpperCase()})
                   </button>
 
                   <button
@@ -5542,6 +5638,15 @@ export default function AdminPanel() {
                       fontSize: 14,
                       background: 'linear-gradient(135deg, #0284c7, #0369a1)',
                       color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 12,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(2,132,199,0.3)'
+                    }}
+                  >
+                    ⚡ Resume Scrape with {scrapeServer === 'auto' ? 'Auto-Failover' : scrapeServer.toUpperCase()}
+                  </button>
                       border: 'none',
                       borderRadius: 12,
                       fontWeight: 800,

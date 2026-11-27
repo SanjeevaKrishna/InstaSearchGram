@@ -177,6 +177,7 @@ export default async function handler(req, res) {
   })
 
   const scraper = new InstagramFollowersScraper(sessionId, csrfToken)
+  const serverChoice = req.body?.serverChoice || req.query?.serverChoice || 'auto'
 
   // Smart Midnight Grace Period: If between 12:00 AM and 6:00 AM (IST), attribute to yesterday unless explicitly specified
   let todayStr = req.body?.targetDate || req.query?.targetDate
@@ -220,7 +221,8 @@ export default async function handler(req, res) {
   safeWrite(`data: ${JSON.stringify({
     type: "start",
     total: allProfiles.length,
-    targetDate: todayStr
+    targetDate: todayStr,
+    serverChoice
   })}\n\n`)
 
   const chunkSize = 2
@@ -239,11 +241,25 @@ export default async function handler(req, res) {
     await Promise.all(chunk.map(async (profile) => {
       try {
         const cleanHandle = profile.instagram_handle.trim().toLowerCase().replace(/^@/, '')
+        let failoverNote = null
         const result = await scraper.fetchFollowers(cleanHandle, {
           signal: chunkController.signal,
-          timeoutMs: 9000
+          timeoutMs: 9000,
+          serverChoice,
+          onServerSwitch: (info) => {
+            failoverNote = `${info.failedServer} ➔ ${info.nextServer}`
+            console.log(`[BatchScrape] Failover for @${cleanHandle}: ${failoverNote}`)
+            safeWrite(`data: ${JSON.stringify({
+              type: "server_switch",
+              handle: cleanHandle,
+              failedServer: info.failedServer,
+              nextServer: info.nextServer,
+              message: `Switched from ${info.failedServer} to ${info.nextServer} for @${cleanHandle}`
+            })}\n\n`)
+          }
         })
         const count = result.followersCount
+        const serverUsed = result.server || 'Server 1 (Direct Web)'
 
         if (!count || count === 0) {
           throw new Error(`Zero follower count returned for @${profile.instagram_handle}`)
@@ -339,7 +355,9 @@ export default async function handler(req, res) {
           count,
           formattedText,
           updated,
-          failed
+          failed,
+          serverUsed,
+          failoverNote
         })}\n\n`)
 
       } catch (err) {
