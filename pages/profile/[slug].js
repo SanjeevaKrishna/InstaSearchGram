@@ -33,6 +33,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import { generateMilestones, formatMilestoneLabel, findMilestoneAchievedDate } from '../../lib/milestones'
 import OgiveGrowthChart from '../../components/OgiveGrowthChart'
+import ComparativePulseTable from '../../components/ComparativePulseTable'
 
 const InstagramIcon = ({ size = 24, style = {} }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
@@ -180,12 +181,29 @@ const getFollowerStats = (history = [], currentCount = 0, createdAt = null) => {
   return { historyMap, monthlyGain, dailyGain, dailyGainDays, recentVelocity, sorted, valid, isLatestFailed, isSynchronizedOnly }
 }
 
-export default function ProfilePage({ profile, slug, rank = null, trendingProfiles = [], celebrityData = null, isEnriched = true }) {
+export default function ProfilePage({ profile, slug, rank = null, trendingProfiles = [], celebrityData = null, isEnriched = true, initialRivalProfile = null, initialRivalRank = null, initialRivalCelebrity = null }) {
   const router = useRouter()
   const [tooltip, setTooltip] = useState(null)
   const [selectedPeriod, setSelectedPeriod] = useState('last30')
   const [openFaq, setOpenFaq] = useState(0)
   const [sidebarSearch, setSidebarSearch] = useState('')
+  const [rivalProfile, setRivalProfile] = useState(initialRivalProfile)
+  const [rivalRank, setRivalRank] = useState(initialRivalRank)
+  const [rivalCelebrityData, setRivalCelebrityData] = useState(initialRivalCelebrity)
+
+  useEffect(() => {
+    setRivalProfile(initialRivalProfile)
+    setRivalRank(initialRivalRank)
+    setRivalCelebrityData(initialRivalCelebrity)
+  }, [initialRivalProfile, initialRivalRank, initialRivalCelebrity])
+
+  useEffect(() => {
+    if (!router.query.compare) {
+      setRivalProfile(null)
+      setRivalRank(null)
+      setRivalCelebrityData(null)
+    }
+  }, [router.query.compare])
 
   if (router.isFallback) {
     return (
@@ -1308,6 +1326,36 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                   Last verified: <strong>{formatDateLabel(profile.last_scraped_at || profile.updated_at || (valid.length > 0 ? valid[valid.length - 1].date : null))}</strong> • Snapshot benchmark
                 </span>
               </div>
+
+              {/* Compare with Rival Button (Accessible on Mobile & Desktop) */}
+              <div id="mobile-compare-rival-btn" style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
+                <button
+                  onClick={() => router.push(`/all?compare=${slug || profile.instagram_handle || ''}`)}
+                  style={{
+                    width: '100%',
+                    maxWidth: 440,
+                    padding: '11px 18px',
+                    borderRadius: 12,
+                    background: rivalProfile
+                      ? 'linear-gradient(135deg, rgba(168,85,247,0.22) 0%, rgba(236,72,153,0.22) 100%)'
+                      : 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(168,85,247,0.18) 100%)',
+                    border: '1px solid rgba(168, 85, 247, 0.4)',
+                    color: '#f8fafc',
+                    fontSize: 13,
+                    fontWeight: 750,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    boxShadow: '0 4px 14px rgba(168, 85, 247, 0.15)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <ArrowLeftRight size={15} color="#c084fc" />
+                  <span>{rivalProfile ? `Switch Rival (vs ${rivalProfile.name})` : `⚔️ Compare ${profile.name} with Rival`}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1589,9 +1637,23 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
             </div>
           )}
 
-          {/* ⚡ Daily Growth Pulse — Vibrant Ultra-Modern Edition with Month Filter */}
-          {(() => {
-            // Build full chronological day-by-day history filling any missing dates with 'Server Failed'
+          {/* ⚡ Daily Growth Pulse — Comparative Table in Compare Mode, or Solo Pulse */}
+          {rivalProfile ? (
+            <ComparativePulseTable
+              profile={profile}
+              rival={rivalProfile}
+              profileRank={rank}
+              rivalRank={rivalRank}
+              onChangeRival={() => router.push(`/all?compare=${slug || profile.instagram_handle || ''}`)}
+              onExitComparison={() => {
+                const { compare, ...restQuery } = router.query
+                router.push({ pathname: `/profile/${slug}`, query: restQuery }, undefined, { shallow: true })
+                setRivalProfile(null)
+              }}
+            />
+          ) : (
+            (() => {
+              // Build full chronological day-by-day history filling any missing dates with 'Server Failed'
             // Tracking officially starts on Aug 28 or Aug 29. Never generate Server Failed for pre-Aug 28 test dates.
             const trackingSorted = sorted.filter(item => item && item.date && item.date >= '2026-08-28')
             const sourceList = trackingSorted.length > 0 ? trackingSorted : sorted
@@ -2267,7 +2329,8 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                 )}
               </div>
             )
-          })()}
+          })()
+        )}
 
           {/* ─────────────────────────────────────────────────────────────
               SECTION 0: Unique Multi-Tier Zoomable Ogive Growth Curve & Forecast
@@ -2747,8 +2810,8 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                   width: '100%',
                   marginTop: 18,
                   padding: '11px 16px',
-                  background: 'var(--gradient-subtle, rgba(168,85,247,0.1))',
-                  border: '1px solid rgba(168,85,247,0.3)',
+                  background: rivalProfile ? 'rgba(168,85,247,0.2)' : 'var(--gradient-subtle, rgba(168,85,247,0.1))',
+                  border: '1px solid rgba(168,85,247,0.35)',
                   color: 'var(--text)',
                   borderRadius: 12,
                   fontSize: 13,
@@ -2762,8 +2825,37 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                 }}
               >
                 <ArrowLeftRight size={14} color="var(--accent)" />
-                <span>Compare {profile.name} with Rival</span>
+                <span>{rivalProfile ? `Switch Rival (vs ${rivalProfile.name})` : `Compare ${profile.name} with Rival`}</span>
               </button>
+
+              {rivalProfile && (
+                <button
+                  onClick={() => {
+                    const { compare, ...restQuery } = router.query
+                    router.push({ pathname: `/profile/${slug}`, query: restQuery }, undefined, { shallow: true })
+                    setRivalProfile(null)
+                  }}
+                  style={{
+                    width: '100%',
+                    marginTop: 8,
+                    padding: '8px 12px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    color: '#f87171',
+                    borderRadius: 10,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <X size={13} />
+                  <span>Exit Comparison Mode</span>
+                </button>
+              )}
             </div>
 
             {/* 3. Trending Peers in Category */}
@@ -2834,35 +2926,26 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
   )
 }
 
-export async function getServerSideProps(context) {
-  const { slug } = context.query
+async function fetchProfileBySlugOrHandle(rawSlug) {
+  if (!rawSlug) return null
+  const decoded = decodeURIComponent(rawSlug || '').toLowerCase().trim()
+  const slugWithDots = decoded.replace(/-/g, '.')
 
-  // Decode URL-encoded slug (handles dots, underscores, etc.)
-  const decodedSlug = decodeURIComponent(slug || '').toLowerCase().trim()
+  const [{ data: exactMatch }, { data: dotMatch }] = await Promise.all([
+    supabase.from('most_followed').select('*').not('instagram_handle', 'is', null).ilike('instagram_handle', decoded).limit(1).maybeSingle(),
+    slugWithDots !== decoded
+      ? supabase.from('most_followed').select('*').not('instagram_handle', 'is', null).ilike('instagram_handle', slugWithDots).limit(1).maybeSingle()
+      : Promise.resolve({ data: null })
+  ])
 
-  try {
-    // Step 1: Try direct handle match — two attempts in parallel
-    // a) slug as-is (handles without dots, e.g. narendramodi)
-    // b) slug with hyphens→dots restored (handles with dots sanitized, e.g. virat-kohli → virat.kohli)
-    const slugWithDots = decodedSlug.replace(/-/g, '.')
+  let finalProfile = exactMatch || dotMatch
 
-    const [{ data: exactMatch }, { data: dotMatch }] = await Promise.all([
-      supabase.from('most_followed').select('*').not('instagram_handle', 'is', null).ilike('instagram_handle', decodedSlug).limit(1).maybeSingle(),
-      slugWithDots !== decodedSlug
-        ? supabase.from('most_followed').select('*').not('instagram_handle', 'is', null).ilike('instagram_handle', slugWithDots).limit(1).maybeSingle()
-        : Promise.resolve({ data: null })
-    ])
+  if (!finalProfile) {
+    const { data: nameList, error: nameErr } = await supabase
+      .from('most_followed')
+      .select('id, name, instagram_handle')
 
-    let finalProfile = exactMatch || dotMatch
-
-    if (!finalProfile) {
-      // Step 2: Fallback — lightweight fetch of id/name/handle only, then full fetch by id
-      const { data: nameList, error: nameErr } = await supabase
-        .from('most_followed')
-        .select('id, name, instagram_handle')
-
-      if (nameErr || !nameList) return { notFound: true }
-
+    if (!nameErr && nameList) {
       const matched = nameList.find(p => {
         const sanitizedHandle = p.instagram_handle
           ? p.instagram_handle.toLowerCase().trim().replace(/\./g, '-')
@@ -2871,55 +2954,95 @@ export async function getServerSideProps(context) {
         const namePlain = p.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
 
         return (
-          decodedSlug === sanitizedHandle ||
-          decodedSlug === nameSlug ||
-          decodedSlug === namePlain
+          decoded === sanitizedHandle ||
+          decoded === nameSlug ||
+          decoded === namePlain
         )
       })
 
-      if (!matched) {
-        // Fallback: check celebrities table directly if not in most_followed
-        const { data: celMatch } = await supabase
-          .from('celebrities')
-          .select('*')
-          .or(`slug.eq.${decodedSlug},instagram_handle.ilike.${decodedSlug},instagram_handle.ilike.${slugWithDots}`)
-          .limit(1)
-          .maybeSingle()
-
-        if (celMatch) {
-          finalProfile = {
-            id: celMatch.id,
-            name: celMatch.name,
-            instagram_handle: celMatch.instagram_handle,
-            followers_count: celMatch.followers_count,
-            category: celMatch.category || 'Creator',
-            photo_url: celMatch.photo_url,
-            follower_history: [],
-            created_at: celMatch.created_at,
-            celebrity_id: celMatch.id,
-            posts_count: celMatch.posts_count,
-            average_views: celMatch.average_views,
-            followers_interaction: celMatch.followers_interaction,
-            account_created_year: celMatch.account_created_year
-          }
-        } else {
-          console.error(`[profile 404] No match for slug="${decodedSlug}". Tried handle exact, dots, name-slug, name-plain, celebrities.`)
-          return { notFound: true }
-        }
-      } else {
-        // Step 3: Fetch full profile by id
-        const { data: fullProfile, error: fullErr } = await supabase
+      if (matched) {
+        const { data: fullProfile } = await supabase
           .from('most_followed')
           .select('*')
           .eq('id', matched.id)
           .single()
-
-        if (fullErr || !fullProfile) return { notFound: true }
-        finalProfile = fullProfile
+        if (fullProfile) finalProfile = fullProfile
       }
     }
 
+    if (!finalProfile) {
+      const { data: celMatch } = await supabase
+        .from('celebrities')
+        .select('*')
+        .or(`slug.eq.${decoded},instagram_handle.ilike.${decoded},instagram_handle.ilike.${slugWithDots}`)
+        .limit(1)
+        .maybeSingle()
+
+      if (celMatch) {
+        finalProfile = {
+          id: celMatch.id,
+          name: celMatch.name,
+          instagram_handle: celMatch.instagram_handle,
+          followers_count: celMatch.followers_count,
+          category: celMatch.category || 'Creator',
+          photo_url: celMatch.photo_url,
+          follower_history: [],
+          created_at: celMatch.created_at,
+          celebrity_id: celMatch.id,
+          posts_count: celMatch.posts_count,
+          average_views: celMatch.average_views,
+          followers_interaction: celMatch.followers_interaction,
+          account_created_year: celMatch.account_created_year
+        }
+      }
+    }
+  }
+
+  return finalProfile
+}
+
+export async function getServerSideProps(context) {
+  const { slug, compare } = context.query
+  const decodedSlug = decodeURIComponent(slug || '').toLowerCase().trim()
+
+  try {
+    const finalProfile = await fetchProfileBySlugOrHandle(decodedSlug)
     if (!finalProfile) return { notFound: true }
+
+    // Fetch rival profile if compare query param is present
+    let rivalProfile = null
+    let rivalRank = null
+    let rivalCelebrityData = null
+
+    if (compare) {
+      const decodedCompare = decodeURIComponent(compare || '').toLowerCase().trim()
+      if (decodedCompare && decodedCompare !== decodedSlug) {
+        try {
+          rivalProfile = await fetchProfileBySlugOrHandle(decodedCompare)
+          if (rivalProfile) {
+            if (rivalProfile.followers_count) {
+              const { count } = await supabase
+                .from('most_followed')
+                .select('id', { count: 'exact', head: true })
+                .gt('followers_count', rivalProfile.followers_count)
+              if (typeof count === 'number') rivalRank = count + 1
+            }
+            if (rivalProfile.celebrity_id) {
+              rivalCelebrityData = rivalProfile
+            } else if (rivalProfile.instagram_handle) {
+              const { data: cel } = await supabase
+                .from('celebrities')
+                .select('id, name, slug, instagram_handle, posts_count, average_views, followers_interaction, account_created_year, total_reel_views, total_reel_likes, total_post_likes, total_comments, total_shares, total_reposts')
+                .ilike('instagram_handle', rivalProfile.instagram_handle)
+                .maybeSingle()
+              if (cel) rivalCelebrityData = cel
+            }
+          }
+        } catch (rErr) {
+          console.warn('Error fetching rival in getServerSideProps:', rErr)
+        }
+      }
+    }
 
     // Calculate dynamic live rank among accounts with 100k+ followers
     let rank = null
@@ -2978,7 +3101,7 @@ export async function getServerSideProps(context) {
       console.warn('Error fetching trending profiles:', trendErr)
     }
 
-    return { props: { profile: finalProfile, slug: decodedSlug, rank, trendingProfiles, celebrityData, isEnriched } }
+    return { props: { profile: finalProfile, slug: decodedSlug, rank, trendingProfiles, celebrityData, isEnriched, initialRivalProfile: rivalProfile, initialRivalRank: rivalRank, initialRivalCelebrity: rivalCelebrityData } }
   } catch (err) {
     console.error('getServerSideProps error in profile page:', err)
     return { notFound: true }
