@@ -362,16 +362,16 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
   const milestoneTrophies = useMemo(() => {
     const count = profile.followers_count || 0
     const list = [
-      { target: 1000, label: '1K', title: 'Bronze Starter', renderSvg: (s) => <BronzeTrophySvg size={s} /> },
-      { target: 10000, label: '10K', title: 'Community Spark', renderSvg: (s) => <Star size={s} color="#6366f1" /> },
-      { target: 50000, label: '50K', title: 'Rising Vanguard', renderSvg: (s) => <Star size={s} color="#8b5cf6" /> },
-      { target: 100000, label: '100K', title: 'Silver Creator', renderSvg: (s) => <SilverTrophySvg size={s} /> },
-      { target: 500000, label: '500K', title: 'Half-Million Titan', renderSvg: (s) => <SilverTrophySvg size={s} /> },
-      { target: 1000000, label: '1M', title: 'Gold Millionaire', renderSvg: (s) => <GoldTrophySvg size={s} /> },
-      { target: 5000000, label: '5M', title: '5M Supernova', renderSvg: (s) => <GoldTrophySvg size={s} /> },
-      { target: 10000000, label: '10M', title: 'Diamond Icon', renderSvg: (s) => <DiamondTrophySvg size={s} /> },
-      { target: 50000000, label: '50M', title: '50M Mega Star', renderSvg: (s) => <Crown size={s} color="#ec4899" /> },
-      { target: 100000000, label: '100M', title: 'Centurion Legend', renderSvg: (s) => <CenturionTrophySvg size={s} /> }
+      { target: 1000, label: '1K', fullCount: '1,000', title: 'Bronze Starter', renderSvg: (s) => <BronzeTrophySvg size={s} />, color: '#d97706', glow: 'rgba(217, 119, 6, 0.45)' },
+      { target: 10000, label: '10K', fullCount: '10,000', title: 'Community Spark', renderSvg: (s) => <Star size={s} color="#4f46e5" />, color: '#4f46e5', glow: 'rgba(79, 70, 229, 0.45)' },
+      { target: 50000, label: '50K', fullCount: '50,000', title: 'Rising Vanguard', renderSvg: (s) => <Star size={s} color="#7c3aed" />, color: '#7c3aed', glow: 'rgba(124, 58, 237, 0.45)' },
+      { target: 100000, label: '100K', fullCount: '100,000', title: 'Silver Creator', renderSvg: (s) => <SilverTrophySvg size={s} />, color: '#0284c7', glow: 'rgba(2, 132, 199, 0.45)' },
+      { target: 500000, label: '500K', fullCount: '500,000', title: 'Half-Million Titan', renderSvg: (s) => <SilverTrophySvg size={s} />, color: '#0369a1', glow: 'rgba(3, 105, 161, 0.45)' },
+      { target: 1000000, label: '1M', fullCount: '1,000,000', title: 'Gold Millionaire', renderSvg: (s) => <GoldTrophySvg size={s} />, color: '#d97706', glow: 'rgba(217, 119, 6, 0.45)' },
+      { target: 5000000, label: '5M', fullCount: '5,000,000', title: '5M Supernova', renderSvg: (s) => <GoldTrophySvg size={s} />, color: '#ea580c', glow: 'rgba(234, 88, 12, 0.45)' },
+      { target: 10000000, label: '10M', fullCount: '10,000,000', title: 'Diamond Icon', renderSvg: (s) => <DiamondTrophySvg size={s} />, color: '#0284c7', glow: 'rgba(2, 132, 199, 0.45)' },
+      { target: 50000000, label: '50M', fullCount: '50,000,000', title: '50M Mega Star', renderSvg: (s) => <Crown size={s} color="#db2777" />, color: '#db2777', glow: 'rgba(219, 39, 119, 0.45)' },
+      { target: 100000000, label: '100M', fullCount: '100,000,000', title: 'Centurion Legend', renderSvg: (s) => <CenturionTrophySvg size={s} />, color: '#dc2626', glow: 'rgba(220, 38, 38, 0.45)' }
     ]
 
     return list.map(t => {
@@ -2643,33 +2643,51 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                 <div
                   key={idx}
                   style={{
-                    background: tr.isAchieved ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.015)',
-                    border: `1px solid ${tr.isAchieved ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)'}`,
+                    background: 'var(--surface2, #f8fafc)',
+                    border: '1px solid var(--border)',
                     borderRadius: 14,
-                    padding: '16px 12px',
+                    padding: '16px 10px',
                     textAlign: 'center',
-                    opacity: tr.isAchieved ? 1 : 0.55,
+                    opacity: tr.isAchieved ? 1 : 0.65,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 6
+                    gap: 4,
+                    boxShadow: tr.isAchieved ? '0 1px 4px rgba(0,0,0,0.03)' : 'none'
                   }}
                 >
                   <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {tr.renderSvg ? tr.renderSvg(24) : <Trophy size={20} />}
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: tr.isAchieved ? '#f8fafc' : 'var(--text-muted)', fontFamily: 'var(--font-display)' }}>
+                  <div style={{
+                    fontSize: 16,
+                    fontWeight: 900,
+                    color: tr.isAchieved ? tr.color : 'var(--text-muted)',
+                    fontFamily: 'var(--font-display)',
+                    letterSpacing: '0.01em',
+                    textShadow: tr.isAchieved ? `0 0 10px ${tr.glow}` : 'none'
+                  }}>
                     {tr.label}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{tr.title}</div>
+                  <div style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: tr.isAchieved ? tr.color : 'var(--text-muted)',
+                    opacity: tr.isAchieved ? 0.95 : 0.75,
+                    letterSpacing: '0.01em'
+                  }}>
+                    {tr.fullCount} Followers
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text)', fontWeight: 650, marginTop: 1 }}>{tr.title}</div>
                   <div style={{
                     fontSize: 10,
                     fontWeight: 750,
                     color: tr.isAchieved ? '#10b981' : '#f59e0b',
-                    background: tr.isAchieved ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.1)',
+                    background: tr.isAchieved ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.08)',
+                    border: `1px solid ${tr.isAchieved ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.2)'}`,
                     padding: '2px 8px',
                     borderRadius: 6,
-                    marginTop: 2
+                    marginTop: 3
                   }}>
                     {tr.isAchieved ? '✓ Unlocked' : `${tr.progress}% Done`}
                   </div>

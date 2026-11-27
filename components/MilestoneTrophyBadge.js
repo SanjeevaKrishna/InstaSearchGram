@@ -478,7 +478,7 @@ export default function MilestoneTrophyBadge({
     )
   }
 
-  // 2. Hero Pill (Beside name/rank or right beneath avatar)
+  // 2. Hero Status (Beneath avatar/rank - clean text with no blue background box)
   return (
     <div
       onClick={onClick}
@@ -486,43 +486,45 @@ export default function MilestoneTrophyBadge({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 7,
-        background: tier.pillBg,
-        border: `1px solid ${tier.pillBorder}`,
+        gap: 6,
+        background: 'transparent',
+        border: 'none',
         borderRadius: 100,
-        padding: '5px 14px',
+        padding: '3px 0',
         cursor: onClick ? 'pointer' : 'default',
-        boxShadow: `0 2px 10px ${tier.shadow}`,
-        transition: 'all 0.2s ease',
+        boxShadow: 'none',
+        transition: 'opacity 0.2s ease',
         ...style
       }}
       onMouseEnter={e => {
         if (onClick) {
-          e.currentTarget.style.transform = 'translateY(-1px)'
-          e.currentTarget.style.boxShadow = `0 4px 16px ${tier.shadow}`
+          e.currentTarget.style.opacity = '0.85'
         }
       }}
       onMouseLeave={e => {
         if (onClick) {
-          e.currentTarget.style.transform = 'none'
-          e.currentTarget.style.boxShadow = `0 2px 10px ${tier.shadow}`
+          e.currentTarget.style.opacity = '1'
         }
       }}
     >
-      {tier.miniSvg}
-      <span style={{ fontSize: 12, fontWeight: 750, color: tier.textColor }}>
-        {tier.title} · {tier.label}+ Trophy
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+        {tier.miniSvg}
+      </span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+        {tier.title} <span style={{ color: 'var(--text-muted)', fontWeight: 400, margin: '0 3px' }}>·</span> <span style={{ color: tier.tierColor, fontWeight: 750 }}>{tier.label}+ Trophy</span>
       </span>
       <span style={{
-        fontSize: 10,
+        fontSize: 10.5,
         fontWeight: 700,
-        color: tier.textColor,
-        opacity: 0.85,
-        background: 'rgba(255, 255, 255, 0.1)',
-        padding: '1px 6px',
-        borderRadius: 8
+        color: '#10b981',
+        background: 'rgba(16, 185, 129, 0.08)',
+        border: '1px solid rgba(16, 185, 129, 0.25)',
+        padding: '1px 7px',
+        borderRadius: 6,
+        marginLeft: 4,
+        letterSpacing: '0.01em'
       }}>
-        Unlocked
+        ✓ Unlocked
       </span>
     </div>
   )
