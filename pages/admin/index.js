@@ -2040,6 +2040,32 @@ export default function AdminPanel() {
   })
   const [skipLoading, setSkipLoading] = useState(false)
   const [scrapeServer, setScrapeServer] = useState('auto') // 'auto' | 'server1' | 'server2' | 'server3' | 'server4' | 'server5'
+  const [scrapeSession, setScrapeSession] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('spialr_scrape_session')
+        if (saved) return JSON.parse(saved)
+      } catch (e) {}
+    }
+    return null
+  })
+
+  const updateScrapeSession = (updater) => {
+    setScrapeSession(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      if (typeof window !== 'undefined') {
+        try {
+          if (next) {
+            localStorage.setItem('spialr_scrape_session', JSON.stringify(next))
+          } else {
+            localStorage.removeItem('spialr_scrape_session')
+          }
+        } catch (e) {}
+      }
+      return next
+    })
+  }
+
   const allScrapeAbortRef = useRef(null)
 
   // 🔴 Live Follower Fetch state (laptop-based)
@@ -3048,7 +3074,7 @@ export default function AdminPanel() {
     setBatchUpdating(false)
   }
 
-  const handleScrapeAllAccounts = async ({ onlyMissing = false, targetIds = null } = {}) => {
+  const handleScrapeAllAccounts = async ({ onlyMissing = false, targetIds = null, isNewSession = false, isResumeSession = false } = {}) => {
     if (allScrapeRunning) return
 
     const withHandles = mostFollowed.filter(p => p.instagram_handle && p.instagram_handle.trim() !== '')
@@ -3062,7 +3088,22 @@ export default function AdminPanel() {
       ? new Date(istDate.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       : istDate.toISOString().split('T')[0]
 
-    if (targetIds && Array.isArray(targetIds) && targetIds.length > 0) {
+    if (isNewSession) {
+      targetList = withHandles
+      const newSession = {
+        id: `session_${Date.now()}`,
+        startedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        targetDate: effectiveDate,
+        totalCount: withHandles.length,
+        allIds: withHandles.map(p => String(p.id)),
+        completedIds: [],
+        failedIds: []
+      }
+      updateScrapeSession(newSession)
+    } else if (isResumeSession && scrapeSession) {
+      const completedSet = new Set((scrapeSession.completedIds || []).map(String))
+      targetList = withHandles.filter(p => !completedSet.has(String(p.id)))
+    } else if (targetIds && Array.isArray(targetIds) && targetIds.length > 0) {
       targetList = withHandles.filter(p => targetIds.map(String).includes(String(p.id)))
     } else if (onlyMissing) {
       // Find accounts that need scraping:
@@ -3084,18 +3125,34 @@ export default function AdminPanel() {
 
     const total = targetList.length
     if (total === 0) {
-      showToast('All accounts already have follower counts for today! ✨')
+      showToast('All accounts in this session are already completed! ✨')
       return
     }
 
     const estMinutes = Math.ceil((total * 3.5) / (2 * 60)) + 1
-    const promptMsg = targetIds
+    const promptMsg = isNewSession
+      ? `⚡ Start a NEW 2-hour scrape session for all ${total} accounts?\n\nEstimated time: ~${estMinutes} minutes.`
+      : isResumeSession
+      ? `▶️ Resume session for the remaining ${total} accounts using ${scrapeServer === 'auto' ? 'Auto-Failover' : scrapeServer.toUpperCase()}?\n\nEstimated time: ~${estMinutes} minutes.`
+      : targetIds
       ? `⚡ Retry scrape for ${total} FAILED accounts?\n\nEstimated time: ~${estMinutes} minutes.`
       : onlyMissing
       ? `⚡ Resume Scrape for ${total} REMAINING / failed accounts?\n\nEstimated time: ~${estMinutes} minutes.`
       : `⚡ Turbo Scrape ALL ${total} accounts with Instagram handles?\n\nEstimated time: ~${estMinutes} minutes.`
 
     if (!confirm(promptMsg)) return
+
+    if (!scrapeSession && !isNewSession) {
+      updateScrapeSession({
+        id: `session_${Date.now()}`,
+        startedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        targetDate: effectiveDate,
+        totalCount: withHandles.length,
+        allIds: withHandles.map(p => String(p.id)),
+        completedIds: [],
+        failedIds: []
+      })
+    }
 
     setAllScrapeRunning(true)
     setAllScrapeResult(null)
@@ -3108,14 +3165,14 @@ export default function AdminPanel() {
 
     try {
       const token = getToken()
-      const sendTargetIds = (targetIds || onlyMissing) ? targetList.map(p => p.id) : null
+      const sendTargetIds = targetList.map(p => p.id)
       const res = await fetch('/api/admin/batch_scrape_followers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-admin-token': token || ''
         },
-        body: JSON.stringify({ onlyMissing, targetIds: sendTargetIds, serverChoice: scrapeServer }),
+        body: JSON.stringify({ onlyMissing: false, targetIds: sendTargetIds, serverChoice: scrapeServer }),
         signal: allScrapeAbortRef.current.signal
       })
 
@@ -3185,6 +3242,34 @@ export default function AdminPanel() {
                     failoverNote: data.failoverNote
                   }
                 ])
+
+                // Track session progress in real time
+                if (data.id) {
+                  if (data.status === 'success') {
+                    updateScrapeSession(prev => {
+                      if (!prev) return prev
+                      const cSet = new Set((prev.completedIds || []).map(String))
+                      cSet.add(String(data.id))
+                      const fSet = new Set((prev.failedIds || []).map(String))
+                      fSet.delete(String(data.id))
+                      return {
+                        ...prev,
+                        completedIds: Array.from(cSet),
+                        failedIds: Array.from(fSet)
+                      }
+                    })
+                  } else if (data.status === 'failed') {
+                    updateScrapeSession(prev => {
+                      if (!prev) return prev
+                      const fSet = new Set((prev.failedIds || []).map(String))
+                      fSet.add(String(data.id))
+                      return {
+                        ...prev,
+                        failedIds: Array.from(fSet)
+                      }
+                    })
+                  }
+                }
               } else if (data.type === 'connection_lost') {
                 setAllScrapeProgress(prev => ({
                   ...prev,
@@ -5533,6 +5618,92 @@ export default function AdminPanel() {
                 </div>
               </div>
 
+              {/* Scrape Session Status & Management Box */}
+              {(() => {
+                const totalWithHandles = mostFollowed.filter(p => p.instagram_handle && p.instagram_handle.trim() !== '').length
+                const sessionTotal = scrapeSession?.totalCount || totalWithHandles
+                const sessionCompleted = scrapeSession?.completedIds?.length || 0
+                const sessionFailed = scrapeSession?.failedIds?.length || 0
+                const sessionRemaining = Math.max(0, sessionTotal - sessionCompleted)
+                const sessionPercent = sessionTotal > 0 ? Math.round((sessionCompleted / sessionTotal) * 100) : 0
+                const hasActiveSession = Boolean(scrapeSession && (scrapeSession.completedIds?.length > 0 || scrapeSession.failedIds?.length > 0))
+
+                return (
+                  <div style={{
+                    marginBottom: 16,
+                    padding: '14px 16px',
+                    background: hasActiveSession ? (sessionRemaining === 0 ? 'rgba(16,185,129,0.08)' : 'rgba(2,132,199,0.06)') : 'rgba(255,255,255,0.7)',
+                    border: `1px solid ${hasActiveSession ? (sessionRemaining === 0 ? 'rgba(16,185,129,0.3)' : 'rgba(2,132,199,0.25)') : 'var(--border)'}`,
+                    borderRadius: 14
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>
+                          ⏱️ 2-Hour Scrape Session:
+                        </span>
+                        {hasActiveSession ? (
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: sessionRemaining === 0 ? '#d1fae5' : '#e0f2fe',
+                            color: sessionRemaining === 0 ? '#047857' : '#0369a1',
+                            padding: '2px 8px',
+                            borderRadius: 6
+                          }}>
+                            {sessionRemaining === 0 ? '🎉 Session Complete' : `Active (Started ${scrapeSession.startedAt})`}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                            No session active · Ready to start fresh
+                          </span>
+                        )}
+                      </div>
+
+                      {hasActiveSession && (
+                        <button
+                          type="button"
+                          disabled={allScrapeRunning}
+                          onClick={() => {
+                            if (confirm('Clear current scrape session? You can start a fresh session anytime.')) {
+                              updateScrapeSession(null)
+                            }
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: '1px solid #d1d5db',
+                            borderRadius: 6,
+                            padding: '3px 8px',
+                            fontSize: 11,
+                            color: '#6b7280',
+                            cursor: allScrapeRunning ? 'not-allowed' : 'pointer'
+                          }}
+                          title="Clear session state"
+                        >
+                          🗑️ Clear Session
+                        </button>
+                      )}
+                    </div>
+
+                    {hasActiveSession && (
+                      <div style={{ marginBottom: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11.5, marginBottom: 5 }}>
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            Session Progress: <strong>{sessionCompleted} / {sessionTotal}</strong> accounts ({sessionPercent}%)
+                          </span>
+                          <span style={{ color: sessionRemaining === 0 ? '#059669' : '#0284c7', fontWeight: 700 }}>
+                            {sessionRemaining === 0 ? '✅ 100% Completed' : `${sessionRemaining} Remaining to scrape`}
+                          </span>
+                        </div>
+                        {/* Progress Bar of the Session */}
+                        <div style={{ width: '100%', height: 7, background: 'rgba(0,0,0,0.06)', borderRadius: 10, overflow: 'hidden' }}>
+                          <div style={{ width: `${sessionPercent}%`, height: '100%', background: sessionRemaining === 0 ? '#10b981' : 'linear-gradient(90deg, #0284c7, #10b981)', transition: 'width 0.4s ease' }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
               {allScrapeRunning ? (
                 <div style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: 16, padding: '18px 20px', boxShadow: '0 4px 14px rgba(0,0,0,0.05)' }}>
                   {/* Progress Header */}
@@ -5613,61 +5784,100 @@ export default function AdminPanel() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleScrapeAllAccounts({ onlyMissing: false })}
-                    style={{
-                      padding: '12px 24px',
-                      fontSize: 14,
-                      background: 'linear-gradient(135deg, #10b981, #059669)',
-                      border: 'none',
-                      borderRadius: 12,
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
-                    }}
-                  >
-                    ⚡ Turbo Scrape All {mostFollowed.filter(p => p.instagram_handle).length} Accounts ({scrapeServer === 'auto' ? 'Auto-Failover' : scrapeServer.toUpperCase()})
-                  </button>
+                  {(() => {
+                    const totalWithHandles = mostFollowed.filter(p => p.instagram_handle && p.instagram_handle.trim() !== '').length
+                    const sessionTotal = scrapeSession?.totalCount || totalWithHandles
+                    const sessionCompleted = scrapeSession?.completedIds?.length || 0
+                    const sessionFailed = scrapeSession?.failedIds?.length || 0
+                    const sessionRemaining = Math.max(0, sessionTotal - sessionCompleted)
+                    const hasActiveSession = Boolean(scrapeSession && scrapeSession.completedIds?.length > 0)
 
-                  <button
-                    className="btn"
-                    onClick={() => handleScrapeAllAccounts({ onlyMissing: true })}
-                    style={{
-                      padding: '12px 20px',
-                      fontSize: 14,
-                      background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: 12,
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(2,132,199,0.3)'
-                    }}
-                  >
-                    ▶️ Resume Scrape with {scrapeServer === 'auto' ? 'Auto-Failover' : scrapeServer.toUpperCase()}
-                  </button>
+                    if (hasActiveSession && sessionRemaining > 0) {
+                      return (
+                        <>
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => handleScrapeAllAccounts({ isResumeSession: true })}
+                            style={{
+                              padding: '12px 22px',
+                              fontSize: 14,
+                              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                              border: 'none',
+                              borderRadius: 12,
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              boxShadow: '0 4px 14px rgba(2,132,199,0.3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8
+                            }}
+                          >
+                            <span>▶️ Resume Session with {scrapeServer === 'auto' ? 'Auto-Failover' : scrapeServer.toUpperCase()}</span>
+                            <span style={{ background: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: 8, fontSize: 12 }}>
+                              {sessionRemaining} remaining
+                            </span>
+                          </button>
 
-                  {lastTurboFailures?.length > 0 && (
+                          <button
+                            className="btn"
+                            onClick={() => handleScrapeAllAccounts({ isNewSession: true })}
+                            style={{
+                              padding: '12px 18px',
+                              fontSize: 13,
+                              background: 'var(--surface2, #ffffff)',
+                              color: 'var(--text)',
+                              border: '1px solid var(--border)',
+                              borderRadius: 12,
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🔄 Discard & Start Fresh Session ({sessionTotal})
+                          </button>
+                        </>
+                      )
+                    }
+
+                    return (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => handleScrapeAllAccounts({ isNewSession: true })}
+                        style={{
+                          padding: '12px 24px',
+                          fontSize: 14,
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          border: 'none',
+                          borderRadius: 12,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
+                        }}
+                      >
+                        ⚡ Start New 2-Hour Scrape Session ({sessionTotal} Accounts)
+                      </button>
+                    )
+                  })()}
+
+                  {scrapeSession?.failedIds?.length > 0 && (
                     <button
                       className="btn"
-                      onClick={() => handleScrapeAllAccounts({ targetIds: lastTurboFailures.map(f => f.id) })}
+                      onClick={() => handleScrapeAllAccounts({ targetIds: scrapeSession.failedIds })}
                       style={{
-                        padding: '12px 20px',
-                        fontSize: 14,
+                        padding: '12px 18px',
+                        fontSize: 13,
                         background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: 12,
-                        fontWeight: 800,
+                        fontWeight: 750,
                         cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(239,68,68,0.3)',
+                        boxShadow: '0 4px 14px rgba(239,68,68,0.25)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6
                       }}
                     >
-                      <span>🔄 Retry {lastTurboFailures.length} Failed Accounts</span>
+                      <span>🔄 Retry {scrapeSession.failedIds.length} Failed in Session</span>
                     </button>
                   )}
                 </div>
