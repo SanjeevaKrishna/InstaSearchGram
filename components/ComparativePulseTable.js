@@ -5,8 +5,7 @@ import {
   ArrowLeftRight,
   TrendingUp,
   TrendingDown,
-  Rocket,
-  Flame,
+  Zap,
   Award,
   AlertTriangle,
   CheckCircle2,
@@ -263,42 +262,39 @@ export default function ComparativePulseTable({
 
   return (
     <div className="card comparative-pulse-container" style={{
-      marginTop: 24,
-      marginBottom: 36,
-      background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 28, 0.99) 100%)',
-      border: '1px solid rgba(168, 85, 247, 0.35)',
-      borderRadius: 18,
-      boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 35px rgba(168, 85, 247, 0.1)',
+      marginTop: 28,
+      marginBottom: 40,
+      background: 'rgba(15, 23, 42, 0.98)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: 16,
+      boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.5)',
       overflow: 'hidden'
     }}>
       {/* ─── 1. HEAD-TO-HEAD ARENA BANNER ─── */}
       <div style={{
         padding: '22px 20px',
-        background: 'linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.22) 50%, rgba(236, 72, 153, 0.15) 100%)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        position: 'relative'
+        background: 'rgba(255, 255, 255, 0.02)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Top Control Bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-              color: '#fff',
+              background: 'rgba(56, 189, 248, 0.1)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              color: '#38bdf8',
               fontSize: 11,
-              fontWeight: 800,
-              padding: '4px 12px',
-              borderRadius: 100,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              boxShadow: '0 2px 10px rgba(168, 85, 247, 0.4)'
+              fontWeight: 700,
+              padding: '5px 12px',
+              borderRadius: 8,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase'
             }}>
               <ArrowLeftRight size={13} />
               Head-to-Head Comparison
-            </span>
-            <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>
-              Live Comparative Follower Pulse
             </span>
           </div>
 
@@ -306,22 +302,22 @@ export default function ComparativePulseTable({
             {onChangeRival && (
               <button
                 onClick={onChangeRival}
-                className="btn"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
                   color: '#e2e8f0',
-                  padding: '5px 12px',
+                  padding: '7px 14px',
                   borderRadius: 8,
                   fontSize: 12,
-                  fontWeight: 700,
+                  fontWeight: 650,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 5
+                  gap: 6,
+                  transition: 'background 0.15s ease'
                 }}
               >
-                <ArrowLeftRight size={12} />
+                <ArrowLeftRight size={13} />
                 <span>Switch Rival</span>
               </button>
             )}
@@ -331,17 +327,17 @@ export default function ComparativePulseTable({
                 onClick={onExitComparison}
                 title="Exit Comparison"
                 style={{
-                  background: 'rgba(239, 68, 68, 0.12)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#f87171',
-                  padding: '5px 10px',
+                  background: 'rgba(244, 63, 94, 0.08)',
+                  border: '1px solid rgba(244, 63, 94, 0.25)',
+                  color: '#fb7185',
+                  padding: '7px 12px',
                   borderRadius: 8,
                   fontSize: 12,
-                  fontWeight: 700,
+                  fontWeight: 650,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 4
+                  gap: 5
                 }}
               >
                 <X size={13} />
@@ -351,179 +347,187 @@ export default function ComparativePulseTable({
           </div>
         </div>
 
-        {/* 2 Creators Side-by-Side Arena */}
+        {/* Responsive Arena Card (Stacked on mobile to prevent squishing, 3-column on desktop) */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto 1fr',
-          alignItems: 'center',
-          gap: 12,
-          padding: '12px 16px',
           background: 'rgba(0, 0, 0, 0.35)',
           borderRadius: 14,
-          border: '1px solid rgba(255, 255, 255, 0.08)'
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          padding: '18px 20px'
         }}>
-          {/* Creator 1 (Left) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-            <img
-              src={p1Photo}
-              alt={p1Name}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '2px solid #38bdf8',
-                boxShadow: '0 0 12px rgba(56, 189, 248, 0.35)',
-                flexShrink: 0
-              }}
-              onError={(e) => { e.currentTarget.src = '/placeholder-avatar.png' }}
-            />
-            <div style={{ minWidth: 0 }}>
-              <div style={{
-                fontSize: 15,
-                fontWeight: 800,
-                color: '#fff',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5
-              }}>
-                <span>{p1Name}</span>
-                {profileRank && (
-                  <span style={{ fontSize: 10, background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '1px 6px', borderRadius: 6 }}>
-                    #{profileRank}
-                  </span>
-                )}
+          {/* Creator 1 Row */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+              <img
+                src={p1Photo}
+                alt={p1Name}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '1.5px solid #38bdf8',
+                  flexShrink: 0
+                }}
+                onError={(e) => { e.currentTarget.src = '/placeholder-avatar.png' }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: 15,
+                  fontWeight: 750,
+                  color: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p1Name}</span>
+                  {profileRank && (
+                    <span style={{ fontSize: 10, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '1px 6px', borderRadius: 6, fontWeight: 700 }}>
+                      #{profileRank}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                  @{profile?.instagram_handle || ''}
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                @{profile?.instagram_handle || ''}
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: '#38bdf8', fontFamily: 'var(--font-display)', marginTop: 2 }}>
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
                 {(profile?.followers_count || 0).toLocaleString()}
               </div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                Verified Followers
+              </div>
             </div>
           </div>
 
-          {/* VS Center Badge */}
-          <div style={{ textAlign: 'center', padding: '0 8px' }}>
-            <div style={{
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #ef4444 0%, #a855f7 100%)',
-              color: '#fff',
-              display: 'flex',
+          {/* Clean Hairline VS Divider */}
+          <div style={{
+            margin: '14px 0',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <div style={{ position: 'absolute', left: 0, right: 0, height: 1, background: 'rgba(255, 255, 255, 0.08)' }} />
+            <span style={{
+              position: 'relative',
+              background: '#0f172a',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              padding: '3px 12px',
+              borderRadius: 100,
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#cbd5e1',
+              display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 900,
-              fontSize: 13,
-              boxShadow: '0 0 16px rgba(239, 68, 68, 0.4)',
-              margin: '0 auto 6px'
+              gap: 5
             }}>
-              VS
-            </div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#f8fafc', whiteSpace: 'nowrap' }}>
-              {Math.abs(periodStats.totalGap).toLocaleString()} Gap
-            </div>
+              <ArrowLeftRight size={11} style={{ color: '#94a3b8' }} />
+              <span>{Math.abs(periodStats.totalGap).toLocaleString()} Follower Difference</span>
+            </span>
           </div>
 
-          {/* Creator 2 (Right) */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{
-                fontSize: 15,
-                fontWeight: 800,
-                color: '#fff',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: 5
-              }}>
-                {rivalRank && (
-                  <span style={{ fontSize: 10, background: 'rgba(236, 72, 153, 0.2)', color: '#f472b6', padding: '1px 6px', borderRadius: 6 }}>
-                    #{rivalRank}
-                  </span>
-                )}
-                <span>{p2Name}</span>
+          {/* Creator 2 Row (Rival) */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+              <img
+                src={p2Photo}
+                alt={p2Name}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '1.5px solid #c084fc',
+                  flexShrink: 0
+                }}
+                onError={(e) => { e.currentTarget.src = '/placeholder-avatar.png' }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: 15,
+                  fontWeight: 750,
+                  color: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p2Name}</span>
+                  {rivalRank && (
+                    <span style={{ fontSize: 10, background: 'rgba(192, 132, 252, 0.15)', color: '#c084fc', padding: '1px 6px', borderRadius: 6, fontWeight: 700 }}>
+                      #{rivalRank}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                  @{rival?.instagram_handle || ''}
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                @{rival?.instagram_handle || ''}
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: '#f472b6', fontFamily: 'var(--font-display)', marginTop: 2 }}>
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#c084fc', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
                 {(rival?.followers_count || 0).toLocaleString()}
               </div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                Verified Followers
+              </div>
             </div>
-            <img
-              src={p2Photo}
-              alt={p2Name}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '2px solid #ec4899',
-                boxShadow: '0 0 12px rgba(236, 72, 153, 0.35)',
-                flexShrink: 0
-              }}
-              onError={(e) => { e.currentTarget.src = '/placeholder-avatar.png' }}
-            />
           </div>
-        </div>
 
-        {/* Audience Tug-of-War Bar */}
-        <div style={{ marginTop: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 750, marginBottom: 5 }}>
-            <span style={{ color: '#38bdf8' }}>{p1Name} ({periodStats.p1Share}%)</span>
-            <span style={{ color: '#cbd5e1' }}>
-              <strong>{periodStats.totalLeader}</strong> holds {formatNumber(Math.abs(periodStats.totalGap))} lead
-            </span>
-            <span style={{ color: '#f472b6' }}>{p2Name} ({periodStats.p2Share}%)</span>
-          </div>
-          <div style={{ height: 8, borderRadius: 6, background: '#1e293b', overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${periodStats.p1Share}%`, background: 'linear-gradient(90deg, #38bdf8 0%, #6366f1 100%)', transition: 'width 0.4s ease' }} />
-            <div style={{ width: `${periodStats.p2Share}%`, background: 'linear-gradient(90deg, #a855f7 0%, #ec4899 100%)', transition: 'width 0.4s ease' }} />
+          {/* Audience Share Progression */}
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11.5, fontWeight: 700, marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+              <span style={{ color: '#38bdf8' }}>{p1Name} ({periodStats.p1Share}%)</span>
+              <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 500 }}>
+                <strong style={{ color: '#e2e8f0', fontWeight: 700 }}>{periodStats.totalLeader}</strong> holds {formatNumber(Math.abs(periodStats.totalGap))} lead
+              </span>
+              <span style={{ color: '#c084fc' }}>{p2Name} ({periodStats.p2Share}%)</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(255, 255, 255, 0.08)', overflow: 'hidden', display: 'flex' }}>
+              <div style={{ width: `${periodStats.p1Share}%`, background: '#38bdf8', transition: 'width 0.4s ease' }} />
+              <div style={{ width: `${periodStats.p2Share}%`, background: '#c084fc', transition: 'width 0.4s ease' }} />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ─── 2. EXECUTIVE METRICS GRID ─── */}
-      <div style={{ padding: '20px 20px 10px' }}>
-        {/* Period Selector Dropdown Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+      {/* ─── 2. EXECUTIVE METRICS SECTION ─── */}
+      <div style={{ padding: '24px 20px 10px' }}>
+        {/* Clean Period Header (Clean, professional, no 3-line wrapped bubble) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'rgba(56, 189, 248, 0.12)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              padding: '4px 12px',
-              borderRadius: 100,
-              fontSize: 11,
-              fontWeight: 750,
-              color: '#38bdf8',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em'
-            }}>
-              <Activity size={12} color="#38bdf8" />
-              Daily Growth Pulse Benchmark
-            </div>
+            <Activity size={16} style={{ color: '#38bdf8' }} />
+            <h3 style={{ fontSize: 15, fontWeight: 750, color: '#f8fafc', margin: 0, fontFamily: 'var(--font-display)' }}>
+              Comparative Growth Trajectory
+            </h3>
+          </div>
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
               style={{
-                background: 'rgba(15, 23, 42, 0.9)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(15, 23, 42, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
                 color: '#f8fafc',
                 fontSize: 12,
-                fontWeight: 700,
-                padding: '4px 10px',
+                fontWeight: 650,
+                padding: '6px 12px',
                 borderRadius: 8,
                 cursor: 'pointer',
                 outline: 'none'
@@ -538,136 +542,136 @@ export default function ComparativePulseTable({
                 return <option key={ym} value={ym}>{monthName}</option>
               })}
             </select>
-          </div>
-
-          <div style={{ fontSize: 11.5, color: '#94a3b8' }}>
-            <strong style={{ color: '#f8fafc' }}>{filteredDates.length}</strong> consecutive dates synced
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>
+              {filteredDates.length} days synced
+            </span>
           </div>
         </div>
 
-        {/* 4 Summary Scorecard Boxes */}
+        {/* 4 Spacious Summary Scorecards (Stacked on mobile, increasing page length and clarity) */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 12,
-          marginBottom: 20
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: 14,
+          marginBottom: 24
         }}>
-          {/* Box 1: Period Net Gain */}
+          {/* Card 1: Period Net Growth */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(52, 211, 153, 0.25)',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: 12,
-            padding: '14px 16px'
+            padding: '18px 20px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Period Net Growth
               </span>
-              <TrendingUp size={15} color="#34d399" />
+              <TrendingUp size={15} style={{ color: '#10b981' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8' }}>{p1Name}:</span>
-              <span style={{ fontSize: 15, fontWeight: 900, color: periodStats.p1Net >= 0 ? '#34d399' : '#fb7185', fontFamily: 'var(--font-display)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 650, color: '#38bdf8' }}>{p1Name}:</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: periodStats.p1Net >= 0 ? '#10b981' : '#f43f5e', fontFamily: 'var(--font-display)' }}>
                 {fmtShort(periodStats.p1Net)}
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#f472b6' }}>{p2Name}:</span>
-              <span style={{ fontSize: 15, fontWeight: 900, color: periodStats.p2Net >= 0 ? '#34d399' : '#fb7185', fontFamily: 'var(--font-display)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 650, color: '#c084fc' }}>{p2Name}:</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: periodStats.p2Net >= 0 ? '#10b981' : '#f43f5e', fontFamily: 'var(--font-display)' }}>
                 {fmtShort(periodStats.p2Net)}
               </span>
             </div>
-            <div style={{ fontSize: 10.5, color: '#6ee7b7', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
-              ⚡ {periodStats.netLeader} outgrew by {formatNumber(periodStats.netLeadDiff)}
+            <div style={{ fontSize: 11, color: '#a7f3d0', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '5px 10px', borderRadius: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Zap size={12} style={{ color: '#10b981' }} />
+              <span>{periodStats.netLeader} outgrew by {formatNumber(periodStats.netLeadDiff)}</span>
             </div>
           </div>
 
-          {/* Box 2: Daily Velocity */}
+          {/* Card 2: Daily Velocity */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(96, 165, 250, 0.25)',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: 12,
-            padding: '14px 16px'
+            padding: '18px 20px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Daily Avg Velocity
               </span>
-              <Rocket size={15} color="#60a5fa" />
+              <Zap size={15} style={{ color: '#38bdf8' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8' }}>{p1Name}:</span>
-              <span style={{ fontSize: 15, fontWeight: 900, color: '#38bdf8', fontFamily: 'var(--font-display)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 650, color: '#38bdf8' }}>{p1Name}:</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-display)' }}>
                 ~{fmtShort(periodStats.p1DailyAvg)}/day
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#f472b6' }}>{p2Name}:</span>
-              <span style={{ fontSize: 15, fontWeight: 900, color: '#f472b6', fontFamily: 'var(--font-display)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 650, color: '#c084fc' }}>{p2Name}:</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#c084fc', fontFamily: 'var(--font-display)' }}>
                 ~{fmtShort(periodStats.p2DailyAvg)}/day
               </span>
             </div>
-            <div style={{ fontSize: 10.5, color: '#93c5fd', background: 'rgba(59, 130, 246, 0.1)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
-              Rate difference: ~{formatNumber(Math.abs(periodStats.p1DailyAvg - periodStats.p2DailyAvg))}/day
+            <div style={{ fontSize: 11, color: '#bae6fd', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '5px 10px', borderRadius: 6, fontWeight: 600 }}>
+              Pace diff: ~{formatNumber(Math.abs(periodStats.p1DailyAvg - periodStats.p2DailyAvg))}/day
             </div>
           </div>
 
-          {/* Box 3: Single-Day Spike Peak */}
+          {/* Card 3: Single-Day Spike Peak */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(251, 191, 36, 0.25)',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: 12,
-            padding: '14px 16px'
+            padding: '18px 20px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Single-Day Record Spike
+                Peak Single-Day Spike
               </span>
-              <Flame size={15} color="#fbbf24" />
+              <Award size={15} style={{ color: '#fbbf24' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8' }}>{p1Name}:</span>
-              <span style={{ fontSize: 15, fontWeight: 900, color: '#fbbf24', fontFamily: 'var(--font-display)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 650, color: '#38bdf8' }}>{p1Name}:</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#fbbf24', fontFamily: 'var(--font-display)' }}>
                 {periodStats.p1BestDay.increment > -Infinity ? fmtShort(periodStats.p1BestDay.increment) : '—'}
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#f472b6' }}>{p2Name}:</span>
-              <span style={{ fontSize: 15, fontWeight: 900, color: '#fbbf24', fontFamily: 'var(--font-display)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 650, color: '#c084fc' }}>{p2Name}:</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#fbbf24', fontFamily: 'var(--font-display)' }}>
                 {periodStats.p2BestDay.increment > -Infinity ? fmtShort(periodStats.p2BestDay.increment) : '—'}
               </span>
             </div>
-            <div style={{ fontSize: 10.5, color: '#fde68a', background: 'rgba(245, 158, 11, 0.1)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
-              Peak acceleration points on Spialr
+            <div style={{ fontSize: 11, color: '#fde68a', background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.2)', padding: '5px 10px', borderRadius: 6, fontWeight: 600 }}>
+              Peak acceleration records
             </div>
           </div>
 
-          {/* Box 4: Global Standing & Category */}
+          {/* Card 4: Global Standing */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(192, 132, 252, 0.25)',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: 12,
-            padding: '14px 16px'
+            padding: '18px 20px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Platform Standing
               </span>
-              <Award size={15} color="#c084fc" />
+              <Award size={15} style={{ color: '#c084fc' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8' }}>{p1Name}:</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 650, color: '#38bdf8' }}>{p1Name}:</span>
+              <span style={{ fontSize: 14, fontWeight: 750, color: '#e2e8f0' }}>
                 {profileRank ? `Global #${profileRank}` : 'Ranked'}
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#f472b6' }}>{p2Name}:</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 650, color: '#c084fc' }}>{p2Name}:</span>
+              <span style={{ fontSize: 14, fontWeight: 750, color: '#e2e8f0' }}>
                 {rivalRank ? `Global #${rivalRank}` : 'Ranked'}
               </span>
             </div>
-            <div style={{ fontSize: 10.5, color: '#e9d5ff', background: 'rgba(168, 85, 247, 0.1)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+            <div style={{ fontSize: 11, color: '#e9d5ff', background: 'rgba(192, 132, 252, 0.08)', border: '1px solid rgba(192, 132, 252, 0.2)', padding: '5px 10px', borderRadius: 6, fontWeight: 600 }}>
               Category: {profile?.category || 'Creator'} vs {rival?.category || 'Creator'}
             </div>
           </div>
@@ -676,30 +680,30 @@ export default function ComparativePulseTable({
 
       {/* ─── 3. SIDE-BY-SIDE COMPARATIVE FOLLOWER PULSE TABLE ─── */}
       <div style={{
-        margin: '0 20px 24px',
+        margin: '0 20px 28px',
         background: 'rgba(0, 0, 0, 0.45)',
         borderRadius: 14,
         border: '1px solid rgba(255, 255, 255, 0.08)',
         overflow: 'hidden'
       }}>
-        {/* Table Controls & Scroll Hint */}
+        {/* Table Controls Header */}
         <div style={{
-          padding: '10px 16px',
-          background: 'rgba(255, 255, 255, 0.04)',
+          padding: '12px 16px',
+          background: 'rgba(255, 255, 255, 0.03)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 8,
-          fontSize: 11,
+          fontSize: 11.5,
           color: '#94a3b8'
         }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#cbd5e1' }}>
-            <ArrowLeftRight size={13} color="#94a3b8" />
-            <span>Scroll horizontally on smaller screens to view side-by-side counts &amp; daily winner</span>
+            <ArrowLeftRight size={13} style={{ color: '#94a3b8' }} />
+            <span>Scroll horizontally on smaller screens to inspect side-by-side counts &amp; daily winners</span>
           </span>
-          <span style={{ background: 'rgba(255, 255, 255, 0.08)', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>
+          <span style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>
             {filteredDates.length} Days Displayed
           </span>
         </div>
@@ -732,7 +736,7 @@ export default function ComparativePulseTable({
               }}>
                 {/* Date Column Header (Sticky Left) */}
                 <th style={{
-                  padding: '12px 14px',
+                  padding: '12px 16px',
                   position: 'sticky',
                   left: 0,
                   zIndex: 20,
@@ -757,7 +761,7 @@ export default function ComparativePulseTable({
                 </th>
 
                 {/* Creator 2 Header */}
-                <th style={{ padding: '12px 16px', color: '#f472b6', minWidth: 200 }}>
+                <th style={{ padding: '12px 16px', color: '#c084fc', minWidth: 200 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <img
                       src={p2Photo}
@@ -770,7 +774,7 @@ export default function ComparativePulseTable({
                 </th>
 
                 {/* Daily Edge & Gap Header */}
-                <th style={{ padding: '12px 16px', color: '#c084fc', minWidth: 170, textAlign: 'right' }}>
+                <th style={{ padding: '12px 16px', color: '#e2e8f0', minWidth: 170, textAlign: 'right' }}>
                   Daily Winner &amp; Gap
                 </th>
               </tr>
@@ -813,14 +817,14 @@ export default function ComparativePulseTable({
                         alignItems: 'center',
                         gap: 4,
                         color: '#38bdf8',
-                        background: 'rgba(56, 189, 248, 0.12)',
-                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        background: 'rgba(56, 189, 248, 0.1)',
+                        border: '1px solid rgba(56, 189, 248, 0.25)',
                         padding: '2px 7px',
                         borderRadius: 6,
                         fontSize: 10.5,
-                        fontWeight: 800
+                        fontWeight: 700
                       }}>
-                        ⚡ {p1Name.split(' ')[0]} +{fmtShort(edge)}
+                        <TrendingUp size={11} /> {p1Name.split(' ')[0]} +{fmtShort(edge)}
                       </span>
                     )
                   } else if (edge < 0) {
@@ -829,20 +833,20 @@ export default function ComparativePulseTable({
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 4,
-                        color: '#f472b6',
-                        background: 'rgba(236, 72, 153, 0.12)',
-                        border: '1px solid rgba(236, 72, 153, 0.3)',
+                        color: '#c084fc',
+                        background: 'rgba(192, 132, 252, 0.1)',
+                        border: '1px solid rgba(192, 132, 252, 0.25)',
                         padding: '2px 7px',
                         borderRadius: 6,
                         fontSize: 10.5,
-                        fontWeight: 800
+                        fontWeight: 700
                       }}>
-                        ⚡ {p2Name.split(' ')[0]} +{fmtShort(Math.abs(edge))}
+                        <TrendingUp size={11} /> {p2Name.split(' ')[0]} +{fmtShort(Math.abs(edge))}
                       </span>
                     )
                   } else {
                     winnerBadge = (
-                      <span style={{ color: '#94a3b8', fontSize: 10.5, fontWeight: 700 }}>
+                      <span style={{ color: '#94a3b8', fontSize: 10.5, fontWeight: 600 }}>
                         Tied pace
                       </span>
                     )
@@ -854,15 +858,15 @@ export default function ComparativePulseTable({
                     key={date}
                     style={{
                       borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
-                      background: idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent',
+                      background: idx % 2 === 0 ? 'rgba(255, 255, 255, 0.012)' : 'transparent',
                       transition: 'background 0.15s ease'
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = idx % 2 === 0 ? 'rgba(255, 255, 255, 0.012)' : 'transparent' }}
                   >
                     {/* Sticky Left Date Column */}
                     <td style={{
-                      padding: '10px 14px',
+                      padding: '12px 16px',
                       position: 'sticky',
                       left: 0,
                       zIndex: 10,
@@ -871,7 +875,7 @@ export default function ComparativePulseTable({
                       borderRight: '1px solid rgba(255, 255, 255, 0.08)',
                       whiteSpace: 'nowrap'
                     }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: isToday ? '#a78bfa' : '#f1f5f9' }}>
+                      <div style={{ fontSize: 12, fontWeight: 750, color: isToday ? '#a78bfa' : '#f1f5f9' }}>
                         {monthDay}
                       </div>
                       <div style={{ fontSize: 10, fontWeight: 600, color: isToday ? '#818cf8' : '#64748b', marginTop: 1 }}>
@@ -880,25 +884,25 @@ export default function ComparativePulseTable({
                     </td>
 
                     {/* Creator 1 Cells */}
-                    <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-display)' }}>
+                        <span style={{ fontSize: 13, fontWeight: 750, color: '#f8fafc', fontFamily: 'var(--font-display)' }}>
                           {c1Count ? c1Count.toLocaleString() : '—'}
                         </span>
                         {c1Failed ? (
-                          <span style={{ fontSize: 10, color: '#f87171', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1px 6px', borderRadius: 4, fontWeight: 750 }}>
-                            Server Failed
+                          <span style={{ fontSize: 10, color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '1px 6px', borderRadius: 4, fontWeight: 650, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <AlertTriangle size={10} /> Server Failed
                           </span>
                         ) : c1Sync ? (
-                          <span style={{ fontSize: 10, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)', padding: '1px 6px', borderRadius: 4, fontWeight: 750 }}>
-                            Sync
+                          <span style={{ fontSize: 10, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '1px 6px', borderRadius: 4, fontWeight: 650, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <CheckCircle2 size={10} /> Sync
                           </span>
                         ) : c1Inc > 0 ? (
-                          <span style={{ fontSize: 11, color: '#34d399', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1px 7px', borderRadius: 5, fontWeight: 800 }}>
+                          <span style={{ fontSize: 11, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '2px 7px', borderRadius: 5, fontWeight: 750 }}>
                             +{c1Inc.toLocaleString()}
                           </span>
                         ) : c1Inc < 0 ? (
-                          <span style={{ fontSize: 11, color: '#fb7185', background: 'rgba(244, 63, 94, 0.12)', border: '1px solid rgba(244, 63, 94, 0.3)', padding: '1px 7px', borderRadius: 5, fontWeight: 800 }}>
+                          <span style={{ fontSize: 11, color: '#f43f5e', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.25)', padding: '2px 7px', borderRadius: 5, fontWeight: 750 }}>
                             {c1Inc.toLocaleString()}
                           </span>
                         ) : (
@@ -908,25 +912,25 @@ export default function ComparativePulseTable({
                     </td>
 
                     {/* Creator 2 Cells */}
-                    <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-display)' }}>
+                        <span style={{ fontSize: 13, fontWeight: 750, color: '#f8fafc', fontFamily: 'var(--font-display)' }}>
                           {c2Count ? c2Count.toLocaleString() : '—'}
                         </span>
                         {c2Failed ? (
-                          <span style={{ fontSize: 10, color: '#f87171', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1px 6px', borderRadius: 4, fontWeight: 750 }}>
-                            Server Failed
+                          <span style={{ fontSize: 10, color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '1px 6px', borderRadius: 4, fontWeight: 650, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <AlertTriangle size={10} /> Server Failed
                           </span>
                         ) : c2Sync ? (
-                          <span style={{ fontSize: 10, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)', padding: '1px 6px', borderRadius: 4, fontWeight: 750 }}>
-                            Sync
+                          <span style={{ fontSize: 10, color: '#c084fc', background: 'rgba(192, 132, 252, 0.1)', border: '1px solid rgba(192, 132, 252, 0.2)', padding: '1px 6px', borderRadius: 4, fontWeight: 650, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <CheckCircle2 size={10} /> Sync
                           </span>
                         ) : c2Inc > 0 ? (
-                          <span style={{ fontSize: 11, color: '#34d399', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1px 7px', borderRadius: 5, fontWeight: 800 }}>
+                          <span style={{ fontSize: 11, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '2px 7px', borderRadius: 5, fontWeight: 750 }}>
                             +{c2Inc.toLocaleString()}
                           </span>
                         ) : c2Inc < 0 ? (
-                          <span style={{ fontSize: 11, color: '#fb7185', background: 'rgba(244, 63, 94, 0.12)', border: '1px solid rgba(244, 63, 94, 0.3)', padding: '1px 7px', borderRadius: 5, fontWeight: 800 }}>
+                          <span style={{ fontSize: 11, color: '#f43f5e', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.25)', padding: '2px 7px', borderRadius: 5, fontWeight: 750 }}>
                             {c2Inc.toLocaleString()}
                           </span>
                         ) : (
@@ -936,11 +940,11 @@ export default function ComparativePulseTable({
                     </td>
 
                     {/* Daily Winner & End-of-Day Gap */}
-                    <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                         {winnerBadge}
                         {dayGap !== null && (
-                          <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>
+                          <span style={{ fontSize: 10.5, color: '#94a3b8', fontWeight: 600 }}>
                             {formatNumber(Math.abs(dayGap))} gap ({leaderNameOnDay?.split(' ')[0]} lead)
                           </span>
                         )}
@@ -960,15 +964,15 @@ export default function ComparativePulseTable({
         borderTop: '1px solid rgba(255, 255, 255, 0.08)',
         paddingTop: 20
       }}>
-        <h3 style={{
-          fontSize: 16,
-          fontWeight: 800,
+        <h4 style={{
+          fontSize: 15,
+          fontWeight: 750,
           color: '#f8fafc',
           marginBottom: 8,
           fontFamily: 'var(--font-display)'
         }}>
           Comparative Follower Momentum &amp; Historical Trajectory
-        </h3>
+        </h4>
         <p style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.7, margin: '0 0 16px' }}>
           This side-by-side comparative ledger benchmarks real-time daily follower gains between <strong>{p1Name}</strong> (@{profile?.instagram_handle}) and <strong>{p2Name}</strong> (@{rival?.instagram_handle}).
           Daily counts are verified against historical database snapshots with synchronized gap-interpolation. Currently, <strong>{periodStats.totalLeader}</strong> holds a total audience advantage of <strong>{formatNumber(Math.abs(periodStats.totalGap))} followers</strong>. Over the selected period, <strong>{periodStats.netLeader}</strong> has experienced higher net follower growth with an extra <strong>{formatNumber(periodStats.netLeadDiff)} followers</strong> acquired.
@@ -978,10 +982,10 @@ export default function ComparativePulseTable({
         <div
           id="spialr-compare-pulse-ad"
           style={{
-            minHeight: 100,
+            minHeight: 90,
             background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px dashed rgba(255, 255, 255, 0.1)',
-            borderRadius: 12,
+            border: '1px dashed rgba(255, 255, 255, 0.08)',
+            borderRadius: 10,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

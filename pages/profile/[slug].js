@@ -1326,36 +1326,6 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                   Last verified: <strong>{formatDateLabel(profile.last_scraped_at || profile.updated_at || (valid.length > 0 ? valid[valid.length - 1].date : null))}</strong> • Snapshot benchmark
                 </span>
               </div>
-
-              {/* Compare with Rival Button (Accessible on Mobile & Desktop) */}
-              <div id="mobile-compare-rival-btn" style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
-                <button
-                  onClick={() => router.push(`/all?compare=${slug || profile.instagram_handle || ''}`)}
-                  style={{
-                    width: '100%',
-                    maxWidth: 440,
-                    padding: '11px 18px',
-                    borderRadius: 12,
-                    background: rivalProfile
-                      ? 'linear-gradient(135deg, rgba(168,85,247,0.22) 0%, rgba(236,72,153,0.22) 100%)'
-                      : 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(168,85,247,0.18) 100%)',
-                    border: '1px solid rgba(168, 85, 247, 0.4)',
-                    color: '#f8fafc',
-                    fontSize: 13,
-                    fontWeight: 750,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    boxShadow: '0 4px 14px rgba(168, 85, 247, 0.15)',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <ArrowLeftRight size={15} color="#c084fc" />
-                  <span>{rivalProfile ? `Switch Rival (vs ${rivalProfile.name})` : `⚔️ Compare ${profile.name} with Rival`}</span>
-                </button>
-              </div>
             </div>
           </div>
 
@@ -2332,6 +2302,110 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
           })()
         )}
 
+          {/* ─── Rectangular Outlined Head-to-Head Comparison Box (Clean & Professional) ─── */}
+          <div
+            className="card"
+            style={{
+              marginTop: 28,
+              marginBottom: 32,
+              padding: '24px 22px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 14,
+              boxShadow: '0 4px 18px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#38bdf8'
+                }}>
+                  <ArrowLeftRight size={17} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Comparative Benchmarking
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 750, color: 'var(--text)', margin: '2px 0 0', fontFamily: 'var(--font-display)' }}>
+                    {rivalProfile ? `Comparing ${profile.name} vs ${rivalProfile.name}` : `Compare ${profile.name} with Rival Creator`}
+                  </h3>
+                </div>
+              </div>
+
+              {rivalProfile && (
+                <button
+                  onClick={() => {
+                    const { compare, ...restQuery } = router.query
+                    router.push({ pathname: `/profile/${slug}`, query: restQuery }, undefined, { shallow: true })
+                    setRivalProfile(null)
+                  }}
+                  style={{
+                    background: 'rgba(244, 63, 94, 0.08)',
+                    border: '1px solid rgba(244, 63, 94, 0.25)',
+                    color: '#fb7185',
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 650,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5
+                  }}
+                >
+                  <X size={13} />
+                  <span>Exit Comparison</span>
+                </button>
+              )}
+            </div>
+
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.65, margin: '0 0 18px' }}>
+              {rivalProfile
+                ? `Currently analyzing verified daily growth rates, live follower gaps, and engagement performance side-by-side between ${profile.name} and ${rivalProfile.name}. Click below to select or switch to another competitor.`
+                : `Benchmark verified daily follower growth, live audience lead, and pacing velocities between ${profile.name} and any popular creator or celebrity on Instagram.`}
+            </p>
+
+            <button
+              onClick={() => router.push(`/all?compare=${slug || profile.instagram_handle || ''}`)}
+              style={{
+                width: '100%',
+                padding: '12px 20px',
+                borderRadius: 10,
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+                fontSize: 13.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'var(--accent)'
+                e.currentTarget.style.color = 'var(--accent)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.color = 'var(--text)'
+              }}
+            >
+              <ArrowLeftRight size={15} />
+              <span>{rivalProfile ? `Switch Rival Creator (vs ${rivalProfile.name})` : `Select Rival Creator to Compare with ${profile.name}`}</span>
+            </button>
+          </div>
+
           {/* ─────────────────────────────────────────────────────────────
               SECTION 0: Unique Multi-Tier Zoomable Ogive Growth Curve & Forecast
               (All-Time, 30-Day, 7-Day & 3-Day Smooth Zoom with Momentum Pulse & Horizons)
@@ -2725,8 +2799,9 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
                         <div style={{ fontSize: 13.5, fontWeight: 750, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {tp.name}
                         </div>
-                        <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span>⚡ {formatNumber(tp.followers_count)}</span>
+                        <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Users size={11} color="var(--text-muted)" />
+                          <span>{formatNumber(tp.followers_count)} followers</span>
                         </div>
                       </div>
                       <ArrowUpRight size={14} color="#64748b" style={{ flexShrink: 0 }} />
