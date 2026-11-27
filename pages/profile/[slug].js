@@ -27,7 +27,8 @@ import {
   Clock,
   ArrowUpRight,
   HelpCircle,
-  Users
+  Users,
+  Search
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { generateMilestones, formatMilestoneLabel, findMilestoneAchievedDate } from '../../lib/milestones'
@@ -184,6 +185,7 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
   const [tooltip, setTooltip] = useState(null)
   const [selectedPeriod, setSelectedPeriod] = useState('last30')
   const [openFaq, setOpenFaq] = useState(0)
+  const [sidebarSearch, setSidebarSearch] = useState('')
 
   if (router.isFallback) {
     return (
@@ -787,9 +789,39 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
           padding: 24px 16px;
         }
 
-        .profile-main-container {
+                .profile-main-container {
           max-width: 680px;
           margin: 0 auto;
+          width: 100%;
+        }
+
+        .profile-content-col {
+          min-width: 0;
+          width: 100%;
+        }
+
+        .profile-sidebar-col {
+          display: none;
+        }
+
+        @media (min-width: 1024px) {
+          .profile-page-wrapper {
+            padding: 28px 24px 80px !important;
+          }
+          .profile-main-container {
+            max-width: 1160px !important;
+            display: grid !important;
+            grid-template-columns: 1fr 340px !important;
+            gap: 28px !important;
+            align-items: start !important;
+          }
+          .profile-sidebar-col {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 20px !important;
+            position: sticky !important;
+            top: 84px !important;
+          }
         }
 
         .profile-hero-card {
@@ -1101,6 +1133,7 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
 
       <div className="profile-page-wrapper">
         <div className="profile-main-container">
+          <div className="profile-content-col">
 
           {/* Back Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
@@ -2641,6 +2674,160 @@ export default function ProfilePage({ profile, slug, rank = null, trendingProfil
             </div>
           )}
 
+          </div>
+
+          <aside className="profile-sidebar-col">
+            {/* 1. Quick Creator Search */}
+            <div className="card" style={{ padding: '18px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Search size={15} color="var(--accent)" /> Quick Creator Search
+              </div>
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                if (sidebarSearch.trim()) router.push(`/results?q=${encodeURIComponent(sidebarSearch.trim())}`)
+              }}>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={sidebarSearch}
+                    onChange={(e) => setSidebarSearch(e.target.value)}
+                    placeholder="Search name or @handle..."
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      fontSize: 13,
+                      color: 'var(--text)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              </form>
+            </div>
+
+            {/* 2. Creator Intelligence Dossier */}
+            <div className="card" style={{ padding: '20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Zap size={15} color="#ec4899" /> Velocity Intelligence
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Standing Rank</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: rank ? 'var(--accent)' : 'var(--text)' }}>
+                    {rank ? `#${rank} on Leaderboard` : 'Indexed Profile'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Daily Velocity</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: dailyVelocity >= 0 ? '#10b981' : '#f43f5e' }}>
+                    {dailyVelocity >= 0 ? `+${formatNumber(dailyVelocity)}/day` : `${formatNumber(dailyVelocity)}/day`}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Hourly Pacing</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: '#38bdf8' }}>
+                    {dailyVelocity !== 0 ? `~${Math.abs(Math.round(hourlyVelocity)).toLocaleString()}/hr` : 'Holding'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>30-Day Outlook</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: '#c084fc' }}>
+                    {monthlyGain ? (monthlyGain > 0 ? `+${formatNumber(monthlyGain)}` : formatNumber(monthlyGain)) : `+${formatNumber(dailyVelocity * 30)}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Compare Button */}
+              <button
+                onClick={() => router.push(`/all?compare=${slug || profile.instagram_handle || ''}`)}
+                style={{
+                  width: '100%',
+                  marginTop: 18,
+                  padding: '11px 16px',
+                  background: 'var(--gradient-subtle, rgba(168,85,247,0.1))',
+                  border: '1px solid rgba(168,85,247,0.3)',
+                  color: 'var(--text)',
+                  borderRadius: 12,
+                  fontSize: 13,
+                  fontWeight: 750,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <ArrowLeftRight size={14} color="var(--accent)" />
+                <span>Compare {profile.name} with Rival</span>
+              </button>
+            </div>
+
+            {/* 3. Trending Peers in Category */}
+            {trendingProfiles && trendingProfiles.length > 0 && (
+              <div className="card" style={{ padding: '20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Flame size={15} color="#ec4899" /> Trending Peers
+                  </span>
+                  <Link href="/live" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>
+                    View All
+                  </Link>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {trendingProfiles.slice(0, 5).map(tp => {
+                    const tpSlug = tp.instagram_handle ? tp.instagram_handle.toLowerCase().trim().replace(/\./g, '-') : tp.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
+                    return (
+                      <Link
+                        key={tp.id}
+                        href={`/profile/${tpSlug}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '10px 12px',
+                          background: 'var(--surface2)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 12,
+                          textDecoration: 'none',
+                          color: 'inherit',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <img
+                          src={tp.photo_url || '/placeholder-avatar.png'}
+                          alt={tp.name}
+                          style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(168,85,247,0.4)', flexShrink: 0 }}
+                          onError={e => e.target.style.display = 'none'}
+                        />
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 750, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {tp.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 600 }}>
+                            {formatNumber(tp.followers_count)} followers
+                          </div>
+                        </div>
+                        <ArrowUpRight size={13} color="#94a3b8" />
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Desktop AdSense Responsive Sidebar Ad Slot */}
+            <div className="card spialr-desktop-sidebar-ad" style={{ padding: '16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Advertisement</div>
+              <div style={{ width: '100%', minHeight: 250, background: 'var(--surface2)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border)' }}>
+                <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Responsive Display Ad Slot</span>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </>

@@ -633,3 +633,62 @@ input, textarea, select {
   animation: timerFlip 0.22s ease-out;
 }
 
+/* ==========================================================================
+   DESKTOP RESPONSIVE LAYOUT UPGRADES (>= 1024px)
+   Balances mobile-first design with wide, information-dense desktop view
+   Eliminates narrow centered voids for Google AdSense & desktop visitors
+   ========================================================================== */
+@media (min-width: 1024px) {
+  /* Expand main containers from 680px/800px mobile clamp to 1160px desktop width */
+  main.main-container,
+  main.trending-main,
+  main.all-profiles-main,
+  main.reel-main-container,
+  main.comment-main-container {
+    max-width: 1160px !important;
+    padding-left: 28px !important;
+    padding-right: 28px !important;
+  }
+
+  /* Reel and comment detail page main containers */
+  main[style*="max-width: 720px"],
+  main[style*="maxWidth: 720"] {
+    max-width: 1160px !important;
+    padding-left: 28px !important;
+    padding-right: 28px !important;
+  }
+
+  /* Trending Featured Cards 2-Column Grid on Desktop */
+  .trending-cards-desktop-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .trending-cards-desktop-grid > div {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  /* Comments 2-Column Grid on Desktop */
+  .comments-desktop-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  /* Profile A-Z List 2-Column Grid on Desktop */
+  .all-profiles-desktop-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
+  }
+}
+
+

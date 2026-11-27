@@ -685,7 +685,7 @@ export default function TrendingPage({ initialData = null }) {
       </Head>
 
       
-      <main style={{ maxWidth: 800, margin: '0 auto', padding: '16px 20px 100px' }}>
+      <main className="trending-main" style={{ maxWidth: 800, margin: '0 auto', padding: '16px 20px 100px' }}>
         {loading && !initialData ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '120px 0' }}>
             <div className="spinner" />
@@ -1166,7 +1166,7 @@ export default function TrendingPage({ initialData = null }) {
                 </div>
               ) : activeTab === 'most_viewed' && activeSubTab === 'comments' ? (
                 /* Native comment rows with small gap (ONLY in Most Viewed > Comments) */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="comments-desktop-grid" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {activeReels.map((reel, idx) => (
                     <LeaderboardRow 
                       key={reel.id}
@@ -1180,13 +1180,16 @@ export default function TrendingPage({ initialData = null }) {
                 </div>
               ) : (
                 /* Single unified leaderboard list */
-                <div style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 20,
-                  overflow: 'hidden',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.02)',
-                }}>
+                <div
+                  className={activeTab === 'trending' ? 'trending-cards-desktop-grid' : ''}
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 20,
+                    overflow: 'hidden',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.02)',
+                  }}
+                >
                   {activeReels.map((reel, idx) => {
                     const absoluteRank = idx + 1
 

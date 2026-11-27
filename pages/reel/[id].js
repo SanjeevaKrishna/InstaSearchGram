@@ -185,7 +185,7 @@ export default function ReelDetailPage({
         />
       </Head>
 
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '24px 18px 120px' }}>
+      <main className="reel-main-container" style={{ maxWidth: 720, margin: '0 auto', padding: '24px 18px 120px' }}>
 
         {/* Back to Leaderboard */}
         <div style={{ marginBottom: 18 }}>

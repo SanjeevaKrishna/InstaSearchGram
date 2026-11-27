@@ -87,7 +87,7 @@ export default function CommentDetailPage({ initialComment, topComments = [], to
         {authorDp && <meta property="og:image" content={authorDp} />}
       </Head>
 
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '24px 18px 120px' }}>
+      <main className="comment-main-container" style={{ maxWidth: 720, margin: '0 auto', padding: '24px 18px 120px' }}>
         {/* Back Button */}
         <div style={{ marginBottom: 18 }}>
           <button 

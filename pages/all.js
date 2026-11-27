@@ -246,7 +246,7 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
       </Head>
 
       
-      <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 20px 140px' }}>
+      <main className="all-profiles-main" style={{ maxWidth: 800, margin: '0 auto', padding: '32px 20px 140px' }}>
 
         <h1 style={{
           fontFamily: 'var(--font-display)',
@@ -339,7 +339,7 @@ export default function AllCelebrities({ initialCelebrities = [], initialOrigina
             {(() => {
               let globalIndex = 0
               return sortedLetters.map(letter => (
-                <div key={letter} id={`letter-${letter}`} style={{ display: 'flex', flexDirection: 'column', scrollMarginTop: '80px' }}>
+                <div key={letter} id={`letter-${letter}`} className="all-profiles-desktop-grid" style={{ display: 'flex', flexDirection: 'column', scrollMarginTop: '80px' }}>
                   {grouped[letter].map((cel, index) => {
                     return (
                       <div key={cel.id}>
